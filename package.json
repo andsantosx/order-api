@@ -6,10 +6,13 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "prestart": "npm run build"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
   },
-  "keywords": ["express", "api", "orders"],
+  "keywords": [
+    "express",
+    "api",
+    "orders"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -33,6 +36,6 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": "24.x"
+    "node": "22.x"
   }
 }
