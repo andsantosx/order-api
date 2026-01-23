@@ -5,9 +5,9 @@ const router = Router();
 const paymentController = new PaymentController();
 
 // POST /api/payments/create-intent - Creates a Stripe Payment Intent for an order
+// Esta rota espera um corpo JSON, então será processada pelo express.json()
 router.post('/create-intent', paymentController.createPaymentIntent.bind(paymentController));
 
-// POST /api/payments/webhook - Handles webhooks from Stripe
-router.post('/webhook', paymentController.handleWebhook.bind(paymentController));
+// A rota de webhook será tratada diretamente no server.ts com um middleware específico.
 
 export default router;
