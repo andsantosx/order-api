@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { OrderItem } from './OrderItem';
 
@@ -8,6 +8,7 @@ export class Order {
   id!: string;
 
   @ManyToOne(() => User, user => user.orders, { nullable: true })
+  @JoinColumn({ name: 'user_id' }) // Mapeia para a coluna 'user_id' no banco
   user!: User | null;
 
   @Column({ nullable: true })

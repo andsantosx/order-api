@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Order } from './Order';
 import { Product } from './Product';
 
@@ -8,9 +8,11 @@ export class OrderItem {
   id!: string;
 
   @ManyToOne(() => Order, order => order.items, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'order_id' }) // Mapeia para a coluna 'order_id'
   order!: Order;
 
   @ManyToOne(() => Product)
+  @JoinColumn({ name: 'product_id' }) // Mapeia para a coluna 'product_id'
   product!: Product;
 
   @Column('integer')

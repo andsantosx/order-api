@@ -12,8 +12,10 @@ dotenv.config();
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  synchronize: process.env.NODE_ENV === 'development', // Use com cuidado em produção
-  logging: false,
+  // Como estamos usando um esquema de banco de dados definido manualmente,
+  // a sincronização é desativada para evitar conflitos.
+  synchronize: false,
+  logging: process.env.NODE_ENV === 'development', // Log das queries em desenvolvimento
   entities: [Product, User, Order, OrderItem, StripeCheckoutSession],
   migrations: [],
   subscribers: [],
