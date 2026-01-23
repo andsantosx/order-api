@@ -5,29 +5,29 @@ import { OrderItem } from './OrderItem';
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @ManyToOne(() => User, user => user.orders)
-  user: User;
+  @ManyToOne(() => User, user => user.orders, { nullable: true })
+  user!: User | null;
 
   @Column({ nullable: true })
   guest_email?: string;
 
   @Column({ type: 'bigint' })
-  total_amount: number;
+  total_amount!: number;
 
   @Column({ length: 3 })
-  currency: string;
+  currency!: string;
 
   @Column({ type: 'uuid', unique: true })
-  idempotency_key: string;
+  idempotency_key!: string;
 
   @Column({ default: 'PENDING' })
-  status: string;
+  status!: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
-  @OneToMany(() => OrderItem, item => item.order)
-  items: OrderItem[];
+  @OneToMany(() => OrderItem, item => item.order, { cascade: true })
+  items!: OrderItem[];
 }
