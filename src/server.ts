@@ -4,35 +4,20 @@ import dotenv from 'dotenv';
 import { AppDataSource } from './data-source';
 import productRoutes from './api/routes/productRoutes';
 import orderRoutes from './api/routes/orderRoutes';
-import paymentRoutes from './api/routes/paymentRoutes'; // Importa as rotas de pagamento
+import paymentRoutes from './api/routes/paymentRoutes';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Middlewares ---
-
-// CORS para todas as rotas
 app.use(cors());
-
-// O webhook da Stripe precisa do corpo bruto (raw body), então o middleware de JSON
-// deve ser aplicado depois da rota do webhook.
-// Rota do Webhook (antes do express.json())
 app.use('/api/payments', paymentRoutes);
-
-// Middleware para parse de JSON para todas as outras rotas
 app.use(express.json());
 
-
-// --- Rotas da API ---
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 
-
-// --- Rotas de Monitoramento e Fallback ---
-
-// Health Check
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
@@ -41,7 +26,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Tratamento de rota não encontrada (deve ser o último)
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -49,12 +33,26 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-
-// --- Inicialização do Servidor ---
-
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => { // Adicionado async aqui
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+
+    // --- CÓDIGO DE DIAGNÓSTICO TEMPORÁRIO ---
+    try {
+      console.log('🔍 Executando diagnóstico de tabelas...');
+      const queryRunner = AppDataSource.createQueryRunner();
+      const result = await queryRunner.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+      `);
+      console.log('✅ Tabelas encontradas no schema "public":', result.map((t: any) => t.table_name));
+      await queryRunner.release();
+    } catch (diagError) {
+      console.error('❌ Erro durante o diagnóstico de tabelas:', diagError);
+    }
+    // --- FIM DO CÓDIGO DE DIAGNÓSTICO ---
+
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
