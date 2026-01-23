@@ -12,10 +12,11 @@ dotenv.config();
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  // Como estamos usando um esquema de banco de dados definido manualmente,
-  // a sincronização é desativada para evitar conflitos.
+  // Forçando o TypeORM a usar o schema 'public' explicitamente.
+  // Isso resolve problemas onde o schema padrão da conexão não é o esperado.
+  schema: 'public',
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development', // Log das queries em desenvolvimento
+  logging: process.env.NODE_ENV === 'development',
   entities: [Product, User, Order, OrderItem, StripeCheckoutSession],
   migrations: [],
   subscribers: [],
