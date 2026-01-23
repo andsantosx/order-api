@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
 import { Order } from './Order';
 
 @Entity('stripe_checkout_sessions')
@@ -7,6 +7,7 @@ export class StripeCheckoutSession {
   id!: string;
 
   @ManyToOne(() => Order, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'order_id' }) // Mapeia para a coluna 'order_id'
   order!: Order;
 
   @Column({ unique: true })
