@@ -4,17 +4,17 @@ import { Order } from './Order';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   @Column()
-  password_hash: string;
+  password_hash!: string;
 
   @Column({ nullable: true })
   stripe_customer_id?: string;
 
   @OneToMany(() => Order, order => order.user)
-  orders: Order[];
+  orders!: Order[];
 }

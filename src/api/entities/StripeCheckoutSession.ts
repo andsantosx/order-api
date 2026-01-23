@@ -4,23 +4,23 @@ import { Order } from './Order';
 @Entity('stripe_checkout_sessions')
 export class StripeCheckoutSession {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ManyToOne(() => Order, { onDelete: 'CASCADE' })
-  order: Order;
+  order!: Order;
 
   @Column({ unique: true })
-  stripe_intent_id: string;
+  stripe_intent_id!: string;
 
   @Column()
-  client_secret: string;
+  client_secret!: string;
 
   @Column()
-  status: string;
+  status!: string;
 
   @Column({ type: 'bigint' })
-  amount_cents: number;
+  amount_cents!: number;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 }
