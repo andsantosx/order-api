@@ -5,19 +5,37 @@ import { AppDataSource } from './data-source';
 import productRoutes from './api/routes/productRoutes';
 import orderRoutes from './api/routes/orderRoutes';
 import paymentRoutes from './api/routes/paymentRoutes';
+import { PaymentController } from './api/controllers/PaymentController';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- Middlewares ---
 app.use(cors());
-app.use('/api/payments', paymentRoutes);
+
+// --- Rota de Webhook da Stripe (Tratamento Especial) ---
+// Esta rota DEVE vir ANTES do express.json(), pois a Stripe precisa do corpo bruto (raw body).
+const paymentController = new PaymentController();
+app.post(
+  '/api/payments/webhook',
+  // Use express.raw para obter o corpo como um Buffer
+  express.raw({ type: 'application/json' }),
+  paymentController.handleWebhook.bind(paymentController)
+);
+
+// --- Middlewares Globais ---
+// Middleware para parse de JSON para todas as outras rotas.
+// Ele deve vir DEPOIS da rota de webhook.
 app.use(express.json());
 
+// --- Rotas da API ---
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes); // Agora contém apenas /create-intent
 
+// --- Rotas de Monitoramento e Fallback ---
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
@@ -33,26 +51,10 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// --- Inicialização do Servidor ---
 AppDataSource.initialize()
-  .then(async () => { // Adicionado async aqui
+  .then(async () => {
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-
-    // --- CÓDIGO DE DIAGNÓSTICO TEMPORÁRIO ---
-    try {
-      console.log('🔍 Executando diagnóstico de tabelas...');
-      const queryRunner = AppDataSource.createQueryRunner();
-      const result = await queryRunner.query(`
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-      `);
-      console.log('✅ Tabelas encontradas no schema "public":', result.map((t: any) => t.table_name));
-      await queryRunner.release();
-    } catch (diagError) {
-      console.error('❌ Erro durante o diagnóstico de tabelas:', diagError);
-    }
-    // --- FIM DO CÓDIGO DE DIAGNÓSTICO ---
-
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
