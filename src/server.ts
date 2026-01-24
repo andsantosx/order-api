@@ -5,6 +5,7 @@ import { AppDataSource } from './data-source';
 import productRoutes from './api/routes/productRoutes';
 import orderRoutes from './api/routes/orderRoutes';
 import paymentRoutes from './api/routes/paymentRoutes';
+import authRoutes from './api/routes/authRoutes';
 import { PaymentController } from './api/controllers/PaymentController';
 import { errorHandler } from './api/middlewares/errorHandler';
 
@@ -28,7 +29,6 @@ app.post(
 app.use(express.json());
 
 // --- Rotas da API ---
-import authRoutes from './api/routes/authRoutes';
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
