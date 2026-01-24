@@ -1,46 +1,43 @@
-# Order API
+# Order API - Marketplace de Roupas
 
-Uma API para um sistema de marketplace, focada no gerenciamento de produtos e pedidos.
+Uma API REST completa para marketplace de roupas, com sistema de pedidos, pagamentos via Stripe e autenticação JWT.
 
 ## 🚀 Início Rápido
 
 ### Pré-requisitos
-- Node.js 18+
-- Docker e Docker Compose (para o banco de dados)
-- npm ou yarn
+- Node.js 22.x
+- PostgreSQL (ou Docker)
+- Conta Stripe (para pagamentos)
 
 ### Instalação
 
-1.  Clone o repositório:
-    ```bash
-    git clone <URL_DO_REPOSITORIO>
-    cd order-api
-    ```
-
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-
-### Variáveis de Ambiente
-
-Copie o arquivo de exemplo `.env` e preencha com suas credenciais do banco de dados.
-
+1. Clone o repositório:
 ```bash
-cp .env .env
+git clone https://github.com/andsantosx/order-api.git
+cd order-api
 ```
 
-### Rodando com Docker
-
-Para subir o banco de dados PostgreSQL em um contêiner Docker:
-
+2. Instale as dependências:
 ```bash
-docker-compose up -d
+npm install
 ```
 
-### Desenvolvimento
+3. Configure as variáveis de ambiente:
+```bash
+cp .env.exemple .env
+```
 
-Para rodar a aplicação em modo de desenvolvimento com hot-reload:
+Edite o `.env` com suas credenciais:
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/order_db
+JWT_SECRET=seu_secret_super_seguro
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+PORT=3000
+NODE_ENV=development
+```
+
+### Rodando Localmente
 
 ```bash
 npm run dev
@@ -48,61 +45,170 @@ npm run dev
 
 O servidor estará disponível em `http://localhost:3000`.
 
-## 🏛️ Arquitetura do Projeto
+### Build para Produção
 
-Este projeto utiliza uma arquitetura **MVC (Model-View-Controller)** adaptada para APIs REST. A estrutura principal do código-fonte está organizada da seguinte forma:
-
-```
-order-api/
-└── src/
-    ├── api/
-    │   ├── controllers/  # C: Lógica de Negócio e Requisições
-    │   ├── entities/     # M: Modelos de Dados (TypeORM Entities)
-    │   └── routes/       # V: Definição de Endpoints da API
-    ├── config/           # Configurações (ex: data-source.ts)
-    └── server.ts         # Ponto de entrada da aplicação Express
+```bash
+npm run build
+npm start
 ```
 
--   **`entities` (Models):** Define a estrutura dos dados usando entidades do TypeORM. Cada arquivo em `entities` corresponde a uma tabela no banco de dados.
--   **`controllers` (Controllers):** Contém a lógica de negócio. Cada controller recebe as requisições das rotas, processa os dados (interagindo com os `entities`/repositórios) e retorna uma resposta.
--   **`routes` (Views/Routers):** Mapeia os endpoints da API (ex: `/api/products`) para os métodos correspondentes nos `controllers`. É a camada de entrada da aplicação.
+---
 
-Essa estrutura garante a separação de responsabilidades, facilitando a manutenção e a escalabilidade do projeto.
+## 🏛️ Arquitetura
+
+Este projeto segue a arquitetura **MVC + Services** para garantir código limpo e escalável:
+
+```
+src/
+├── api/
+│   ├── controllers/      # Recebem requisições HTTP
+│   ├── services/         # Lógica de negócio e transações
+│   ├── entities/         # Modelos do banco (TypeORM)
+│   ├── routes/           # Definição de endpoints
+│   ├── middlewares/      # Autenticação, validação, erros
+│   └── schemas/          # Validação com Zod
+├── config/               # Configurações (Stripe, etc)
+├── data-source.ts        # Configuração TypeORM
+└── server.ts             # Inicialização do Express
+```
+
+### Camadas
+
+- **Controllers**: Validam entrada e chamam Services
+- **Services**: Contêm toda a lógica de negócio
+- **Entities**: Definem o schema do banco de dados
+- **Middlewares**: Autenticação JWT, validação Zod, tratamento de erros
+- **Routes**: Mapeiam URLs para Controllers
+
+---
 
 ## 📚 Endpoints da API
 
-### Health Check
--   `GET /health`: Verifica o status da aplicação.
+### Base URL
+**Produção**: `https://order-api.up.railway.app`  
+**Local**: `http://localhost:3000`
 
-### Produtos
--   `GET /api/products`: Lista todos os produtos.
--   `GET /api/products/:id`: Detalhes de um produto específico.
--   `POST /api/products`: Cria um novo produto.
+### 🔓 Públicos
 
-### Pedidos
--   `GET /api/orders`: Lista todos os pedidos.
--   `GET /api/orders/:id`: Detalhes de um pedido específico.
--   `POST /api/orders`: Cria um novo pedido.
+#### Produtos
+- `GET /api/products` - Listar todos os produtos
+- `GET /api/products/:id` - Detalhes de um produto
 
-### Exemplo de POST para criar um pedido
-
-```bash
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "uuid-do-usuario-se-logado",
+#### Pedidos (Guest Checkout)
+- `POST /api/orders` - Criar pedido sem login
+  ```json
+  {
+    "guestEmail": "cliente@example.com",
     "items": [
-      { "productId": "uuid-do-produto-1", "quantity": 2 },
-      { "productId": "uuid-do-produto-2", "quantity": 1 }
+      { "productId": "uuid", "quantity": 2 }
     ]
-  }'
-```
+  }
+  ```
+
+#### Pagamentos
+- `POST /api/payments/create-payment-intent` - Criar intenção de pagamento
+  ```json
+  {
+    "orderId": "uuid-do-pedido"
+  }
+  ```
+
+### � Admin (Requer Autenticação)
+
+#### Autenticação
+- `POST /api/auth/register` - Criar conta admin
+  ```json
+  {
+    "email": "admin@store.com",
+    "password": "senha123"
+  }
+  ```
+
+- `POST /api/auth/login` - Login (retorna token JWT válido por 24h)
+  ```json
+  {
+    "email": "admin@store.com",
+    "password": "senha123"
+  }
+  ```
+
+#### Produtos (Admin)
+- `POST /api/products` - Criar produto
+  ```json
+  {
+    "name": "Camiseta Básica",
+    "description": "100% algodão",
+    "price_cents": 4990,
+    "stock": 50
+  }
+  ```
+  **Header**: `Authorization: Bearer <seu-token>`
+
+#### Pedidos (Admin)
+- `GET /api/orders` - Listar todos os pedidos
+- `GET /api/orders/:id` - Detalhes de um pedido
+
+**Header**: `Authorization: Bearer <seu-token>`
+
+### 🔔 Webhooks
+- `POST /api/payments/webhook` - Webhook Stripe (atualiza status do pedido)
+
+---
+
+## 🛡️ Segurança
+
+- ✅ **Senhas**: Hash com bcrypt (salt rounds: 10)
+- ✅ **JWT**: Tokens expiram em 24 horas
+- ✅ **Validação**: Zod valida todos os inputs
+- ✅ **CORS**: Configurado para aceitar requisições
+- ✅ **Transações**: Rollback automático em caso de erro
+- ✅ **Error Handling**: Middleware global captura todos os erros
+
+---
 
 ## 🛠️ Tecnologias
 
--   Node.js
--   Express.js
--   TypeScript
--   TypeORM (para interação com o banco de dados)
--   PostgreSQL
--   Docker
+- **Runtime**: Node.js 22.x
+- **Framework**: Express 5.x
+- **Linguagem**: TypeScript 5.x
+- **ORM**: TypeORM 0.3.x
+- **Banco de Dados**: PostgreSQL
+- **Validação**: Zod
+- **Autenticação**: JWT (jsonwebtoken)
+- **Pagamentos**: Stripe
+- **Deploy**: Railway
+
+---
+
+## 📦 Scripts Disponíveis
+
+```bash
+npm run dev      # Desenvolvimento com hot-reload
+npm run build    # Compilar TypeScript
+npm start        # Rodar versão compilada
+```
+
+---
+
+## 🌐 Deploy
+
+Este projeto está configurado para deploy automático no Railway.
+
+1. Conecte seu repositório GitHub ao Railway
+2. Configure as variáveis de ambiente no Railway
+3. O Railway executará automaticamente:
+   ```bash
+   npm run build && npm start
+   ```
+
+---
+
+## 📝 Licença
+
+MIT
+
+---
+
+## 👨‍💻 Autor
+
+Anderson Santos - [GitHub](https://github.com/andsantosx)
