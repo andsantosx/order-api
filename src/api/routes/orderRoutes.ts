@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { OrderController } from '../controllers/OrderController';
+import { validate } from '../middlewares/validate';
+import { createOrderSchema } from '../schemas/orderSchemas';
+import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 const orderController = new OrderController();
 
-// GET /api/orders - Retrieve a list of all orders
-router.get('/', orderController.getAll.bind(orderController));
-
-// GET /api/orders/:id - Get a single order by its ID
-router.get('/:id', orderController.getOne.bind(orderController));
-
-// POST /api/orders - Create a new order
-router.post('/', orderController.create.bind(orderController));
+// Use bind to ensure 'this' context is preserved
+router.get('/', authMiddleware, orderController.getAll.bind(orderController));
+router.get('/:id', authMiddleware, orderController.getOne.bind(orderController));
+// POST /orders is public (Guest Checkout)
+router.post('/', validate(createOrderSchema), orderController.create.bind(orderController));
 
 export default router;

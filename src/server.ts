@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { AppDataSource } from './data-source';
@@ -6,6 +6,7 @@ import productRoutes from './api/routes/productRoutes';
 import orderRoutes from './api/routes/orderRoutes';
 import paymentRoutes from './api/routes/paymentRoutes';
 import { PaymentController } from './api/controllers/PaymentController';
+import { errorHandler } from './api/middlewares/errorHandler';
 
 dotenv.config();
 
@@ -16,24 +17,22 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 // --- Rota de Webhook da Stripe (Tratamento Especial) ---
-// Esta rota DEVE vir ANTES do express.json(), pois a Stripe precisa do corpo bruto (raw body).
 const paymentController = new PaymentController();
 app.post(
   '/api/payments/webhook',
-  // Use express.raw para obter o corpo como um Buffer
   express.raw({ type: 'application/json' }),
   paymentController.handleWebhook.bind(paymentController)
 );
 
 // --- Middlewares Globais ---
-// Middleware para parse de JSON para todas as outras rotas.
-// Ele deve vir DEPOIS da rota de webhook.
 app.use(express.json());
 
 // --- Rotas da API ---
+import authRoutes from './api/routes/authRoutes';
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes); // Agora contém apenas /create-intent
+app.use('/api/payments', paymentRoutes);
 
 // --- Rotas de Monitoramento e Fallback ---
 app.get('/health', (req: Request, res: Response) => {
@@ -43,6 +42,9 @@ app.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Middleware Global de Erros DEVE vir depois das rotas
+app.use(errorHandler);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
