@@ -29,10 +29,15 @@ app.post(
 app.use(express.json());
 
 // --- Rotas da API ---
+console.log('🔧 Registering routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes registered at /api/auth');
 app.use('/api/products', productRoutes);
+console.log('✅ Product routes registered at /api/products');
 app.use('/api/orders', orderRoutes);
+console.log('✅ Order routes registered at /api/orders');
 app.use('/api/payments', paymentRoutes);
+console.log('✅ Payment routes registered at /api/payments');
 
 // --- Rotas de Monitoramento e Fallback ---
 app.get('/health', (req: Request, res: Response) => {
