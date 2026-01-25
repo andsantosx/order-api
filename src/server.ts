@@ -30,8 +30,16 @@ app.post(
 );
 
 // --- Middlewares Globais ---
-// Agora sim, parse JSON para todas as outras rotas
 app.use(express.json());
+
+// --- Rota de Health Check (antes das rotas da API) ---
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // --- Rotas da API ---
 console.log('🔧 Registering routes...');
@@ -50,18 +58,10 @@ console.log('✅ Order routes registered at /api/orders');
 app.use('/api/payments', paymentRoutes);
 console.log('✅ Payment routes registered at /api/payments');
 
-// --- Rotas de Monitoramento e Fallback ---
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Middleware Global de Erros DEVE vir depois das rotas
+// --- Middleware Global de Erros (DEVE vir depois das rotas) ---
 app.use(errorHandler);
 
+// --- Rota 404 (DEVE ser a última) ---
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
