@@ -5,6 +5,9 @@ import { AppError } from '../middlewares/errorHandler';
 export class CategoryService {
     private categoryRepository = AppDataSource.getRepository(Category);
 
+    /**
+     * Retorna todas as categorias ordenadas por nome.
+     */
     async getAll() {
         return this.categoryRepository.find({
             relations: ['products'],
@@ -12,6 +15,9 @@ export class CategoryService {
         });
     }
 
+    /**
+     * Busca uma categoria pelo ID.
+     */
     async getOne(id: number) {
         const category = await this.categoryRepository.findOne({
             where: { id },
@@ -25,6 +31,9 @@ export class CategoryService {
         return category;
     }
 
+    /**
+     * Busca uma categoria pelo slug.
+     */
     async getBySlug(slug: string) {
         const category = await this.categoryRepository.findOne({
             where: { slug },
@@ -38,6 +47,10 @@ export class CategoryService {
         return category;
     }
 
+    /**
+     * Cria uma nova categoria.
+     * Verifica se o slug já existe.
+     */
     async create(name: string, slug: string) {
         const existingCategory = await this.categoryRepository.findOneBy({ slug });
         if (existingCategory) {
@@ -48,6 +61,10 @@ export class CategoryService {
         return this.categoryRepository.save(category);
     }
 
+    /**
+     * Atualiza uma categoria.
+     * Verifica duplicidade de slug se ele for alterado.
+     */
     async update(id: number, name: string, slug: string) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {
@@ -67,6 +84,9 @@ export class CategoryService {
         return this.categoryRepository.save(category);
     }
 
+    /**
+     * Remove uma categoria.
+     */
     async delete(id: number) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {

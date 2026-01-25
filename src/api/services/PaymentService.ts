@@ -12,6 +12,11 @@ export class PaymentService {
     private sessionRepository = AppDataSource.getRepository(StripeCheckoutSession);
     private userRepository = AppDataSource.getRepository(User);
 
+    /**
+     * Cria ou recupera um cliente Stripe e gera um PaymentIntent.
+     * Salva a sessão de checkout no banco para histórico.
+     * @param orderId ID do pedido
+     */
     async createPaymentIntent(orderId: string) {
         if (!orderId) {
             throw new AppError('ID do pedido é obrigatório', 400);
@@ -62,6 +67,11 @@ export class PaymentService {
         };
     }
 
+    /**
+     * Processa eventos recebidos via Webhook da Stripe.
+     * Atualiza o status do pedido para PAID quando o pagamento via Stripe é confirmado.
+     * @param event Evento da Stripe
+     */
     async handleWebhookEvent(event: Stripe.Event) {
         if (event.type === 'payment_intent.succeeded') {
             const paymentIntent = event.data.object as Stripe.PaymentIntent;

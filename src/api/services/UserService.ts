@@ -7,6 +7,9 @@ import jwt from 'jsonwebtoken';
 export class UserService {
     private userRepository = AppDataSource.getRepository(User);
 
+    /**
+     * Registra um novo usuário com senha criptografada.
+     */
     async register(email: string, password: string) {
         const existingUser = await this.userRepository.findOneBy({ email });
         if (existingUser) {
@@ -26,6 +29,9 @@ export class UserService {
         return userWithoutPassword;
     }
 
+    /**
+     * Autentica um usuário e gera um token JWT.
+     */
     async login(email: string, password: string) {
         const user = await this.userRepository.findOneBy({ email });
         if (!user) {

@@ -20,12 +20,20 @@ export class OrderService {
     private orderItemRepository = AppDataSource.getRepository(OrderItem);
     private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
 
+    /**
+     * Retorna todos os pedidos com suas relações.
+     */
     async getAll() {
         return this.orderRepository.find({
             relations: ['user', 'items', 'items.product', 'shippingAddress']
         });
     }
 
+    /**
+     * Busca um pedido pelo ID.
+     * @param id ID do pedido (UUID)
+     * @throws AppError se o pedido não for encontrado.
+     */
     async getOne(id: string) {
         const order = await this.orderRepository.findOne({
             where: { id },
