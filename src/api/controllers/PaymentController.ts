@@ -38,7 +38,7 @@ export class PaymentController {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const orderId = paymentIntent.metadata.order_id;
         console.log(`PaymentIntent for order ${orderId} was successful!`);
-        await this.paymentService.confirmOrderPayment(orderId);
+        await this.paymentService.handleWebhookEvent(event);
         break;
 
       case 'payment_intent.payment_failed':

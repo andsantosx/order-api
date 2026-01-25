@@ -24,7 +24,7 @@ export class VariantService {
         });
 
         if (!variant) {
-            throw new AppError('Variant not found', 404);
+            throw new AppError('Variante não encontrada', 404);
         }
 
         return variant;
@@ -33,12 +33,12 @@ export class VariantService {
     async create(productId: string, sizeId: string, stock: number, price_cents?: number) {
         const product = await this.productRepository.findOneBy({ id: productId });
         if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError('Produto não encontrado', 404);
         }
 
         const size = await this.sizeRepository.findOneBy({ id: sizeId });
         if (!size) {
-            throw new AppError('Size not found', 404);
+            throw new AppError('Tamanho não encontrado', 404);
         }
 
         const variant = this.variantRepository.create({
@@ -54,7 +54,7 @@ export class VariantService {
     async updateStock(id: string, stock: number) {
         const variant = await this.variantRepository.findOneBy({ id });
         if (!variant) {
-            throw new AppError('Variant not found', 404);
+            throw new AppError('Variante não encontrada', 404);
         }
 
         variant.stock = stock;
@@ -68,13 +68,13 @@ export class VariantService {
         });
 
         if (!variant) {
-            throw new AppError('Variant not found', 404);
+            throw new AppError('Variante não encontrada', 404);
         }
 
         if (data.sizeId) {
             const size = await this.sizeRepository.findOneBy({ id: data.sizeId });
             if (!size) {
-                throw new AppError('Size not found', 404);
+                throw new AppError('Tamanho não encontrado', 404);
             }
             variant.size = size;
         }
@@ -88,10 +88,10 @@ export class VariantService {
     async delete(id: string) {
         const variant = await this.variantRepository.findOneBy({ id });
         if (!variant) {
-            throw new AppError('Variant not found', 404);
+            throw new AppError('Variante não encontrada', 404);
         }
 
         await this.variantRepository.remove(variant);
-        return { message: 'Variant deleted successfully' };
+        return { message: 'Variante deletada com sucesso' };
     }
 }

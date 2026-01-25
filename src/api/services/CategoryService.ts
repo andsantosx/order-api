@@ -19,7 +19,7 @@ export class CategoryService {
         });
 
         if (!category) {
-            throw new AppError('Category not found', 404);
+            throw new AppError('Categoria não encontrada', 404);
         }
 
         return category;
@@ -32,7 +32,7 @@ export class CategoryService {
         });
 
         if (!category) {
-            throw new AppError('Category not found', 404);
+            throw new AppError('Categoria não encontrada', 404);
         }
 
         return category;
@@ -41,7 +41,7 @@ export class CategoryService {
     async create(name: string, slug: string) {
         const existingCategory = await this.categoryRepository.findOneBy({ slug });
         if (existingCategory) {
-            throw new AppError('Category with this slug already exists', 400);
+            throw new AppError('Já existe uma categoria com este slug', 400);
         }
 
         const category = this.categoryRepository.create({ name, slug });
@@ -51,14 +51,13 @@ export class CategoryService {
     async update(id: string, name: string, slug: string) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {
-            throw new AppError('Category not found', 404);
+            throw new AppError('Categoria não encontrada', 404);
         }
 
-        // Check if slug is being changed and if it conflicts
         if (slug !== category.slug) {
             const existingCategory = await this.categoryRepository.findOneBy({ slug });
             if (existingCategory) {
-                throw new AppError('Category with this slug already exists', 400);
+                throw new AppError('Já existe uma categoria com este slug', 400);
             }
         }
 
@@ -71,10 +70,10 @@ export class CategoryService {
     async delete(id: string) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {
-            throw new AppError('Category not found', 404);
+            throw new AppError('Categoria não encontrada', 404);
         }
 
         await this.categoryRepository.remove(category);
-        return { message: 'Category deleted successfully' };
+        return { message: 'Categoria deletada com sucesso' };
     }
 }

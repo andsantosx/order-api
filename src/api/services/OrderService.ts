@@ -25,7 +25,7 @@ export class OrderService {
         });
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError('Pedido não encontrado', 404);
         }
 
         return order;
@@ -43,7 +43,7 @@ export class OrderService {
             for (const item of items) {
                 const product = await this.productRepository.findOneBy({ id: item.productId });
                 if (!product) {
-                    throw new AppError(`Product with ID ${item.productId} not found.`, 404);
+                    throw new AppError(`Produto com ID ${item.productId} não encontrado`, 404);
                 }
 
                 const variant = await this.variantRepository.findOne({
@@ -51,12 +51,12 @@ export class OrderService {
                     relations: ['size']
                 });
                 if (!variant) {
-                    throw new AppError(`Variant with ID ${item.variantId} not found.`, 404);
+                    throw new AppError(`Variante com ID ${item.variantId} não encontrada`, 404);
                 }
 
                 if (variant.stock < item.quantity) {
                     throw new AppError(
-                        `Not enough stock for ${product.name} (Size: ${variant.size.name}). Available: ${variant.stock}`,
+                        `Estoque insuficiente para ${product.name} (Tamanho: ${variant.size.name}). Disponível: ${variant.stock}`,
                         400
                     );
                 }
