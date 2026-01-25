@@ -48,13 +48,6 @@ export class OrderService {
                     throw new AppError(`Produto com ID ${item.productId} não encontrado`, 404);
                 }
 
-                if (product.stock < item.quantity) {
-                    throw new AppError(
-                        `Estoque insuficiente para ${product.name} (Tamanho: ${product.size.name}). Disponível: ${product.stock}`,
-                        400
-                    );
-                }
-
                 const itemTotalPrice = product.price_cents * item.quantity;
                 totalAmount += itemTotalPrice;
 
@@ -65,10 +58,6 @@ export class OrderService {
                     total_price: itemTotalPrice,
                 });
                 orderItems.push(newOrderItem);
-
-                // Baixar estoque do produto
-                product.stock -= item.quantity;
-                await queryRunner.manager.save(product);
             }
 
             const newOrder = this.orderRepository.create({
