@@ -56,7 +56,7 @@ export class OrderService {
 
                 if (variant.stock < item.quantity) {
                     throw new AppError(
-                        `Not enough stock for ${product.name} (${variant.size.name}, ${variant.color}). Available: ${variant.stock}`,
+                        `Not enough stock for ${product.name} (Size: ${variant.size.name}). Available: ${variant.stock}`,
                         400
                     );
                 }

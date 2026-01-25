@@ -15,9 +15,6 @@ export class ProductVariant {
     @JoinColumn({ name: 'size_id' })
     size!: Size;
 
-    @Column()
-    color!: string;
-
     @Column('integer')
     stock!: number;
 
