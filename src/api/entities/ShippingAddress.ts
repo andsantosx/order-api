@@ -11,9 +11,6 @@ export class ShippingAddress {
     order!: Order;
 
     @Column()
-    name!: string;
-
-    @Column()
     street!: string;
 
     @Column()
@@ -24,4 +21,7 @@ export class ShippingAddress {
 
     @Column()
     zip_code!: string;
+
+    @Column()
+    country!: string;
 }
