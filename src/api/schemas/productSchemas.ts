@@ -7,7 +7,6 @@ export const createProductSchema = z.object({
         currency: z.string().length(3, 'Moeda deve ter 3 caracteres (ex: BRL)'),
         categoryId: z.string().uuid('ID da categoria inválido'),
         sizeId: z.number().int().positive('ID do tamanho inválido'),
-        stock: z.number().int().min(0, 'Estoque deve ser um número não negativo'),
     }),
 });
 
@@ -18,6 +17,5 @@ export const updateProductSchema = z.object({
         currency: z.string().length(3).optional(),
         categoryId: z.string().uuid().optional(),
         sizeId: z.number().int().positive().optional(),
-        stock: z.number().int().min(0).optional(),
     }),
 });

@@ -25,9 +25,6 @@ export class Product {
   @JoinColumn({ name: 'size_id' })
   size!: Size;
 
-  @Column('integer')
-  stock!: number;
-
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images!: ProductImage[];
 }
