@@ -6,6 +6,10 @@ import Stripe from 'stripe';
 export class PaymentController {
   private paymentService = new PaymentService();
 
+  /**
+   * Cria uma intenção de pagamento (PaymentIntent) na Stripe.
+   * Retorna o client_secret para o Frontend finalizar o pagamento.
+   */
   async createPaymentIntent(req: Request, res: Response, next: NextFunction) {
     const { orderId } = req.body;
     // Let the service handle validation
@@ -13,6 +17,10 @@ export class PaymentController {
     return res.status(201).json(result);
   }
 
+  /**
+   * Webhook para receber notificações da Stripe.
+   * Valida a assinatura e processa eventos como 'payment_intent.succeeded'.
+   */
   async handleWebhook(req: Request, res: Response, next: NextFunction) {
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

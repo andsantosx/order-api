@@ -7,7 +7,7 @@ export class StripeCheckoutSession {
   id!: string;
 
   @ManyToOne(() => Order, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'order_id' }) // Mapeia para a coluna 'order_id'
+  @JoinColumn({ name: 'order_id' })
   order!: Order;
 
   @Column({ unique: true })

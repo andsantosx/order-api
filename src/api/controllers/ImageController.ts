@@ -4,12 +4,18 @@ import { ImageService } from '../services/ImageService';
 export class ImageController {
     private imageService = new ImageService();
 
+    /**
+     * Retorna todas as imagens de um produto específico.
+     */
     async getByProduct(req: Request, res: Response, next: NextFunction) {
         const { productId } = req.params;
         const images = await this.imageService.getByProduct(productId as string);
         res.json(images);
     }
 
+    /**
+     * Adiciona uma nova imagem a um produto.
+     */
     async create(req: Request, res: Response, next: NextFunction) {
         const { productId } = req.params;
         const { url } = req.body;
@@ -23,6 +29,9 @@ export class ImageController {
         });
     }
 
+    /**
+     * Remove uma imagem pelo ID.
+     */
     async delete(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
         const result = await this.imageService.delete(parseInt(id as string));

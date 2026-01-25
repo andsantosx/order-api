@@ -12,16 +12,23 @@ import imageRoutes from './api/routes/imageRoutes';
 import { PaymentController } from './api/controllers/PaymentController';
 import { errorHandler } from './api/middlewares/errorHandler';
 
+// Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Middlewares ---
+// ==========================================
+// 1. Middlewares Iniciais
+// ==========================================
+// Habilita CORS para permitir requisições de outros domínios (Frontend)
 app.use(cors());
 
-// --- Rota de Webhook da Stripe (ANTES do express.json) ---
-// O webhook precisa do body raw, então deve vir antes do express.json()
+// ==========================================
+// 2. Webhook da Stripe (Caso Especial)
+// ==========================================
+// O webhook precisa do corpo da requisição em formato RAW (bruto) para verificar a assinatura.
+// Por isso, esta rota deve ser definida ANTES do express.json().
 const paymentController = new PaymentController();
 app.post(
   '/api/payments/webhook',
@@ -29,10 +36,16 @@ app.post(
   paymentController.handleWebhook.bind(paymentController)
 );
 
-// --- Middlewares Globais ---
+// ==========================================
+// 3. Middlewares Globais de JSON
+// ==========================================
+// Habilita parsing de JSON para todas as outras rotas
 app.use(express.json());
 
-// --- Rota de Health Check (antes das rotas da API) ---
+// ==========================================
+// 4. Rotas de Monitoramento (Health Check)
+// ==========================================
+// Rota simples para verificar se o servidor está online
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
@@ -41,10 +54,16 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// --- Rotas da API ---
+// ==========================================
+// 5. Registro de Rotas da API
+// ==========================================
 console.log('🔧 Registering routes...');
+
+// Autenticação (Login, Cadastro)
 app.use('/api/auth', authRoutes);
 console.log('✅ Auth routes registered at /api/auth');
+
+// Catálogo (Categorias, Tamanhos, Produtos, Imagens)
 app.use('/api/categories', categoryRoutes);
 console.log('✅ Category routes registered at /api/categories');
 app.use('/api/sizes', sizeRoutes);
@@ -53,15 +72,23 @@ app.use('/api/products', productRoutes);
 console.log('✅ Product routes registered at /api/products');
 app.use('/api/images', imageRoutes);
 console.log('✅ Image routes registered at /api/images');
+
+// Pedidos e Pagamentos
 app.use('/api/orders', orderRoutes);
 console.log('✅ Order routes registered at /api/orders');
 app.use('/api/payments', paymentRoutes);
 console.log('✅ Payment routes registered at /api/payments');
 
-// --- Middleware Global de Erros (DEVE vir depois das rotas) ---
+// ==========================================
+// 6. Tratamento de Erros e 404
+// ==========================================
+
+// Middleware Global de Erros (Captura erros lançados em qualquer rota)
+// Deve ser sempre o PENÚLTIMO middleware
 app.use(errorHandler);
 
-// --- Rota 404 (DEVE ser a última) ---
+// Middleware 404 (Rota não encontrada)
+// Deve ser sempre o ÚLTIMO middleware
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -69,7 +96,10 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// --- Inicialização do Servidor ---
+// ==========================================
+// 7. Inicialização do Servidor
+// ==========================================
+// Primeiro conecta ao banco de dados, depois inicia o servidor HTTP
 AppDataSource.initialize()
   .then(async () => {
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');

@@ -11,6 +11,10 @@ export class ProductService {
     private sizeRepository = AppDataSource.getRepository(Size);
     private productSizeRepository = AppDataSource.getRepository(ProductSize);
 
+    /**
+     * Retorna produtos com paginação e filtro por categoria (slug).
+     * Retorna também o total de registros para controle de paginação no front.
+     */
     async getAll(categorySlug?: string, page: number = 1, limit: number = 20) {
         const skip = (page - 1) * limit;
         const where = categorySlug ? { category: { slug: categorySlug } } : {};
@@ -26,6 +30,9 @@ export class ProductService {
         return { data, total, page, limit };
     }
 
+    /**
+     * Busca um produto pelo ID.
+     */
     async getOne(id: string) {
         const product = await this.productRepository.findOne({
             where: { id },
@@ -39,6 +46,9 @@ export class ProductService {
         return product;
     }
 
+    /**
+     * Cria um novo produto e vincula aos tamanhos selecionados.
+     */
     async create(name: string, price_cents: number, currency: string, categoryId: number, sizeIds: number[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
@@ -73,6 +83,10 @@ export class ProductService {
         return this.getOne(savedProduct.id);
     }
 
+    /**
+     * Atualiza um produto.
+     * Permite atualizar dados básicos e lista de tamanhos.
+     */
     async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: number; sizeIds?: number[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
@@ -122,6 +136,9 @@ export class ProductService {
         return this.getOne(id);
     }
 
+    /**
+     * Remove um produto.
+     */
     async delete(id: string) {
         const product = await this.productRepository.findOneBy({ id });
         if (!product) {
