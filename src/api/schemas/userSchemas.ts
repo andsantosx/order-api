@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
-export const registerUserSchema = z.object({
+export const registerSchema = z.object({
     body: z.object({
-        email: z.string().email(),
-        password: z.string().min(6, 'Password must be at least 6 characters long'),
+        email: z.string().email('Email inválido'),
+        password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
     }),
 });
 
-export const loginUserSchema = z.object({
+export const loginSchema = z.object({
     body: z.object({
-        email: z.string().email(),
-        password: z.string(),
+        email: z.string().email('Email inválido'),
+        password: z.string().min(1, 'Senha é obrigatória'),
     }),
 });
