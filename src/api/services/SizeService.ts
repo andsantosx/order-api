@@ -16,7 +16,7 @@ export class SizeService {
     async getOne(id: string) {
         const size = await this.sizeRepository.findOneBy({ id });
         if (!size) {
-            throw new AppError('Size not found', 404);
+            throw new AppError('Tamanho não encontrado', 404);
         }
         return size;
     }
@@ -29,10 +29,10 @@ export class SizeService {
     async delete(id: string) {
         const size = await this.sizeRepository.findOneBy({ id });
         if (!size) {
-            throw new AppError('Size not found', 404);
+            throw new AppError('Tamanho não encontrado', 404);
         }
 
         await this.sizeRepository.remove(size);
-        return { message: 'Size deleted successfully' };
+        return { message: 'Tamanho deletado com sucesso' };
     }
 }

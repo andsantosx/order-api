@@ -10,7 +10,7 @@ export class UserService {
     async register(email: string, password: string) {
         const existingUser = await this.userRepository.findOneBy({ email });
         if (existingUser) {
-            throw new AppError('User already exists', 400);
+            throw new AppError('Usuário já existe', 400);
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
@@ -29,12 +29,12 @@ export class UserService {
     async login(email: string, password: string) {
         const user = await this.userRepository.findOneBy({ email });
         if (!user) {
-            throw new AppError('Invalid email or password', 401);
+            throw new AppError('Email ou senha inválidos', 401);
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         if (!isPasswordValid) {
-            throw new AppError('Invalid email or password', 401);
+            throw new AppError('Email ou senha inválidos', 401);
         }
 
         const token = jwt.sign(

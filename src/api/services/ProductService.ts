@@ -29,7 +29,7 @@ export class ProductService {
         });
 
         if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError('Produto não encontrado', 404);
         }
 
         return product;
@@ -38,7 +38,7 @@ export class ProductService {
     async create(name: string, price_cents: number, currency: string, categoryId: string) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
-            throw new AppError('Category not found', 404);
+            throw new AppError('Categoria não encontrada', 404);
         }
 
         const product = this.productRepository.create({
@@ -54,13 +54,13 @@ export class ProductService {
     async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: string }) {
         const product = await this.productRepository.findOneBy({ id });
         if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError('Produto não encontrado', 404);
         }
 
         if (data.categoryId) {
             const category = await this.categoryRepository.findOneBy({ id: data.categoryId });
             if (!category) {
-                throw new AppError('Category not found', 404);
+                throw new AppError('Categoria não encontrada', 404);
             }
             product.category = category;
         }
@@ -75,10 +75,10 @@ export class ProductService {
     async delete(id: string) {
         const product = await this.productRepository.findOneBy({ id });
         if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError('Produto não encontrado', 404);
         }
 
         await this.productRepository.remove(product);
-        return { message: 'Product deleted successfully' };
+        return { message: 'Produto deletado com sucesso' };
     }
 }

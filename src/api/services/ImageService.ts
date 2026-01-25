@@ -17,7 +17,7 @@ export class ImageService {
     async create(productId: string, url: string) {
         const product = await this.productRepository.findOneBy({ id: productId });
         if (!product) {
-            throw new AppError('Product not found', 404);
+            throw new AppError('Produto não encontrado', 404);
         }
 
         const image = this.imageRepository.create({ product, url });
@@ -27,10 +27,10 @@ export class ImageService {
     async delete(id: string) {
         const image = await this.imageRepository.findOneBy({ id });
         if (!image) {
-            throw new AppError('Image not found', 404);
+            throw new AppError('Imagem não encontrada', 404);
         }
 
         await this.imageRepository.remove(image);
-        return { message: 'Image deleted successfully' };
+        return { message: 'Imagem deletada com sucesso' };
     }
 }
