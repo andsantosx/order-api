@@ -11,7 +11,12 @@ export class Product {
   @Column()
   name!: string;
 
-  @Column({ type: 'bigint', comment: 'Preço em centavos' })
+  @Column({
+    type: 'bigint', comment: 'Preço em centavos', transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseInt(value, 10)
+    }
+  })
   price_cents!: number;
 
   @Column({ length: 3 })

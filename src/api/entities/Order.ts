@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { OrderItem } from './OrderItem';
+import { ShippingAddress } from './ShippingAddress';
 
 @Entity('orders')
 export class Order {
@@ -8,13 +9,18 @@ export class Order {
   id!: string;
 
   @ManyToOne(() => User, user => user.orders, { nullable: true })
-  @JoinColumn({ name: 'user_id' }) // Mapeia para a coluna 'user_id' no banco
+  @JoinColumn({ name: 'user_id' })
   user!: User | null;
 
   @Column({ nullable: true })
   guest_email?: string;
 
-  @Column({ type: 'bigint' })
+  @Column({
+    type: 'bigint', transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseInt(value, 10)
+    }
+  })
   total_amount!: number;
 
   @Column({ length: 3 })
@@ -31,4 +37,7 @@ export class Order {
 
   @OneToMany(() => OrderItem, item => item.order, { cascade: true })
   items!: OrderItem[];
+
+  @OneToMany(() => ShippingAddress, address => address.order, { cascade: true })
+  shippingAddress!: ShippingAddress[];
 }
