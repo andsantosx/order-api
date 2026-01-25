@@ -37,7 +37,7 @@ export class ProductService {
         return product;
     }
 
-    async create(name: string, price_cents: number, currency: string, categoryId: string, sizeId: number) {
+    async create(name: string, price_cents: number, currency: string, categoryId: number, sizeId: number) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
@@ -59,7 +59,7 @@ export class ProductService {
         return this.productRepository.save(product);
     }
 
-    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: string; sizeId?: number }) {
+    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: number; sizeId?: number }) {
         const product = await this.productRepository.findOneBy({ id });
         if (!product) {
             throw new AppError('Produto não encontrado', 404);
