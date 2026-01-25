@@ -12,7 +12,7 @@ export class SizeController {
 
     async getOne(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
-        const size = await this.sizeService.getOne(id as string);
+        const size = await this.sizeService.getOne(Number(id));
         res.json(size);
     }
 }

@@ -3,8 +3,8 @@ import { ProductVariant } from './ProductVariant';
 
 @Entity('sizes')
 export class Size {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    @PrimaryGeneratedColumn('increment')
+    id!: number;
 
     @Column()
     name!: string;
