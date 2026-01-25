@@ -14,7 +14,13 @@ export class ImageController {
         const { productId } = req.params;
         const { url } = req.body;
         const image = await this.imageService.create(productId as string, url);
-        res.status(201).json(image);
+
+        // Retornar apenas dados essenciais
+        res.status(201).json({
+            id: image.id,
+            url: image.url,
+            product_id: productId
+        });
     }
 
     async delete(req: Request, res: Response, next: NextFunction) {
