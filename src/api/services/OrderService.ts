@@ -12,14 +12,14 @@ export class OrderService {
 
     async getAll() {
         return this.orderRepository.find({
-            relations: ['user', 'items', 'items.product', 'items.product.size']
+            relations: ['user', 'items', 'items.product']
         });
     }
 
     async getOne(id: string) {
         const order = await this.orderRepository.findOne({
             where: { id },
-            relations: ['user', 'items', 'items.product', 'items.product.size'],
+            relations: ['user', 'items', 'items.product'],
         });
 
         if (!order) {
@@ -40,8 +40,7 @@ export class OrderService {
 
             for (const item of items) {
                 const product = await this.productRepository.findOne({
-                    where: { id: item.productId },
-                    relations: ['size']
+                    where: { id: item.productId }
                 });
 
                 if (!product) {
