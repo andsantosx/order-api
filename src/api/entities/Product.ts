@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Category } from './Category';
-import { ProductVariant } from './ProductVariant';
+import { Size } from './Size';
 import { ProductImage } from './ProductImage';
 
 @Entity('products')
@@ -11,7 +11,7 @@ export class Product {
   @Column()
   name!: string;
 
-  @Column({ type: 'bigint', comment: 'Preço em centavos para evitar problemas com ponto flutuante' })
+  @Column({ type: 'bigint', comment: 'Preço em centavos' })
   price_cents!: number;
 
   @Column({ length: 3 })
@@ -21,8 +21,12 @@ export class Product {
   @JoinColumn({ name: 'category_id' })
   category!: Category;
 
-  @OneToMany(() => ProductVariant, variant => variant.product, { cascade: true })
-  variants!: ProductVariant[];
+  @ManyToOne(() => Size)
+  @JoinColumn({ name: 'size_id' })
+  size!: Size;
+
+  @Column('integer')
+  stock!: number;
 
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images!: ProductImage[];

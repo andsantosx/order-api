@@ -1,11 +1,13 @@
 import { AppDataSource } from '../../data-source';
 import { Product } from '../entities/Product';
 import { Category } from '../entities/Category';
+import { Size } from '../entities/Size';
 import { AppError } from '../middlewares/errorHandler';
 
 export class ProductService {
     private productRepository = AppDataSource.getRepository(Product);
     private categoryRepository = AppDataSource.getRepository(Category);
+    private sizeRepository = AppDataSource.getRepository(Size);
 
     async getAll(categorySlug?: string, page: number = 1, limit: number = 20) {
         const skip = (page - 1) * limit;
@@ -13,7 +15,7 @@ export class ProductService {
 
         const [data, total] = await this.productRepository.findAndCount({
             where,
-            relations: ['category', 'variants', 'variants.size', 'images'],
+            relations: ['category', 'size', 'images'],
             skip,
             take: limit,
             order: { name: 'ASC' }
@@ -25,7 +27,7 @@ export class ProductService {
     async getOne(id: string) {
         const product = await this.productRepository.findOne({
             where: { id },
-            relations: ['category', 'variants', 'variants.size', 'images']
+            relations: ['category', 'size', 'images']
         });
 
         if (!product) {
@@ -35,23 +37,30 @@ export class ProductService {
         return product;
     }
 
-    async create(name: string, price_cents: number, currency: string, categoryId: string) {
+    async create(name: string, price_cents: number, currency: string, categoryId: string, sizeId: number, stock: number) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
+        }
+
+        const size = await this.sizeRepository.findOneBy({ id: sizeId });
+        if (!size) {
+            throw new AppError('Tamanho não encontrado', 404);
         }
 
         const product = this.productRepository.create({
             name,
             price_cents,
             currency,
-            category
+            category,
+            size,
+            stock
         });
 
         return this.productRepository.save(product);
     }
 
-    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: string }) {
+    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: string; sizeId?: number; stock?: number }) {
         const product = await this.productRepository.findOneBy({ id });
         if (!product) {
             throw new AppError('Produto não encontrado', 404);
@@ -65,9 +74,18 @@ export class ProductService {
             product.category = category;
         }
 
+        if (data.sizeId) {
+            const size = await this.sizeRepository.findOneBy({ id: data.sizeId });
+            if (!size) {
+                throw new AppError('Tamanho não encontrado', 404);
+            }
+            product.size = size;
+        }
+
         if (data.name) product.name = data.name;
         if (data.price_cents) product.price_cents = data.price_cents;
         if (data.currency) product.currency = data.currency;
+        if (data.stock !== undefined) product.stock = data.stock;
 
         return this.productRepository.save(product);
     }

@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { ProductVariant } from './ProductVariant';
+import { Product } from './Product';
 
 @Entity('sizes')
 export class Size {
@@ -12,6 +12,6 @@ export class Size {
     @Column()
     type!: string;
 
-    @OneToMany(() => ProductVariant, variant => variant.size)
-    variants!: ProductVariant[];
+    @OneToMany(() => Product, product => product.size)
+    products!: Product[];
 }
