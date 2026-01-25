@@ -13,7 +13,7 @@ export class SizeService {
         });
     }
 
-    async getOne(id: string) {
+    async getOne(id: number) {
         const size = await this.sizeRepository.findOneBy({ id });
         if (!size) {
             throw new AppError('Tamanho não encontrado', 404);
