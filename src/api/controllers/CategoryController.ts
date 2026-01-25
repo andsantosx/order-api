@@ -11,7 +11,7 @@ export class CategoryController {
 
     async getOne(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
-        const category = await this.categoryService.getOne(id as string);
+        const category = await this.categoryService.getOne(parseInt(id as string));
         res.json(category);
     }
 
@@ -30,13 +30,13 @@ export class CategoryController {
     async update(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
         const { name, slug } = req.body;
-        const category = await this.categoryService.update(id as string, name, slug);
+        const category = await this.categoryService.update(parseInt(id as string), name, slug);
         res.json(category);
     }
 
     async delete(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
-        const result = await this.categoryService.delete(id as string);
+        const result = await this.categoryService.delete(parseInt(id as string));
         res.json(result);
     }
 }

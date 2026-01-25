@@ -19,7 +19,7 @@ export class ImageController {
 
     async delete(req: Request, res: Response, next: NextFunction) {
         const { id } = req.params;
-        const result = await this.imageService.delete(id as string);
+        const result = await this.imageService.delete(parseInt(id as string));
         res.json(result);
     }
 }

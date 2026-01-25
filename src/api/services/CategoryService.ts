@@ -12,7 +12,7 @@ export class CategoryService {
         });
     }
 
-    async getOne(id: string) {
+    async getOne(id: number) {
         const category = await this.categoryRepository.findOne({
             where: { id },
             relations: ['products']
@@ -48,7 +48,7 @@ export class CategoryService {
         return this.categoryRepository.save(category);
     }
 
-    async update(id: string, name: string, slug: string) {
+    async update(id: number, name: string, slug: string) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
@@ -67,7 +67,7 @@ export class CategoryService {
         return this.categoryRepository.save(category);
     }
 
-    async delete(id: string) {
+    async delete(id: number) {
         const category = await this.categoryRepository.findOneBy({ id });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);

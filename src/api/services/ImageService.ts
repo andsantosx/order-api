@@ -24,7 +24,7 @@ export class ImageService {
         return this.imageRepository.save(image);
     }
 
-    async delete(id: string) {
+    async delete(id: number) {
         const image = await this.imageRepository.findOneBy({ id });
         if (!image) {
             throw new AppError('Imagem não encontrada', 404);
