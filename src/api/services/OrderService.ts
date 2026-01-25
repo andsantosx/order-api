@@ -40,25 +40,45 @@ export class OrderService {
     }
 
     async create(guestEmail: string, items: { productId: string; quantity: number }[], shippingAddressData: ShippingAddressData) {
+        // 1. Calcular o total antes de iniciar a transação para verificar duplicidade
+        let totalAmount = 0;
+        const productsMap = new Map<string, Product>();
+
+        for (const item of items) {
+            const product = await this.productRepository.findOne({ where: { id: item.productId } });
+            if (!product) {
+                throw new AppError(`Produto com ID ${item.productId} não encontrado`, 404);
+            }
+            totalAmount += product.price_cents * item.quantity;
+            productsMap.set(item.productId, product);
+        }
+
+        // 2. Verificação de Idempotência (Deduplicação)
+        // Procura pedidos idênticos (mesmo email e valor) criados nos últimos 30 segundos
+        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+
+        const existingOrder = await this.orderRepository.createQueryBuilder('order')
+            .where('order.guest_email = :guestEmail', { guestEmail })
+            .andWhere('order.total_amount = :totalAmount', { totalAmount })
+            .andWhere('order.created_at >= :date', { date: thirtySecondsAgo })
+            .getOne();
+
+        if (existingOrder) {
+            console.log(`[Idempotency] Pedido duplicado detectado. Retornando pedido existente ID: ${existingOrder.id}`);
+            return this.getOne(existingOrder.id);
+        }
+
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
-            let totalAmount = 0;
             const orderItems: OrderItem[] = [];
 
+            // Recriar items usando os produtos já buscados
             for (const item of items) {
-                const product = await this.productRepository.findOne({
-                    where: { id: item.productId }
-                });
-
-                if (!product) {
-                    throw new AppError(`Produto com ID ${item.productId} não encontrado`, 404);
-                }
-
+                const product = productsMap.get(item.productId)!;
                 const itemTotalPrice = product.price_cents * item.quantity;
-                totalAmount += itemTotalPrice;
 
                 const newOrderItem = this.orderItemRepository.create({
                     product: product,
