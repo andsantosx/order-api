@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 export const createProductSchema = z.object({
     body: z.object({
-        name: z.string().min(1, 'Name is required'),
-        price_cents: z.number().int().positive('Price must be a positive integer'),
-        currency: z.string().length(3, 'Currency must be 3 characters (e.g., BRL)'),
-        categoryId: z.string().uuid('Invalid category ID'),
+        name: z.string().min(1, 'Nome é obrigatório'),
+        price_cents: z.number().int().positive('Preço deve ser um número positivo'),
+        currency: z.string().length(3, 'Moeda deve ter 3 caracteres (ex: BRL)'),
+        categoryId: z.string().uuid('ID da categoria inválido'),
     }),
 });
 

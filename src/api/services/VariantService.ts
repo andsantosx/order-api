@@ -30,7 +30,7 @@ export class VariantService {
         return variant;
     }
 
-    async create(productId: string, sizeId: string, stock: number, price_cents?: number) {
+    async create(productId: string, sizeId: number, stock: number, price_cents?: number) {
         const product = await this.productRepository.findOneBy({ id: productId });
         if (!product) {
             throw new AppError('Produto não encontrado', 404);
@@ -61,7 +61,7 @@ export class VariantService {
         return this.variantRepository.save(variant);
     }
 
-    async update(id: string, data: { sizeId?: string; stock?: number; price_cents?: number }) {
+    async update(id: string, data: { sizeId?: number; stock?: number; price_cents?: number }) {
         const variant = await this.variantRepository.findOne({
             where: { id },
             relations: ['size']
