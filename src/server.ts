@@ -20,7 +20,8 @@ const PORT = process.env.PORT || 3000;
 // --- Middlewares ---
 app.use(cors());
 
-// --- Rota de Webhook da Stripe (Tratamento Especial) ---
+// --- Rota de Webhook da Stripe (ANTES do express.json) ---
+// O webhook precisa do body raw, então deve vir antes do express.json()
 const paymentController = new PaymentController();
 app.post(
   '/api/payments/webhook',
@@ -29,6 +30,7 @@ app.post(
 );
 
 // --- Middlewares Globais ---
+// Agora sim, parse JSON para todas as outras rotas
 app.use(express.json());
 
 // --- Rotas da API ---
