@@ -13,8 +13,7 @@
     "api",
     "orders"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Anderson Santos",
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
