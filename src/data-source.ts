@@ -9,6 +9,7 @@ import { StripeCheckoutSession } from './api/entities/StripeCheckoutSession';
 import { Category } from './api/entities/Category';
 import { Size } from './api/entities/Size';
 import { ProductImage } from './api/entities/ProductImage';
+import { ProductSize } from './api/entities/ProductSize';
 import { ShippingAddress } from './api/entities/ShippingAddress';
 
 dotenv.config();
@@ -28,6 +29,7 @@ export const AppDataSource = new DataSource({
     Category,
     Size,
     ProductImage,
+    ProductSize,
     ShippingAddress
   ],
   migrations: [],

@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Category } from './Category';
-import { Size } from './Size';
 import { ProductImage } from './ProductImage';
+import { ProductSize } from './ProductSize';
 
 @Entity('products')
 export class Product {
@@ -21,10 +21,9 @@ export class Product {
   @JoinColumn({ name: 'category_id' })
   category!: Category;
 
-  @ManyToOne(() => Size)
-  @JoinColumn({ name: 'size_id' })
-  size!: Size;
-
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images!: ProductImage[];
+
+  @OneToMany(() => ProductSize, productSize => productSize.product, { cascade: true })
+  sizes!: ProductSize[];
 }

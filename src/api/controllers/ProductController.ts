@@ -20,8 +20,8 @@ export class ProductController {
   }
 
   async create(req: Request, res: Response, next: NextFunction) {
-    const { name, price_cents, currency, categoryId, sizeId } = req.body;
-    const product = await this.productService.create(name, price_cents, currency, categoryId, sizeId);
+    const { name, price_cents, currency, categoryId, sizeIds } = req.body;
+    const product = await this.productService.create(name, price_cents, currency, categoryId, sizeIds);
     res.status(201).json(product);
   }
 
