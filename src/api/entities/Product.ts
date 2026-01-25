@@ -1,4 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Category } from './Category';
+import { ProductVariant } from './ProductVariant';
+import { ProductImage } from './ProductImage';
 
 @Entity('products')
 export class Product {
@@ -14,6 +17,13 @@ export class Product {
   @Column({ length: 3 })
   currency!: string;
 
-  @Column('integer')
-  stock!: number;
+  @ManyToOne(() => Category, category => category.products)
+  @JoinColumn({ name: 'category_id' })
+  category!: Category;
+
+  @OneToMany(() => ProductVariant, variant => variant.product, { cascade: true })
+  variants!: ProductVariant[];
+
+  @OneToMany(() => ProductImage, image => image.product, { cascade: true })
+  images!: ProductImage[];
 }
