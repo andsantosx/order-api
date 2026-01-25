@@ -10,16 +10,14 @@ export class OrderController {
   }
 
   async getOne(req: Request, res: Response, next: NextFunction) {
-    const id = req.params.id as string;
-    const order = await this.orderService.getOne(id);
+    const { id } = req.params;
+    const order = await this.orderService.getOne(id as string);
     res.json(order);
   }
 
   async create(req: Request, res: Response, next: NextFunction) {
-    const items = req.body.items;
-    const guestEmail = req.body.guestEmail;
-    // We strictly use Guest Checkout now
-    const newOrder = await this.orderService.create(guestEmail, items);
-    res.status(201).json(newOrder);
+    const { guestEmail, items, shippingAddress } = req.body;
+    const order = await this.orderService.create(guestEmail, items, shippingAddress);
+    res.status(201).json(order);
   }
 }
