@@ -24,17 +24,6 @@ const PORT = process.env.PORT || 3000;
 // Habilita CORS para permitir requisições de outros domínios (Frontend)
 app.use(cors());
 
-// ==========================================
-// 2. Webhook da Stripe (Caso Especial)
-// ==========================================
-// O webhook precisa do corpo da requisição em formato RAW (bruto) para verificar a assinatura.
-// Por isso, esta rota deve ser definida ANTES do express.json().
-const paymentController = new PaymentController();
-app.post(
-  '/api/payments/webhook',
-  express.raw({ type: 'application/json' }),
-  paymentController.handleWebhook.bind(paymentController)
-);
 
 // ==========================================
 // 3. Middlewares Globais de JSON

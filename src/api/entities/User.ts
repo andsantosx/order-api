@@ -12,8 +12,6 @@ export class User {
   @Column()
   password_hash!: string;
 
-  @Column({ nullable: true })
-  stripe_customer_id?: string;
 
   @OneToMany(() => Order, order => order.user)
   orders!: Order[];

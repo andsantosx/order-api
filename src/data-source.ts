@@ -5,7 +5,6 @@ import { Product } from './api/entities/Product';
 import { User } from './api/entities/User';
 import { Order } from './api/entities/Order';
 import { OrderItem } from './api/entities/OrderItem';
-import { StripeCheckoutSession } from './api/entities/StripeCheckoutSession';
 import { Category } from './api/entities/Category';
 import { Size } from './api/entities/Size';
 import { ProductImage } from './api/entities/ProductImage';
@@ -25,7 +24,6 @@ export const AppDataSource = new DataSource({
     User,
     Order,
     OrderItem,
-    StripeCheckoutSession,
     Category,
     Size,
     ProductImage,
