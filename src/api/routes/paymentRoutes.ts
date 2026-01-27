@@ -4,10 +4,10 @@ import { PaymentController } from '../controllers/PaymentController';
 const router = Router();
 const paymentController = new PaymentController();
 
-// POST /api/payments/create-intent - Creates a Stripe Payment Intent for an order
-// Esta rota espera um corpo JSON, então será processada pelo express.json()
-router.post('/create-intent', paymentController.createPaymentIntent.bind(paymentController));
+// POST /api/payments/process - Process a payment via Mercado Pago
+router.post('/process', paymentController.processPayment.bind(paymentController));
 
-// A rota de webhook será tratada diretamente no server.ts com um middleware específico.
+// POST /api/payments/webhook - Handle Mercado Pago Notifications
+router.post('/webhook', paymentController.handleWebhook.bind(paymentController));
 
 export default router;
