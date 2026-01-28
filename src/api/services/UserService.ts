@@ -10,7 +10,7 @@ export class UserService {
     /**
      * Registra um novo usuário com senha criptografada.
      */
-    async register(email: string, password: string) {
+    async register(name: string, email: string, password: string) {
         const existingUser = await this.userRepository.findOneBy({ email });
         if (existingUser) {
             throw new AppError('Usuário já existe', 400);
@@ -18,8 +18,10 @@ export class UserService {
 
         const passwordHash = await bcrypt.hash(password, 10);
         const user = this.userRepository.create({
+            name,
             email,
             password_hash: passwordHash,
+            isAdmin: false // Explicit default
         });
 
         await this.userRepository.save(user);
@@ -44,7 +46,7 @@ export class UserService {
         }
 
         const token = jwt.sign(
-            { userId: user.id, email: user.email },
+            { userId: user.id, email: user.email, isAdmin: user.isAdmin },
             process.env.JWT_SECRET || 'default_secret',
             { expiresIn: '1d' }
         );
@@ -52,5 +54,45 @@ export class UserService {
         const { password_hash, ...userWithoutPassword } = user;
 
         return { user: userWithoutPassword, token };
+    }
+
+    /**
+     * Busca o perfil do usuário logado.
+     */
+    async getProfile(userId: string) {
+        const user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) {
+            throw new AppError('Usuário não encontrado', 404);
+        }
+        const { password_hash, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+    }
+
+    /**
+     * Atualiza o perfil do usuário.
+     */
+    async updateProfile(userId: string, data: { name?: string; email?: string; password?: string }) {
+        const user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) {
+            throw new AppError('Usuário não encontrado', 404);
+        }
+
+        if (data.name) user.name = data.name;
+        if (data.email) {
+            // Check if email is already taken by another user
+            const existingUser = await this.userRepository.findOneBy({ email: data.email });
+            if (existingUser && existingUser.id !== userId) {
+                throw new AppError('Email já está em uso', 400);
+            }
+            user.email = data.email;
+        }
+        if (data.password) {
+            user.password_hash = await bcrypt.hash(data.password, 10);
+        }
+
+        await this.userRepository.save(user);
+
+        const { password_hash, ...userWithoutPassword } = user;
+        return userWithoutPassword;
     }
 }

@@ -1,5 +1,5 @@
 import { AppDataSource } from '../../data-source';
-import { Order } from '../entities/Order';
+import { Order, OrderStatus } from '../entities/Order';
 import { User } from '../entities/User';
 import { AppError } from '../middlewares/errorHandler';
 import { Payment } from 'mercadopago';
@@ -28,39 +28,55 @@ export class PaymentService {
 
         try {
             const paymentBody: any = {
-                transaction_amount: paymentData.transaction_amount,
-                description: `Order ${order.id}`,
+                transaction_amount: Number(paymentData.transaction_amount),
+                description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
                 payment_method_id: paymentData.payment_method_id,
                 payer: {
-                    email: paymentData.payer.email || order.user?.email || 'test@test.com', // Fallback or strict content
+                    email: paymentData.payer?.email || order.user?.email,
                     identification: {
-                        type: paymentData.payer.identification.type,
-                        number: paymentData.payer.identification.number,
+                        type: paymentData.payer?.identification?.type || 'CPF',
+                        number: paymentData.payer?.identification?.number || '00000000000',
                     },
+                    first_name: paymentData.payer?.first_name || '',
+                    last_name: paymentData.payer?.last_name || ''
                 },
                 metadata: {
                     order_id: order.id,
                 },
             };
 
-            // Campos opcionais (ex: Pix não tem token)
+            // Enhanced optional fields mapping for Bricks
             if (paymentData.token) paymentBody.token = paymentData.token;
-            if (paymentData.installments) paymentBody.installments = paymentData.installments;
-            if (paymentData.issuer_id) paymentBody.issuer_id = paymentData.issuer_id;
+            if (paymentData.installments) paymentBody.installments = Number(paymentData.installments);
+            if (paymentData.issuer_id) paymentBody.issuer_id = String(paymentData.issuer_id);
+
+            console.log('Processing payment with Mercado Pago:', JSON.stringify(paymentBody, null, 2));
 
             const result = await payment.create({
                 body: paymentBody,
+                requestOptions: { idempotencyKey: `order_${order.id}_${Date.now()}` }
             });
 
+            console.log('Mercado Pago Payment Result:', result);
+
             if (result.status === 'approved' || result.status === 'in_process') {
-                // Update order status if needed, or wait for webhook
-                // For bricks, usually immediate response is useful
+                // Immediately update order status if approved to avoid waiting for webhook
+                if (result.status === 'approved') {
+                    await this.orderRepository.update({ id: orderId }, { status: OrderStatus.PAID });
+                }
             }
 
             return result;
-        } catch (error) {
+        } catch (error: any) {
             console.error('Mercado Pago Error:', error);
-            throw new AppError('Payment processing failed', 500);
+            // Enhance error message for the client
+            const errorMessage = error.message || 'Payment processing failed';
+            const errorStatus = error.status || 500;
+            // Check for specific Mercado Pago API errors
+            if (error.cause) {
+                console.error('Mercado Pago Error Cause:', JSON.stringify(error.cause, null, 2));
+            }
+            throw new AppError(`Payment processing failed: ${errorMessage}`, errorStatus);
         }
     }
 
@@ -87,7 +103,7 @@ export class PaymentService {
                 const status = payment.status;
 
                 if (status === 'approved') {
-                    await this.orderRepository.update({ id: orderId }, { status: 'PAID' });
+                    await this.orderRepository.update({ id: orderId }, { status: OrderStatus.PAID });
                     console.log(`Order ${orderId} updated to PAID via Webhook/IPN`);
                 }
             }

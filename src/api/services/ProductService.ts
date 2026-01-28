@@ -12,20 +12,46 @@ export class ProductService {
     private productSizeRepository = AppDataSource.getRepository(ProductSize);
 
     /**
-     * Retorna produtos com paginação e filtro por categoria (slug).
-     * Retorna também o total de registros para controle de paginação no front.
+     * Retorna produtos com paginação e filtro parametrizado.
      */
-    async getAll(categorySlug?: string, page: number = 1, limit: number = 20) {
+    async getAll(params: {
+        search?: string,
+        minPrice?: number,
+        maxPrice?: number,
+        categorySlug?: string,
+        page: number,
+        limit: number
+    }) {
+        const { search, minPrice, maxPrice, categorySlug, page = 1, limit = 20 } = params;
         const skip = (page - 1) * limit;
-        const where = categorySlug ? { category: { slug: categorySlug } } : {};
 
-        const [data, total] = await this.productRepository.findAndCount({
-            where,
-            relations: ['category', 'sizes', 'sizes.size', 'images'],
-            skip,
-            take: limit,
-            order: { name: 'ASC' }
-        });
+        const qb = this.productRepository.createQueryBuilder('product')
+            .leftJoinAndSelect('product.category', 'category')
+            .leftJoinAndSelect('product.sizes', 'productSizes')
+            .leftJoinAndSelect('productSizes.size', 'size')
+            .leftJoinAndSelect('product.images', 'images')
+            .skip(skip)
+            .take(limit)
+            .orderBy('product.name', 'ASC');
+
+        if (categorySlug) {
+            qb.andWhere('category.slug = :slug', { slug: categorySlug });
+        }
+
+        if (search) { // Case insensitive search
+            qb.andWhere('LOWER(product.name) LIKE :search', { search: `%${search.toLowerCase()}%` });
+        }
+
+        if (minPrice !== undefined) {
+            // Assuming price is in cents for consistency
+            qb.andWhere('product.price_cents >= :minPrice', { minPrice });
+        }
+
+        if (maxPrice !== undefined) {
+            qb.andWhere('product.price_cents <= :maxPrice', { maxPrice });
+        }
+
+        const [data, total] = await qb.getManyAndCount();
 
         return { data, total, page, limit };
     }
@@ -47,20 +73,15 @@ export class ProductService {
     }
 
     /**
-     * Cria um novo produto e vincula aos tamanhos selecionados.
+     * Cria um novo produto e vincula aos tamanhos com quantidade.
      */
-    async create(name: string, price_cents: number, currency: string, categoryId: number, sizeIds: number[]) {
+    async create(name: string, price_cents: number, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
         }
 
-        // Verificar se todos os tamanhos existem
-        const sizes = await this.sizeRepository.findByIds(sizeIds);
-        if (sizes.length !== sizeIds.length) {
-            throw new AppError('Um ou mais tamanhos não foram encontrados', 404);
-        }
-
+        // Prepare product
         const product = this.productRepository.create({
             name,
             price_cents,
@@ -70,24 +91,34 @@ export class ProductService {
 
         const savedProduct = await this.productRepository.save(product);
 
-        // Criar relações com os tamanhos
-        const productSizes = sizeIds.map(sizeId => {
-            return this.productSizeRepository.create({
-                product: savedProduct,
-                size: sizes.find(s => s.id === sizeId)!
-            });
-        });
+        // Handle sizes (expecting array of objects now)
+        if (sizesData && sizesData.length > 0) {
+            const sizeIds = sizesData.map(s => s.sizeId);
+            const foundSizes = await this.sizeRepository.findByIds(sizeIds);
 
-        await this.productSizeRepository.save(productSizes);
+            if (foundSizes.length !== sizeIds.length) {
+                throw new AppError('Um ou mais tamanhos não foram encontrados', 404);
+            }
+
+            const productSizes = sizesData.map(item => {
+                const size = foundSizes.find(s => s.id === item.sizeId)!;
+                return this.productSizeRepository.create({
+                    product: savedProduct,
+                    size: size,
+                    quantity: item.quantity || 0
+                });
+            });
+
+            await this.productSizeRepository.save(productSizes);
+        }
 
         return this.getOne(savedProduct.id);
     }
 
     /**
      * Atualiza um produto.
-     * Permite atualizar dados básicos e lista de tamanhos.
      */
-    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: number; sizeIds?: number[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['sizes']
@@ -111,22 +142,24 @@ export class ProductService {
 
         await this.productRepository.save(product);
 
-        // Atualizar tamanhos se fornecidos
-        if (data.sizeIds) {
-            // Remover tamanhos antigos
+        // Update sizes if provided
+        if (data.sizes) {
+            // Remove old associations
             await this.productSizeRepository.delete({ product: { id } });
 
-            // Verificar se todos os tamanhos existem
-            const sizes = await this.sizeRepository.findByIds(data.sizeIds);
-            if (sizes.length !== data.sizeIds.length) {
+            const sizeIds = data.sizes.map(s => s.sizeId);
+            const foundSizes = await this.sizeRepository.findByIds(sizeIds);
+
+            if (foundSizes.length !== sizeIds.length) {
                 throw new AppError('Um ou mais tamanhos não foram encontrados', 404);
             }
 
-            // Criar novos tamanhos
-            const productSizes = data.sizeIds.map(sizeId => {
+            const productSizes = data.sizes.map(item => {
+                const size = foundSizes.find(s => s.id === item.sizeId)!;
                 return this.productSizeRepository.create({
                     product: product,
-                    size: sizes.find(s => s.id === sizeId)!
+                    size: size,
+                    quantity: item.quantity || 0
                 });
             });
 
@@ -140,12 +173,10 @@ export class ProductService {
      * Remove um produto.
      */
     async delete(id: string) {
-        const product = await this.productRepository.findOneBy({ id });
-        if (!product) {
+        const result = await this.productRepository.softDelete(id);
+        if (result.affected === 0) {
             throw new AppError('Produto não encontrado', 404);
         }
-
-        await this.productRepository.remove(product);
         return { message: 'Produto deletado com sucesso' };
     }
 }

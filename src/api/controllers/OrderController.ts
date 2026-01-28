@@ -9,7 +9,9 @@ export class OrderController {
    * Útil para painel administrativo.
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
-    const orders = await this.orderService.getAll();
+    const userId = req.user?.userId;
+    const isAdmin = req.user?.isAdmin;
+    const orders = await this.orderService.getAll(userId, isAdmin);
     res.json(orders);
   }
 
@@ -31,5 +33,15 @@ export class OrderController {
     const { guestEmail, items, shippingAddress } = req.body;
     const order = await this.orderService.create(guestEmail, items, shippingAddress);
     res.status(201).json(order);
+  }
+
+  /**
+   * Atualiza o status do pedido.
+   */
+  async updateStatus(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+    const { status } = req.body;
+    const order = await this.orderService.updateStatus(id as string, status);
+    res.json(order);
   }
 }

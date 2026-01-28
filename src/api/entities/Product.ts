@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, DeleteDateColumn } from 'typeorm';
 import { Category } from './Category';
 import { ProductImage } from './ProductImage';
 import { ProductSize } from './ProductSize';
@@ -31,4 +31,7 @@ export class Product {
 
   @OneToMany(() => ProductSize, productSize => productSize.product, { cascade: true })
   sizes!: ProductSize[];
+
+  @DeleteDateColumn()
+  deleted_at?: Date;
 }

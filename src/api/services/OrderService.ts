@@ -1,5 +1,5 @@
 import { AppDataSource } from '../../data-source';
-import { Order } from '../entities/Order';
+import { Order, OrderStatus } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { ShippingAddress } from '../entities/ShippingAddress';
@@ -21,23 +21,34 @@ export class OrderService {
     private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
 
     /**
-     * Retorna todos os pedidos com suas relações.
+     * Retorna pedidos. Se admin, todos. Se user, apenas os seus.
      */
-    async getAll() {
+    async getAll(userId?: string, isAdmin: boolean = false) {
+        if (isAdmin) {
+            return this.orderRepository.find({
+                relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+                order: { created_at: 'DESC' }
+            });
+        }
+
+        if (!userId) {
+            return []; // Should not happen if auth middleware is used
+        }
+
         return this.orderRepository.find({
-            relations: ['user', 'items', 'items.product', 'shippingAddress']
+            where: { user: { id: userId } },
+            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+            order: { created_at: 'DESC' }
         });
     }
 
     /**
      * Busca um pedido pelo ID.
-     * @param id ID do pedido (UUID)
-     * @throws AppError se o pedido não for encontrado.
      */
     async getOne(id: string) {
         const order = await this.orderRepository.findOne({
             where: { id },
-            relations: ['user', 'items', 'items.product', 'shippingAddress'],
+            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
         });
 
         if (!order) {
@@ -45,6 +56,15 @@ export class OrderService {
         }
 
         return order;
+    }
+
+    /**
+     * Atualiza o status de um pedido.
+     */
+    async updateStatus(id: string, status: OrderStatus) {
+        const order = await this.getOne(id);
+        order.status = status;
+        return this.orderRepository.save(order);
     }
 
     async create(guestEmail: string, items: { productId: string; quantity: number }[], shippingAddressData: ShippingAddressData) {
@@ -104,7 +124,7 @@ export class OrderService {
                 total_amount: totalAmount,
                 currency: 'BRL',
                 idempotency_key: uuidv4(),
-                status: 'PENDING',
+                status: OrderStatus.PENDING,
             });
 
             const savedOrder = await queryRunner.manager.save(newOrder);

@@ -5,6 +5,7 @@ import { AppError } from './errorHandler';
 interface JwtPayload {
     userId: string;
     email: string;
+    isAdmin: boolean;
 }
 
 declare global {
