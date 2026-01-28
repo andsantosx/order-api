@@ -3,6 +3,14 @@ import { User } from './User';
 import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
 
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELED = 'CANCELED'
+}
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -29,8 +37,12 @@ export class Order {
   @Column({ type: 'uuid', unique: true })
   idempotency_key!: string;
 
-  @Column({ default: 'PENDING' })
-  status!: string;
+  @Column({
+    type: 'enum',
+    enum: OrderStatus,
+    default: OrderStatus.PENDING
+  })
+  status!: OrderStatus;
 
   @CreateDateColumn()
   created_at!: Date;

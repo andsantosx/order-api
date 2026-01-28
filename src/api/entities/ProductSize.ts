@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column } from 'typeorm';
 import { Product } from './Product';
 import { Size } from './Size';
 
@@ -14,4 +14,7 @@ export class ProductSize {
     @ManyToOne(() => Size)
     @JoinColumn({ name: 'size_id' })
     size!: Size;
+
+    @Column({ default: 0 })
+    quantity!: number;
 }

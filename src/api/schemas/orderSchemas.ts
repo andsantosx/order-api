@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OrderStatus } from '../entities/Order';
 
 export const createOrderSchema = z.object({
     body: z.object({
@@ -15,6 +16,14 @@ export const createOrderSchema = z.object({
             state: z.string().min(1, 'Estado é obrigatório'),
             zipCode: z.string().min(1, 'CEP é obrigatório'),
             country: z.string().min(1, 'País é obrigatório'),
+        }),
+    }),
+});
+
+export const updateStatusSchema = z.object({
+    body: z.object({
+        status: z.nativeEnum(OrderStatus, {
+            message: 'Status inválido. Valores permitidos: ' + Object.values(OrderStatus).join(', '),
         }),
     }),
 });

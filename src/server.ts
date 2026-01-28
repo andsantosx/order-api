@@ -11,6 +11,10 @@ import sizeRoutes from './api/routes/sizeRoutes';
 import imageRoutes from './api/routes/imageRoutes';
 import { PaymentController } from './api/controllers/PaymentController';
 import { errorHandler } from './api/middlewares/errorHandler';
+import adminRoutes from './api/routes/adminRoutes';
+import profileRoutes from './api/routes/profileRoutes';
+
+// Carrega variáveis de ambiente do arquivo .envs from './api/routes/adminRoutes';
 
 // Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
@@ -52,6 +56,10 @@ console.log('🔧 Registering routes...');
 app.use('/api/auth', authRoutes);
 console.log('✅ Auth routes registered at /api/auth');
 
+// Perfil (Endereços)
+app.use('/api/profile', profileRoutes);
+console.log('✅ Profile routes registered at /api/profile');
+
 // Catálogo (Categorias, Tamanhos, Produtos, Imagens)
 app.use('/api/categories', categoryRoutes);
 console.log('✅ Category routes registered at /api/categories');
@@ -61,6 +69,10 @@ app.use('/api/products', productRoutes);
 console.log('✅ Product routes registered at /api/products');
 app.use('/api/images', imageRoutes);
 console.log('✅ Image routes registered at /api/images');
+
+// Admin
+app.use('/api/admin', adminRoutes);
+console.log('✅ Admin routes registered at /api/admin');
 
 // Pedidos e Pagamentos
 app.use('/api/orders', orderRoutes);
