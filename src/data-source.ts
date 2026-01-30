@@ -10,6 +10,9 @@ import { Size } from './api/entities/Size';
 import { ProductImage } from './api/entities/ProductImage';
 import { ProductSize } from './api/entities/ProductSize';
 import { ShippingAddress } from './api/entities/ShippingAddress';
+import { UserAddress } from './api/entities/UserAddress';
+import { Wishlist } from './api/entities/Wishlist';
+import { ContactMessage } from './api/entities/ContactMessage';
 
 dotenv.config();
 
@@ -17,7 +20,7 @@ export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   schema: 'public',
-  synchronize: false,
+  synchronize: true,
   logging: process.env.NODE_ENV === 'development',
   entities: [
     Product,
@@ -28,7 +31,10 @@ export const AppDataSource = new DataSource({
     Size,
     ProductImage,
     ProductSize,
-    ShippingAddress
+    ShippingAddress,
+    UserAddress,
+    Wishlist,
+    ContactMessage
   ],
   migrations: [],
   subscribers: [],

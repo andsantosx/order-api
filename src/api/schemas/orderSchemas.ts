@@ -3,7 +3,7 @@ import { OrderStatus } from '../entities/Order';
 
 export const createOrderSchema = z.object({
     body: z.object({
-        guestEmail: z.string().email('Email do cliente é obrigatório'),
+        guestEmail: z.string().email('Email inválido').optional(),
         items: z.array(
             z.object({
                 productId: z.string().uuid('ID do produto inválido'),

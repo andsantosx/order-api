@@ -27,18 +27,21 @@ export class PaymentService {
         const payment = new Payment(client);
 
         try {
+            // Normalize payment data (handle potential formData wrapper from frontend)
+            const rawData = paymentData.formData || paymentData;
+
             const paymentBody: any = {
-                transaction_amount: Number(paymentData.transaction_amount),
+                transaction_amount: Number(order.total_amount) / 100, // Converts cents (4990) to decimal (49.90)
                 description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
-                payment_method_id: paymentData.payment_method_id,
+                payment_method_id: rawData.payment_method_id,
                 payer: {
-                    email: paymentData.payer?.email || order.user?.email,
+                    email: rawData.payer?.email || paymentData.payer?.email || order.user?.email || order.guest_email,
                     identification: {
-                        type: paymentData.payer?.identification?.type || 'CPF',
-                        number: paymentData.payer?.identification?.number || '00000000000',
+                        type: rawData.payer?.identification?.type || 'CPF',
+                        number: rawData.payer?.identification?.number || '00000000000',
                     },
-                    first_name: paymentData.payer?.first_name || '',
-                    last_name: paymentData.payer?.last_name || ''
+                    first_name: rawData.payer?.first_name || '',
+                    last_name: rawData.payer?.last_name || ''
                 },
                 metadata: {
                     order_id: order.id,
@@ -46,9 +49,9 @@ export class PaymentService {
             };
 
             // Enhanced optional fields mapping for Bricks
-            if (paymentData.token) paymentBody.token = paymentData.token;
-            if (paymentData.installments) paymentBody.installments = Number(paymentData.installments);
-            if (paymentData.issuer_id) paymentBody.issuer_id = String(paymentData.issuer_id);
+            if (rawData.token) paymentBody.token = rawData.token;
+            if (rawData.installments) paymentBody.installments = Number(rawData.installments);
+            if (rawData.issuer_id) paymentBody.issuer_id = String(rawData.issuer_id);
 
             console.log('Processing payment with Mercado Pago:', JSON.stringify(paymentBody, null, 2));
 

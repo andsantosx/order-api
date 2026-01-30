@@ -1,16 +1,17 @@
-import { AppDataSource } from '../../data-source';
 import { Order, OrderStatus } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { ShippingAddress } from '../entities/ShippingAddress';
+import { User } from '../entities/User';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middlewares/errorHandler';
+import { AppDataSource } from '../../data-source';
 
 interface ShippingAddressData {
     street: string;
     city: string;
     state: string;
-    zipCode: string;
+    zipCode?: string;
     country: string;
 }
 
@@ -19,27 +20,36 @@ export class OrderService {
     private productRepository = AppDataSource.getRepository(Product);
     private orderItemRepository = AppDataSource.getRepository(OrderItem);
     private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
+    private userRepository = AppDataSource.getRepository(User);
 
     /**
      * Retorna pedidos. Se admin, todos. Se user, apenas os seus.
      */
     async getAll(userId?: string, isAdmin: boolean = false) {
+        let orders: any[];
         if (isAdmin) {
-            return this.orderRepository.find({
+            orders = await this.orderRepository.find({
                 relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
                 order: { created_at: 'DESC' }
             });
+        } else if (userId) {
+            orders = await this.orderRepository.find({
+                where: { user: { id: userId } },
+                relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+                order: { created_at: 'DESC' }
+            });
+        } else {
+            orders = [];
         }
 
-        if (!userId) {
-            return []; // Should not happen if auth middleware is used
-        }
+        return orders.map(order => this.transform(order));
+    }
 
-        return this.orderRepository.find({
-            where: { user: { id: userId } },
-            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
-            order: { created_at: 'DESC' }
-        });
+    private transform(order: Order) {
+        return {
+            ...order,
+            shippingAddress: order.shippingAddress && order.shippingAddress.length > 0 ? order.shippingAddress[0] : null
+        };
     }
 
     /**
@@ -55,19 +65,52 @@ export class OrderService {
             throw new AppError('Pedido não encontrado', 404);
         }
 
-        return order;
+        return this.transform(order);
     }
 
     /**
      * Atualiza o status de um pedido.
      */
     async updateStatus(id: string, status: OrderStatus) {
-        const order = await this.getOne(id);
+        const order = await this.orderRepository.findOne({
+            where: { id },
+            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress']
+        });
+
+        if (!order) {
+            throw new AppError('Pedido não encontrado', 404);
+        }
+
         order.status = status;
-        return this.orderRepository.save(order);
+        const savedOrder = await this.orderRepository.save(order);
+        return this.transform(savedOrder);
     }
 
-    async create(guestEmail: string, items: { productId: string; quantity: number }[], shippingAddressData: ShippingAddressData) {
+    async create(
+        userId: string | undefined,
+        guestEmail: string | undefined, // Make optional
+        items: { productId: string; quantity: number }[],
+        shippingAddressData: ShippingAddressData
+    ) {
+        if (!shippingAddressData.zipCode) {
+            throw new AppError('CEP é obrigatório para o envio', 400);
+        }
+
+        // Validate basic requirements: either User Logged OR Guest Email
+        if (!userId && !guestEmail) {
+            throw new AppError('É necessário estar logado ou fornecer um email para continuar', 400);
+        }
+
+        let user = null;
+        let finalEmail = guestEmail;
+
+        if (userId) {
+            user = await this.userRepository.findOneBy({ id: userId });
+            if (user) {
+                finalEmail = user.email; // Use user's email if logged in
+            }
+        }
+
         // 1. Calcular o total antes de iniciar a transação para verificar duplicidade
         let totalAmount = 0;
         const productsMap = new Map<string, Product>();
@@ -85,11 +128,17 @@ export class OrderService {
         // Procura pedidos idênticos (mesmo email e valor) criados nos últimos 30 segundos
         const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
 
-        const existingOrder = await this.orderRepository.createQueryBuilder('order')
-            .where('order.guest_email = :guestEmail', { guestEmail })
-            .andWhere('order.total_amount = :totalAmount', { totalAmount })
-            .andWhere('order.created_at >= :date', { date: thirtySecondsAgo })
-            .getOne();
+        const queryBuilder = this.orderRepository.createQueryBuilder('order')
+            .where('order.total_amount = :totalAmount', { totalAmount })
+            .andWhere('order.created_at >= :date', { date: thirtySecondsAgo });
+
+        if (userId) {
+            queryBuilder.andWhere('order.user_id = :userId', { userId });
+        } else if (finalEmail) {
+            queryBuilder.andWhere('order.guest_email = :guestEmail', { guestEmail: finalEmail });
+        }
+
+        const existingOrder = await queryBuilder.getOne();
 
         if (existingOrder) {
             console.log(`[Idempotency] Pedido duplicado detectado. Retornando pedido existente ID: ${existingOrder.id}`);
@@ -118,8 +167,8 @@ export class OrderService {
             }
 
             const newOrder = this.orderRepository.create({
-                user: null,
-                guest_email: guestEmail,
+                user: user,
+                guest_email: finalEmail,
                 items: orderItems,
                 total_amount: totalAmount,
                 currency: 'BRL',
@@ -142,7 +191,9 @@ export class OrderService {
             await queryRunner.manager.save(shippingAddress);
 
             await queryRunner.commitTransaction();
-            return this.getOne(savedOrder.id);
+
+            // Return using the modified getOne which handles the address transformation
+            return await this.getOne(savedOrder.id);
 
         } catch (error) {
             await queryRunner.rollbackTransaction();

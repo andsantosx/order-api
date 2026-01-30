@@ -13,6 +13,7 @@ import { PaymentController } from './api/controllers/PaymentController';
 import { errorHandler } from './api/middlewares/errorHandler';
 import adminRoutes from './api/routes/adminRoutes';
 import profileRoutes from './api/routes/profileRoutes';
+import contactRoutes from './api/routes/contactRoutes';
 
 // Carrega variáveis de ambiente do arquivo .envs from './api/routes/adminRoutes';
 
@@ -79,6 +80,10 @@ app.use('/api/orders', orderRoutes);
 console.log('✅ Order routes registered at /api/orders');
 app.use('/api/payments', paymentRoutes);
 console.log('✅ Payment routes registered at /api/payments');
+
+// Contato
+app.use('/api/contact', contactRoutes);
+console.log('✅ Contact routes registered at /api/contact');
 
 // ==========================================
 // 6. Tratamento de Erros e 404

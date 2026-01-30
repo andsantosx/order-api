@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 import { Category } from './Category';
 import { ProductImage } from './ProductImage';
 import { ProductSize } from './ProductSize';
+import { Wishlist } from './Wishlist';
 
 @Entity('products')
 export class Product {
@@ -31,6 +32,9 @@ export class Product {
 
   @OneToMany(() => ProductSize, productSize => productSize.product, { cascade: true })
   sizes!: ProductSize[];
+
+  @OneToMany(() => Wishlist, wishlist => wishlist.product)
+  wishlist!: Wishlist[];
 
   @DeleteDateColumn()
   deleted_at?: Date;

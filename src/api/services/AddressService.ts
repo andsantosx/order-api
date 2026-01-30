@@ -7,7 +7,7 @@ interface AddressData {
     street: string;
     city: string;
     state: string;
-    zipCode: string;
+    zipCode?: string;
     country: string;
 }
 
@@ -25,6 +25,10 @@ export class AddressService {
         const user = await this.userRepository.findOneBy({ id: userId });
         if (!user) {
             throw new AppError('Usuário não encontrado', 404);
+        }
+
+        if (!data.zipCode) {
+            throw new AppError('CEP é obrigatório', 400);
         }
 
         const address = this.addressRepository.create({
