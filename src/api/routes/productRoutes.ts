@@ -9,6 +9,7 @@ const productController = new ProductController();
 
 // Public routes
 router.get('/', productController.getAll.bind(productController));
+router.get('/filters', productController.getFilters.bind(productController));
 router.get('/:id', productController.getOne.bind(productController));
 
 // Admin routes

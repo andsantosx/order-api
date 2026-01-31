@@ -18,11 +18,13 @@ export class ProductService {
         search?: string,
         minPrice?: number,
         maxPrice?: number,
-        categorySlug?: string,
+        categories?: string[],
+        sizes?: string[],
+        sortBy?: string,
         page: number,
         limit: number
     }) {
-        const { search, minPrice, maxPrice, categorySlug, page = 1, limit = 20 } = params;
+        const { search, minPrice, maxPrice, categories, sizes, sortBy, page = 1, limit = 20 } = params;
         const skip = (page - 1) * limit;
 
         const qb = this.productRepository.createQueryBuilder('product')
@@ -31,11 +33,41 @@ export class ProductService {
             .leftJoinAndSelect('productSizes.size', 'size')
             .leftJoinAndSelect('product.images', 'images')
             .skip(skip)
-            .take(limit)
-            .orderBy('product.name', 'ASC');
+            .take(limit);
 
-        if (categorySlug) {
-            qb.andWhere('category.slug = :slug', { slug: categorySlug });
+        if (sortBy === 'price-low') {
+            qb.orderBy('product.price_cents', 'ASC');
+        } else if (sortBy === 'price-high') {
+            qb.orderBy('product.price_cents', 'DESC');
+        } else {
+            // "Mais Recentes" -> Filter last 30 days AND sort by newest
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            qb.andWhere('product.created_at >= :thirtyDaysAgo', { thirtyDaysAgo });
+            qb.orderBy('product.created_at', 'DESC');
+        }
+
+        if (categories && categories.length > 0) {
+            qb.andWhere('category.name IN (:...categories)', { categories });
+        }
+
+        if (sizes && sizes.length > 0) {
+            // Filter products that have at least one of the selected sizes
+            // We use a subquery or join filter logic.
+            // Since we already joined productSizes and size, we can filter on size.name
+            // IMPORTANT: If we just filter, we might get duplicate product rows if multiple sizes match, 
+            // but TypeORM handles hydration. However, strict filtering often requires checks.
+            // A safer way for "has one of these sizes" is:
+            qb.andWhere(qb => {
+                const subQuery = qb.subQuery()
+                    .select("ps.productId")
+                    .from(ProductSize, "ps")
+                    .leftJoin("ps.size", "s")
+                    .where("s.name IN (:...sizes)")
+                    .getQuery();
+                return "product.id IN " + subQuery;
+            }, { sizes });
         }
 
         if (search) { // Case insensitive search
@@ -54,6 +86,32 @@ export class ProductService {
         const [data, total] = await qb.getManyAndCount();
 
         return { data, total, page, limit };
+    }
+
+    /**
+     * Retorna os filtros disponíveis (categorias e tamanhos) baseados nos produtos existentes.
+     */
+    async getAvailableFilters() {
+        // Get all unique categories that have products
+        const categories = await this.categoryRepository.createQueryBuilder("category")
+            .innerJoin("category.products", "product") // Only categories with products
+            .select("category.name")
+            .distinct(true)
+            .orderBy("category.name", "ASC")
+            .getRawMany();
+
+        // Get all unique sizes that are used in products
+        const sizes = await this.sizeRepository.createQueryBuilder("size")
+            .innerJoin("size.productSizes", "ps")
+            .select(["size.id", "size.name"])
+            .distinct(true)
+            .orderBy("size.id", "ASC") // Maintain logical order if IDs are ordered
+            .getRawMany();
+
+        return {
+            categories: categories.map(c => c.category_name),
+            sizes: sizes.map(s => s.size_name)
+        };
     }
 
     /**

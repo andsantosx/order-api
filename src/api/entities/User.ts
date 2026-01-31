@@ -19,6 +19,8 @@ export class User {
   @Column({ default: false })
   isAdmin!: boolean;
 
+  @Column({ nullable: true })
+  document!: string;
 
   @OneToMany(() => Order, order => order.user)
   orders!: Order[];

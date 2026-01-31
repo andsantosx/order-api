@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, DeleteDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, DeleteDateColumn, CreateDateColumn } from 'typeorm';
 import { Category } from './Category';
 import { ProductImage } from './ProductImage';
 import { ProductSize } from './ProductSize';
@@ -41,4 +41,7 @@ export class Product {
 
   @DeleteDateColumn()
   deleted_at?: Date;
+
+  @CreateDateColumn()
+  created_at!: Date;
 }

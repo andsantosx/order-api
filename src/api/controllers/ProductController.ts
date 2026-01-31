@@ -6,15 +6,24 @@ export class ProductController {
 
   /**
    * Retorna produtos com paginação e filtro de categoria.
-   * Query Params: category (opcional), page (default 1), limit (default 20), search, minPrice, maxPrice.
+   * Query Params: categories (string | string[]), sizes (string | string[]), page, limit, search, minPrice, maxPrice, sort.
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
-    const { category, page, limit, search, minPrice, maxPrice } = req.query;
+    const { categories, sizes, page, limit, search, minPrice, maxPrice, sort } = req.query;
     const pageNum = page ? parseInt(page as string) : 1;
     const limitNum = limit ? parseInt(limit as string) : 20;
 
+    // Helper to ensure array
+    const toArray = (val: any): string[] | undefined => {
+      if (!val) return undefined;
+      if (Array.isArray(val)) return val as string[];
+      return (val as string).split(',');
+    };
+
     const products = await this.productService.getAll({
-      categorySlug: category as string,
+      categories: toArray(categories),
+      sizes: toArray(sizes),
+      sortBy: sort as string,
       page: pageNum,
       limit: limitNum,
       search: search as string,
@@ -22,6 +31,14 @@ export class ProductController {
       maxPrice: maxPrice ? Number(maxPrice) : undefined
     });
     res.json(products);
+  }
+
+  /**
+   * Retorna os filtros disponíveis (facetas).
+   */
+  async getFilters(req: Request, res: Response, next: NextFunction) {
+    const filters = await this.productService.getAvailableFilters();
+    res.json(filters);
   }
 
   /**

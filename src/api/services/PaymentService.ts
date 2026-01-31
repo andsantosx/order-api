@@ -30,15 +30,28 @@ export class PaymentService {
             // Normalize payment data (handle potential formData wrapper from frontend)
             const rawData = paymentData.formData || paymentData;
 
+            // Enhanced validation
+            const email = rawData.payer?.email || paymentData.payer?.email || order.user?.email || order.guest_email;
+            if (!email) {
+                throw new AppError('Payer email is required', 400);
+            }
+
+            const docType = rawData.payer?.identification?.type || 'CPF';
+            const docNumber = rawData.payer?.identification?.number || paymentData.payer?.identification?.number;
+
+            if (!docNumber) {
+                throw new AppError('Payer identification number is required', 400);
+            }
+
             const paymentBody: any = {
                 transaction_amount: Number(order.total_amount) / 100, // Converts cents (4990) to decimal (49.90)
                 description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
                 payment_method_id: rawData.payment_method_id,
                 payer: {
-                    email: rawData.payer?.email || paymentData.payer?.email || order.user?.email || order.guest_email,
+                    email: email,
                     identification: {
-                        type: rawData.payer?.identification?.type || 'CPF',
-                        number: rawData.payer?.identification?.number || '00000000000',
+                        type: docType,
+                        number: docNumber,
                     },
                     first_name: rawData.payer?.first_name || '',
                     last_name: rawData.payer?.last_name || ''

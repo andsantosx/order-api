@@ -6,6 +6,7 @@ import { User } from '../entities/User';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middlewares/errorHandler';
 import { AppDataSource } from '../../data-source';
+import bcrypt from 'bcryptjs';
 
 interface ShippingAddressData {
     street: string;
@@ -88,7 +89,8 @@ export class OrderService {
 
     async create(
         userId: string | undefined,
-        guestEmail: string | undefined, // Make optional
+        guestEmail: string | undefined,
+        guestCpf: string | undefined,
         items: { productId: string; quantity: number }[],
         shippingAddressData: ShippingAddressData
     ) {
@@ -101,7 +103,7 @@ export class OrderService {
             throw new AppError('É necessário estar logado ou fornecer um email para continuar', 400);
         }
 
-        let user = null;
+        let user: User | null = null;
         let finalEmail = guestEmail;
 
         if (userId) {
@@ -109,6 +111,48 @@ export class OrderService {
             if (user) {
                 finalEmail = user.email; // Use user's email if logged in
             }
+        }
+
+        // Auto-Account Creation Logic
+        if (!user && finalEmail) {
+            const existingUser = await this.userRepository.findOneBy({ email: finalEmail });
+
+            if (existingUser) {
+                // User exists, link order to them
+                user = existingUser;
+                // Update CPF/Document if provided and missing
+                if (guestCpf && !user.document) {
+                    user.document = guestCpf;
+                    await this.userRepository.save(user);
+                }
+            } else {
+                // User does not exist, create new account
+                try {
+                    const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+                    const newUser = this.userRepository.create({
+                        name: 'Cliente', // Placeholder name
+                        email: finalEmail,
+                        password_hash: hashedPassword,
+                        isAdmin: false,
+                        document: guestCpf
+                    });
+
+                    user = await this.userRepository.save(newUser);
+
+                    console.log(`[AUTO-SIGNUP] Account created for ${finalEmail}. Password: ${randomPassword}`);
+                    // TODO: Send email to user with these credentials
+                } catch (error) {
+                    console.error('Failed to auto-create user:', error);
+                    throw new AppError('Falha ao criar conta automática para o pedido', 500);
+                }
+            }
+        }
+
+        if (!user) {
+            // Should not happen given logic above, but safe guard
+            throw new AppError('Não foi possível identificar o usuário para o pedido', 400);
         }
 
         // 1. Calcular o total antes de iniciar a transação para verificar duplicidade
