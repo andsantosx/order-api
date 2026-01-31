@@ -20,7 +20,7 @@ export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   schema: 'public',
-  synchronize: true,
+  synchronize: false,
   logging: process.env.NODE_ENV === 'development',
   entities: [
     Product,

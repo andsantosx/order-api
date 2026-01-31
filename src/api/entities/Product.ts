@@ -20,6 +20,9 @@ export class Product {
   })
   price_cents!: number;
 
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
   @Column({ length: 3 })
   currency!: string;
 

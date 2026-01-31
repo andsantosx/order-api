@@ -75,7 +75,7 @@ export class ProductService {
     /**
      * Cria um novo produto e vincula aos tamanhos com quantidade.
      */
-    async create(name: string, price_cents: number, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[]) {
+    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
@@ -85,6 +85,7 @@ export class ProductService {
         const product = this.productRepository.create({
             name,
             price_cents,
+            description,
             currency,
             category
         });
@@ -118,7 +119,7 @@ export class ProductService {
     /**
      * Atualiza um produto.
      */
-    async update(id: string, data: { name?: string; price_cents?: number; currency?: string; categoryId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['sizes']
@@ -138,6 +139,7 @@ export class ProductService {
 
         if (data.name) product.name = data.name;
         if (data.price_cents) product.price_cents = data.price_cents;
+        if (data.description !== undefined) product.description = data.description;
         if (data.currency) product.currency = data.currency;
 
         await this.productRepository.save(product);
