@@ -61,7 +61,7 @@ export class ProductService {
             // A safer way for "has one of these sizes" is:
             qb.andWhere(qb => {
                 const subQuery = qb.subQuery()
-                    .select("ps.productId")
+                    .select("ps.product_id")
                     .from(ProductSize, "ps")
                     .leftJoin("ps.size", "s")
                     .where("s.name IN (:...sizes)")
