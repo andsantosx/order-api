@@ -8,7 +8,8 @@ export enum OrderStatus {
   PAID = 'PAID',
   SHIPPED = 'SHIPPED',
   DELIVERED = 'DELIVERED',
-  CANCELED = 'CANCELED'
+  CANCELED = 'CANCELED',
+  REFUNDED = 'REFUNDED'
 }
 
 @Entity('orders')
@@ -36,6 +37,9 @@ export class Order {
 
   @Column({ type: 'uuid', unique: true })
   idempotency_key!: string;
+
+  @Column({ nullable: true })
+  payment_id?: string; // Stores Mercado Pago Transaction ID
 
   @Column({
     type: 'enum',

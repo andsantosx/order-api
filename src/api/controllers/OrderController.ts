@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/OrderService';
+import { PaymentService } from '../services/PaymentService';
 
 export class OrderController {
   private orderService = new OrderService();
@@ -44,5 +45,46 @@ export class OrderController {
     const { status } = req.body;
     const order = await this.orderService.updateStatus(id as string, status);
     res.json(order);
+  }
+
+  /**
+   * Reembolsa um pedido pago (Apenas Admin).
+   */
+  async refund(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+
+    // Check if user is admin (Extra safeguard, middleware should handle this)
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    try {
+      const paymentService = new PaymentService();
+      const result = await paymentService.refundPayment(id as string);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Cancela um pedido (Usuário dono ou Admin).
+   */
+  async cancel(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const isAdmin = req.user?.isAdmin || false;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    try {
+      const paymentService = new PaymentService();
+      const result = await paymentService.cancelOrder(id as string, userId, isAdmin);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
   }
 }

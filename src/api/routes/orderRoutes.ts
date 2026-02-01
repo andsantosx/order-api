@@ -15,5 +15,7 @@ router.get('/:id', authMiddleware, orderController.getOne.bind(orderController))
 // POST /orders is public (Guest Checkout) but checks for token
 router.post('/', optionalAuthMiddleware, validate(createOrderSchema), orderController.create.bind(orderController));
 router.put('/:id/status', authMiddleware, validate(updateStatusSchema), orderController.updateStatus.bind(orderController));
+router.post('/:id/refund', authMiddleware, orderController.refund.bind(orderController));
+router.post('/:id/cancel', authMiddleware, orderController.cancel.bind(orderController));
 
 export default router;
