@@ -49,7 +49,7 @@ export class ProductService {
         }
 
         if (categories && categories.length > 0) {
-            qb.andWhere('category.name IN (:...categories)', { categories });
+            qb.andWhere('category.slug IN (:...categories)', { categories });
         }
 
         if (sizes && sizes.length > 0) {
@@ -89,13 +89,13 @@ export class ProductService {
     }
 
     /**
-     * Retorna os filtros disponíveis (categorias e tamanhos) baseados nos produtos existentes.
+     * Retorna os filtros disponíveis (facetas).
      */
     async getAvailableFilters() {
         // Get all unique categories that have products
         const categories = await this.categoryRepository.createQueryBuilder("category")
             .innerJoin("category.products", "product") // Only categories with products
-            .select("category.name")
+            .select(["category.name", "category.slug"])
             .distinct(true)
             .orderBy("category.name", "ASC")
             .getRawMany();
@@ -109,7 +109,7 @@ export class ProductService {
             .getRawMany();
 
         return {
-            categories: categories.map(c => c.category_name),
+            categories: categories.map(c => ({ name: c.category_name, slug: c.category_slug })),
             sizes: sizes.map(s => s.size_name)
         };
     }
