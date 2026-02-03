@@ -15,6 +15,5 @@ export class ProductSize {
     @JoinColumn({ name: 'size_id' })
     size!: Size;
 
-    @Column({ default: 0 })
-    quantity!: number;
+
 }

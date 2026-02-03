@@ -2,14 +2,15 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middlewares/validate';
 import { registerSchema, loginSchema } from '../schemas/userSchemas';
-
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { authLimiter } from '../../config/rateLimits';
 
 const router = Router();
 const authController = new AuthController();
 
-router.post('/register', validate(registerSchema), authController.register.bind(authController));
-router.post('/login', validate(loginSchema), authController.login.bind(authController));
+// Apply rate limiting to prevent brute force attacks
+router.post('/register', authLimiter, validate(registerSchema), authController.register.bind(authController));
+router.post('/login', authLimiter, validate(loginSchema), authController.login.bind(authController));
 
 router.get('/me', authMiddleware, authController.getProfile.bind(authController));
 router.put('/me', authMiddleware, authController.updateProfile.bind(authController));

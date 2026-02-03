@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { AppDataSource } from './data-source';
 import productRoutes from './api/routes/productRoutes';
@@ -15,6 +16,10 @@ import adminRoutes from './api/routes/adminRoutes';
 import profileRoutes from './api/routes/profileRoutes';
 import contactRoutes from './api/routes/contactRoutes';
 import brandRoutes from './api/routes/brandRoutes';
+import statsRoutes from './api/routes/statsRoutes';
+import { log } from './config/logger';
+import { requestLogger } from './api/middlewares/requestLogger';
+import { generalLimiter } from './config/rateLimits';
 
 // Carrega variáveis de ambiente do arquivo .envs from './api/routes/adminRoutes';
 
@@ -27,8 +32,23 @@ const PORT = process.env.PORT || 3000;
 // ==========================================
 // 1. Middlewares Iniciais
 // ==========================================
-// Habilita CORS para permitir requisições de outros domínios (Frontend)
-app.use(cors());
+
+// Request logging
+app.use(requestLogger);
+
+// Security headers
+app.use(helmet());
+
+// General rate limiting (baseline protection)
+app.use('/api', generalLimiter);
+
+// CORS - apenas frontend autorizado
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 
 // ==========================================
@@ -40,13 +60,54 @@ app.use(express.json());
 // ==========================================
 // 4. Rotas de Monitoramento (Health Check)
 // ==========================================
-// Rota simples para verificar se o servidor está online
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Server is running',
+// Enhanced health check with database and external services status
+app.get('/health', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const healthcheck = {
+    status: 'ok' as 'ok' | 'degraded' | 'down',
     timestamp: new Date().toISOString(),
-  });
+    uptime: process.uptime(),
+    version: '1.0.0',
+    checks: {
+      database: { status: 'unknown' as 'ok' | 'error', responseTime: '0ms' },
+      mercadopago: { status: 'unknown' as 'ok' | 'error', responseTime: '0ms' }
+    }
+  };
+
+  try {
+    // Check database connection
+    const dbStart = Date.now();
+    await AppDataSource.query('SELECT 1');
+    healthcheck.checks.database = {
+      status: 'ok',
+      responseTime: `${Date.now() - dbStart}ms`
+    };
+  } catch (error) {
+    healthcheck.checks.database = { status: 'error', responseTime: '0ms' };
+    healthcheck.status = 'degraded';
+    log.error('Database health check failed', { error });
+  }
+
+  // Check Mercado Pago (simple ping)
+  try {
+    const mpStart = Date.now();
+    const response = await fetch('https://api.mercadopago.com/v1/payment_methods', {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(3000) // 3s timeout
+    });
+    healthcheck.checks.mercadopago = {
+      status: response.ok ? 'ok' : 'error',
+      responseTime: `${Date.now() - mpStart}ms`
+    };
+    if (!response.ok) healthcheck.status = 'degraded';
+  } catch (error) {
+    healthcheck.checks.mercadopago = { status: 'error', responseTime: '0ms' };
+    healthcheck.status = 'degraded';
+    log.warn('Mercado Pago health check failed', { error });
+  }
+
+  const statusCode = healthcheck.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(healthcheck);
 });
 
 // ==========================================
@@ -74,9 +135,13 @@ console.log('✅ Product routes registered at /api/products');
 app.use('/api/images', imageRoutes);
 console.log('✅ Image routes registered at /api/images');
 
-// Admin
+// Admin Panel
 app.use('/api/admin', adminRoutes);
 console.log('✅ Admin routes registered at /api/admin');
+
+// Admin Statistics
+app.use('/api/admin/stats', statsRoutes);
+console.log('✅ Stats routes registered at /api/admin/stats');
 
 // Pedidos e Pagamentos
 app.use('/api/orders', orderRoutes);

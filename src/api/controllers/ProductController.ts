@@ -53,15 +53,15 @@ export class ProductController {
 
   /**
    * Cria um novo produto.
-   * Espera: name, price_cents, currency, categoryId, sizes (array of {sizeId, quantity}).
-   * Compatibility: supports sizeIds (array of numbers) -> default quantity 0.
+   * Espera: name, price_cents, currency, categoryId, sizes (array of {sizeId}).
+   * Compatibility: supports sizeIds (array of numbers).
    */
   async create(req: Request, res: Response, next: NextFunction) {
     const { name, price_cents, description, currency, categoryId, brandId, sizeIds, sizes, images } = req.body;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
-      sizesData = sizeIds.map((id: number) => ({ sizeId: id, quantity: 0 }));
+      sizesData = sizeIds.map((id: number) => ({ sizeId: id }));
     }
 
     const product = await this.productService.create(name, price_cents, description, currency, categoryId, brandId, sizesData, images);
@@ -77,7 +77,7 @@ export class ProductController {
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
-      sizesData = sizeIds.map((id: number) => ({ sizeId: id, quantity: 0 }));
+      sizesData = sizeIds.map((id: number) => ({ sizeId: id }));
     }
 
     const product = await this.productService.update(id as string, { ...rest, sizes: sizesData, images });

@@ -18,6 +18,9 @@ export class OrderItem {
   @Column('integer')
   quantity!: number;
 
+  @Column({ nullable: true })
+  size?: string;
+
   @Column({
     type: 'bigint', comment: 'Preço unitário no momento da compra', transformer: {
       to: (value: number) => value,

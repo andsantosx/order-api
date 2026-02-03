@@ -8,6 +8,7 @@ export const createOrderSchema = z.object({
             z.object({
                 productId: z.string().uuid('ID do produto inválido'),
                 quantity: z.number().int().positive('Quantidade deve ser um número positivo'),
+                size: z.string().min(1, 'Tamanho é obrigatório'),
             })
         ).min(1, 'Pedido deve ter pelo menos um item'),
         shippingAddress: z.object({

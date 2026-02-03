@@ -164,7 +164,7 @@ export class ProductService {
     /**
      * Cria um novo produto e vincula aos tamanhos com quantidade.
      */
-    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, brandId: number | undefined, sizesData: { sizeId: number, quantity?: number }[], images?: string[]) {
+    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, brandId: number | undefined, sizesData: { sizeId: number }[], images?: string[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
@@ -208,8 +208,7 @@ export class ProductService {
                 const size = foundSizes.find(s => s.id === item.sizeId)!;
                 return this.productSizeRepository.create({
                     product: savedProduct,
-                    size: size,
-                    quantity: item.quantity || 0
+                    size: size
                 });
             });
 
@@ -222,7 +221,7 @@ export class ProductService {
     /**
      * Atualiza um produto.
      */
-    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number, quantity?: number }[], images?: string[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number }[], images?: string[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['sizes', 'images']
@@ -285,8 +284,7 @@ export class ProductService {
                 const size = foundSizes.find(s => s.id === item.sizeId)!;
                 return this.productSizeRepository.create({
                     product: product,
-                    size: size,
-                    quantity: item.quantity || 0
+                    size: size
                 });
             });
 

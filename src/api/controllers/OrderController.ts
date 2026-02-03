@@ -8,11 +8,13 @@ export class OrderController {
   /**
    * Retorna todos os pedidos cadastrados.
    * Útil para painel administrativo.
+   * Query params: ?status=PENDING (opcional)
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
     const userId = req.user?.userId;
     const isAdmin = req.user?.isAdmin;
-    const orders = await this.orderService.getAll(userId, isAdmin);
+    const status = req.query.status as string | undefined;
+    const orders = await this.orderService.getAll(userId, isAdmin, status as any);
     res.json(orders);
   }
 

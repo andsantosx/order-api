@@ -25,17 +25,32 @@ export class OrderService {
 
     /**
      * Retorna pedidos. Se admin, todos. Se user, apenas os seus.
+     * @param userId - ID do usuário (opcional)
+     * @param isAdmin - Se true, retorna todos os pedidos
+     * @param status - Filtro de status (opcional)
      */
-    async getAll(userId?: string, isAdmin: boolean = false) {
+    async getAll(userId?: string, isAdmin: boolean = false, status?: OrderStatus) {
         let orders: any[];
+
         if (isAdmin) {
+            const whereCondition: any = {};
+            if (status) {
+                whereCondition.status = status;
+            }
+
             orders = await this.orderRepository.find({
+                where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
                 relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
                 order: { created_at: 'DESC' }
             });
         } else if (userId) {
+            const whereCondition: any = { user: { id: userId } };
+            if (status) {
+                whereCondition.status = status;
+            }
+
             orders = await this.orderRepository.find({
-                where: { user: { id: userId } },
+                where: whereCondition,
                 relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
                 order: { created_at: 'DESC' }
             });
@@ -92,7 +107,7 @@ export class OrderService {
         guestName: string | undefined,
         guestEmail: string | undefined,
         guestCpf: string | undefined,
-        items: { productId: string; quantity: number }[],
+        items: { productId: string; quantity: number; size: string }[],
         shippingAddressData: ShippingAddressData
     ) {
         if (!shippingAddressData.zipCode) {
@@ -207,6 +222,7 @@ export class OrderService {
                     quantity: item.quantity,
                     unit_price: product.price_cents,
                     total_price: itemTotalPrice,
+                    size: item.size
                 });
                 orderItems.push(newOrderItem);
             }
