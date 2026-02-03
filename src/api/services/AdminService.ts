@@ -7,43 +7,69 @@ export class AdminService {
     private orderRepository = AppDataSource.getRepository(Order);
     private productRepository = AppDataSource.getRepository(Product);
 
-    async getDashboardStats() {
-        // 1. Total Revenue: Sum of total_amount for "completed" orders
-        // Assuming PAID, SHIPPED, DELIVERED are revenue-generating statuses
-        const revenueResult = await this.orderRepository
-            .createQueryBuilder('order')
+    async getDashboardStats(startDate?: string, endDate?: string) {
+        // Prepare Date Range Conditions
+        // If dates are provided, we filter. If not, defaults apply:
+        // Revenue: default to All Time (or we could say last 30 days, but usually checks all)
+        // Orders: default to All Time count
+        // RECENT: always last 5 regardless of filter? Usually yes, or filter them too. 
+        // Let's filter MAIN stats by date, but keep totals as totals if no date provided.
+
+        const qbRevenue = this.orderRepository.createQueryBuilder('order')
             .select('SUM(order.total_amount)', 'sum')
             .where('order.status IN (:...statuses)', {
                 statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED]
-            })
-            .getRawOne();
+            });
 
+        const qbOrders = this.orderRepository.createQueryBuilder('order');
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            // end needs to be end of day
+            end.setHours(23, 59, 59, 999);
+
+            qbRevenue.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
+            qbOrders.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
+        }
+
+        const revenueResult = await qbRevenue.getRawOne();
         const totalRevenue = revenueResult ? parseInt(revenueResult.sum || '0', 10) : 0;
 
-        // 2. Total Orders
-        const totalOrders = await this.orderRepository.count();
+        const totalOrders = await qbOrders.getCount();
 
-        // 3. Total Products
+        // 3. Total Products (Always Global Count)
         const totalProducts = await this.productRepository.count();
 
-        // 4. Recent Orders (Last 5)
-        const recentOrders = await this.orderRepository.find({
-            order: { created_at: 'DESC' },
-            take: 5,
-            relations: ['user'], // Include user basics if needed
-            select: {
-                id: true,
-                total_amount: true,
-                status: true,
-                created_at: true,
-                guest_email: true,
-                user: {
-                    id: true,
-                    name: true,
-                    email: true
-                }
-            }
-        });
+        // 4. Recent Orders (Last 5) - Optionally filtered?
+        // Usually recent orders table reflects the filter, OR it just shows "Live Feed".
+        // Let's keep it "Recent Global" for now, or "Recent in Range".
+        // User asked for "Overview", usually "Recent" implies global context. 
+        // If I filter `total orders` to last 7 days, seeing an order from 2 years ago in the table is weird.
+        // Let's apply filter to recent orders too if provided.
+        const qbRecent = this.orderRepository.createQueryBuilder('order')
+            .leftJoinAndSelect('order.user', 'user')
+            .orderBy('order.created_at', 'DESC')
+            .take(5)
+            .select([
+                'order.id',
+                'order.total_amount',
+                'order.status',
+                'order.created_at',
+                'order.guest_email',
+                'user.id',
+                'user.name',
+                'user.email'
+            ]);
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            qbRecent.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
+        }
+
+        const recentOrders = await qbRecent.getMany();
 
         // Format recent orders for display
         const recentOrdersFormatted = recentOrders.map(order => ({

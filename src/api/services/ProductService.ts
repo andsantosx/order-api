@@ -222,10 +222,10 @@ export class ProductService {
     /**
      * Atualiza um produto.
      */
-    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number, quantity?: number }[], images?: string[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
-            relations: ['sizes']
+            relations: ['sizes', 'images']
         });
 
         if (!product) {
@@ -254,6 +254,20 @@ export class ProductService {
         if (data.currency) product.currency = data.currency;
 
         await this.productRepository.save(product);
+
+        // Update Images if provided
+        if (data.images) {
+            // Remove old images
+            await this.productImageRepository.delete({ product: { id } });
+
+            // Add new images with position preservation
+            const productImages = data.images.map((url, index) => this.productImageRepository.create({
+                url,
+                position: index,
+                product // correctly link to product
+            }));
+            await this.productImageRepository.save(productImages);
+        }
 
         // Update sizes if provided
         if (data.sizes) {

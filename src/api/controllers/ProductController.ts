@@ -73,14 +73,14 @@ export class ProductController {
    */
   async update(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
-    const { sizeIds, sizes, ...rest } = req.body;
+    const { sizeIds, sizes, images, ...rest } = req.body;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
       sizesData = sizeIds.map((id: number) => ({ sizeId: id, quantity: 0 }));
     }
 
-    const product = await this.productService.update(id as string, { ...rest, sizes: sizesData });
+    const product = await this.productService.update(id as string, { ...rest, sizes: sizesData, images });
     res.json(product);
   }
 
