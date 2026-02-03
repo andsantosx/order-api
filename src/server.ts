@@ -33,6 +33,10 @@ const PORT = process.env.PORT || 3000;
 // 1. Middlewares Iniciais
 // ==========================================
 
+// Trust proxy (necessário quando atrás de nginx/load balancer)
+// Permite que o rate limiter identifique IPs corretamente via X-Forwarded-For
+app.set('trust proxy', 1);
+
 // Request logging
 app.use(requestLogger);
 
