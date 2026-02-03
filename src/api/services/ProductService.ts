@@ -3,6 +3,7 @@ import { Product } from '../entities/Product';
 import { Category } from '../entities/Category';
 import { Size } from '../entities/Size';
 import { ProductSize } from '../entities/ProductSize';
+import { ProductImage } from '../entities/ProductImage';
 import { AppError } from '../middlewares/errorHandler';
 
 export class ProductService {
@@ -10,6 +11,7 @@ export class ProductService {
     private categoryRepository = AppDataSource.getRepository(Category);
     private sizeRepository = AppDataSource.getRepository(Size);
     private productSizeRepository = AppDataSource.getRepository(ProductSize);
+    private productImageRepository = AppDataSource.getRepository(ProductImage);
 
     /**
      * Retorna produtos com paginação e filtro parametrizado.
@@ -133,7 +135,7 @@ export class ProductService {
     /**
      * Cria um novo produto e vincula aos tamanhos com quantidade.
      */
-    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[]) {
+    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[], images?: string[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
@@ -147,6 +149,11 @@ export class ProductService {
             currency,
             category
         });
+
+        if (images && images.length > 0) {
+            const productImages = images.map(url => this.productImageRepository.create({ url }));
+            product.images = productImages;
+        }
 
         const savedProduct = await this.productRepository.save(product);
 

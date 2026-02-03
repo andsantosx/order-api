@@ -56,14 +56,14 @@ export class ProductController {
    * Compatibility: supports sizeIds (array of numbers) -> default quantity 0.
    */
   async create(req: Request, res: Response, next: NextFunction) {
-    const { name, price_cents, description, currency, categoryId, sizeIds, sizes } = req.body;
+    const { name, price_cents, description, currency, categoryId, sizeIds, sizes, images } = req.body;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
       sizesData = sizeIds.map((id: number) => ({ sizeId: id, quantity: 0 }));
     }
 
-    const product = await this.productService.create(name, price_cents, description, currency, categoryId, sizesData);
+    const product = await this.productService.create(name, price_cents, description, currency, categoryId, sizesData, images);
     res.status(201).json(product);
   }
 
