@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, DeleteDateColumn, CreateDateColumn } from 'typeorm';
 import { Category } from './Category';
+import { Brand } from './Brand';
 import { ProductImage } from './ProductImage';
 import { ProductSize } from './ProductSize';
 import { Wishlist } from './Wishlist';
@@ -26,9 +27,13 @@ export class Product {
   @Column({ length: 3 })
   currency!: string;
 
-  @ManyToOne(() => Category, category => category.products)
+  @ManyToOne(() => Category, category => category.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'category_id' })
   category!: Category;
+
+  @ManyToOne(() => Brand, brand => brand.products, { nullable: true, eager: true })
+  @JoinColumn({ name: 'brand_id' })
+  brand!: Brand;
 
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images!: ProductImage[];

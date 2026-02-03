@@ -89,6 +89,7 @@ export class OrderService {
 
     async create(
         userId: string | undefined,
+        guestName: string | undefined,
         guestEmail: string | undefined,
         guestCpf: string | undefined,
         items: { productId: string; quantity: number }[],
@@ -132,7 +133,7 @@ export class OrderService {
                     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
                     const newUser = this.userRepository.create({
-                        name: 'Cliente', // Placeholder name
+                        name: guestName || 'Cliente',
                         email: finalEmail,
                         password_hash: hashedPassword,
                         isAdmin: false,

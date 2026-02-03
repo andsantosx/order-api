@@ -13,6 +13,7 @@ import { ShippingAddress } from './api/entities/ShippingAddress';
 import { UserAddress } from './api/entities/UserAddress';
 import { Wishlist } from './api/entities/Wishlist';
 import { ContactMessage } from './api/entities/ContactMessage';
+import { Brand } from './api/entities/Brand';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   schema: 'public',
-  synchronize: false,
+  synchronize: true,
   logging: process.env.NODE_ENV === 'development',
   entities: [
     Product,
@@ -34,7 +35,8 @@ export const AppDataSource = new DataSource({
     ShippingAddress,
     UserAddress,
     Wishlist,
-    ContactMessage
+    ContactMessage,
+    Brand
   ],
   migrations: [],
   subscribers: [],

@@ -14,6 +14,7 @@ import { errorHandler } from './api/middlewares/errorHandler';
 import adminRoutes from './api/routes/adminRoutes';
 import profileRoutes from './api/routes/profileRoutes';
 import contactRoutes from './api/routes/contactRoutes';
+import brandRoutes from './api/routes/brandRoutes';
 
 // Carrega variáveis de ambiente do arquivo .envs from './api/routes/adminRoutes';
 
@@ -64,6 +65,8 @@ console.log('✅ Profile routes registered at /api/profile');
 // Catálogo (Categorias, Tamanhos, Produtos, Imagens)
 app.use('/api/categories', categoryRoutes);
 console.log('✅ Category routes registered at /api/categories');
+app.use('/api/brands', brandRoutes);
+console.log('✅ Brand routes registered at /api/brands');
 app.use('/api/sizes', sizeRoutes);
 console.log('✅ Size routes registered at /api/sizes');
 app.use('/api/products', productRoutes);

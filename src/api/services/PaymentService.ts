@@ -79,12 +79,18 @@ export class PaymentService {
                 // Save payment_id and update status
                 await this.orderRepository.update({ id: orderId }, {
                     status: OrderStatus.PAID,
-                    payment_id: result.id?.toString()
+                    payment_id: result.id?.toString(),
+                    payment_method: result.payment_method_id,
+                    installments: result.installments,
+                    card_last_four: result.card?.last_four_digits
                 });
             } else if (result.id) {
                 // Even if not approved yet, save the payment_id for future reference
                 await this.orderRepository.update({ id: orderId }, {
-                    payment_id: result.id?.toString()
+                    payment_id: result.id?.toString(),
+                    payment_method: result.payment_method_id,
+                    installments: result.installments,
+                    card_last_four: result.card?.last_four_digits
                 });
             }
 
@@ -197,7 +203,12 @@ export class PaymentService {
                 await this.orderRepository.update({ id: orderId }, { payment_id: paymentId.toString() });
 
                 if (status === 'approved') {
-                    await this.orderRepository.update({ id: orderId }, { status: OrderStatus.PAID });
+                    await this.orderRepository.update({ id: orderId }, {
+                        status: OrderStatus.PAID,
+                        payment_method: payment.payment_method_id,
+                        installments: payment.installments,
+                        card_last_four: payment.card?.last_four_digits
+                    });
                     console.log(`Order ${orderId} updated to PAID via Webhook/IPN`);
                 } else if (status === 'refunded' || status === 'charged_back') {
                     await this.orderRepository.update({ id: orderId }, { status: OrderStatus.REFUNDED });

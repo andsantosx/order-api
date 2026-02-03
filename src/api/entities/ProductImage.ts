@@ -12,4 +12,7 @@ export class ProductImage {
 
     @Column()
     url!: string;
+
+    @Column({ default: 0 })
+    position!: number;
 }

@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../data-source';
 import { Product } from '../entities/Product';
 import { Category } from '../entities/Category';
+import { Brand } from '../entities/Brand';
 import { Size } from '../entities/Size';
 import { ProductSize } from '../entities/ProductSize';
 import { ProductImage } from '../entities/ProductImage';
@@ -9,6 +10,7 @@ import { AppError } from '../middlewares/errorHandler';
 export class ProductService {
     private productRepository = AppDataSource.getRepository(Product);
     private categoryRepository = AppDataSource.getRepository(Category);
+    private brandRepository = AppDataSource.getRepository(Brand);
     private sizeRepository = AppDataSource.getRepository(Size);
     private productSizeRepository = AppDataSource.getRepository(ProductSize);
     private productImageRepository = AppDataSource.getRepository(ProductImage);
@@ -21,19 +23,23 @@ export class ProductService {
         minPrice?: number,
         maxPrice?: number,
         categories?: string[],
+        brands?: string[],
         sizes?: string[],
         sortBy?: string,
         page: number,
         limit: number
     }) {
-        const { search, minPrice, maxPrice, categories, sizes, sortBy, page = 1, limit = 20 } = params;
+        const { search, minPrice, maxPrice, categories, brands, sizes, sortBy, page = 1, limit = 20 } = params;
         const skip = (page - 1) * limit;
 
         const qb = this.productRepository.createQueryBuilder('product')
             .leftJoinAndSelect('product.category', 'category')
+            .leftJoinAndSelect('product.brand', 'brand')
             .leftJoinAndSelect('product.sizes', 'productSizes')
             .leftJoinAndSelect('productSizes.size', 'size')
             .leftJoinAndSelect('product.images', 'images')
+            .addOrderBy('images.position', 'ASC')
+            .addOrderBy('size.id', 'ASC')
             .skip(skip)
             .take(limit);
 
@@ -52,6 +58,10 @@ export class ProductService {
 
         if (categories && categories.length > 0) {
             qb.andWhere('category.slug IN (:...categories)', { categories });
+        }
+
+        if (brands && brands.length > 0) {
+            qb.andWhere('brand.slug IN (:...brands)', { brands });
         }
 
         if (sizes && sizes.length > 0) {
@@ -110,8 +120,17 @@ export class ProductService {
             .orderBy("size.id", "ASC") // Maintain logical order if IDs are ordered
             .getRawMany();
 
+        // Get all unique brands that have products
+        const brands = await this.brandRepository.createQueryBuilder("brand")
+            .innerJoin("brand.products", "product") // Only brands with products
+            .select(["brand.name", "brand.slug"])
+            .distinct(true)
+            .orderBy("brand.name", "ASC")
+            .getRawMany();
+
         return {
             categories: categories.map(c => ({ name: c.category_name, slug: c.category_slug })),
+            brands: brands.map(b => ({ name: b.brand_name, slug: b.brand_slug })),
             sizes: sizes.map(s => s.size_name)
         };
     }
@@ -122,7 +141,17 @@ export class ProductService {
     async getOne(id: string) {
         const product = await this.productRepository.findOne({
             where: { id },
-            relations: ['category', 'sizes', 'sizes.size', 'images']
+            relations: ['category', 'brand', 'sizes', 'sizes.size', 'images'],
+            order: {
+                images: {
+                    position: 'ASC'
+                },
+                sizes: {
+                    size: {
+                        id: 'ASC'
+                    }
+                }
+            }
         });
 
         if (!product) {
@@ -135,10 +164,18 @@ export class ProductService {
     /**
      * Cria um novo produto e vincula aos tamanhos com quantidade.
      */
-    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, sizesData: { sizeId: number, quantity?: number }[], images?: string[]) {
+    async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, brandId: number | undefined, sizesData: { sizeId: number, quantity?: number }[], images?: string[]) {
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
             throw new AppError('Categoria não encontrada', 404);
+        }
+
+        let brand = null;
+        if (brandId) {
+            brand = await this.brandRepository.findOneBy({ id: brandId });
+            if (!brand) {
+                throw new AppError('Marca não encontrada', 404);
+            }
         }
 
         // Prepare product
@@ -147,11 +184,12 @@ export class ProductService {
             price_cents,
             description,
             currency,
-            category
+            category,
+            brand: brand || undefined
         });
 
         if (images && images.length > 0) {
-            const productImages = images.map(url => this.productImageRepository.create({ url }));
+            const productImages = images.map((url, index) => this.productImageRepository.create({ url, position: index }));
             product.images = productImages;
         }
 
@@ -184,7 +222,7 @@ export class ProductService {
     /**
      * Atualiza um produto.
      */
-    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number, quantity?: number }[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['sizes']
@@ -200,6 +238,14 @@ export class ProductService {
                 throw new AppError('Categoria não encontrada', 404);
             }
             product.category = category;
+        }
+
+        if (data.brandId) {
+            const brand = await this.brandRepository.findOneBy({ id: data.brandId });
+            if (!brand) {
+                throw new AppError('Marca não encontrada', 404);
+            }
+            product.brand = brand;
         }
 
         if (data.name) product.name = data.name;

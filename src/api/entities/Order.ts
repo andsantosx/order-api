@@ -41,6 +41,15 @@ export class Order {
   @Column({ nullable: true })
   payment_id?: string; // Stores Mercado Pago Transaction ID
 
+  @Column({ nullable: true })
+  payment_method?: string; // pix, credit_card, ticket, etc.
+
+  @Column({ default: 1 })
+  installments!: number;
+
+  @Column({ nullable: true })
+  card_last_four?: string;
+
   @Column({
     type: 'enum',
     enum: OrderStatus,

@@ -9,7 +9,7 @@ export class ProductController {
    * Query Params: categories (string | string[]), sizes (string | string[]), page, limit, search, minPrice, maxPrice, sort.
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
-    const { categories, sizes, page, limit, search, minPrice, maxPrice, sort } = req.query;
+    const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort } = req.query;
     const pageNum = page ? parseInt(page as string) : 1;
     const limitNum = limit ? parseInt(limit as string) : 20;
 
@@ -22,6 +22,7 @@ export class ProductController {
 
     const products = await this.productService.getAll({
       categories: toArray(categories),
+      brands: toArray(brands),
       sizes: toArray(sizes),
       sortBy: sort as string,
       page: pageNum,
@@ -56,14 +57,14 @@ export class ProductController {
    * Compatibility: supports sizeIds (array of numbers) -> default quantity 0.
    */
   async create(req: Request, res: Response, next: NextFunction) {
-    const { name, price_cents, description, currency, categoryId, sizeIds, sizes, images } = req.body;
+    const { name, price_cents, description, currency, categoryId, brandId, sizeIds, sizes, images } = req.body;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
       sizesData = sizeIds.map((id: number) => ({ sizeId: id, quantity: 0 }));
     }
 
-    const product = await this.productService.create(name, price_cents, description, currency, categoryId, sizesData, images);
+    const product = await this.productService.create(name, price_cents, description, currency, categoryId, brandId, sizesData, images);
     res.status(201).json(product);
   }
 
