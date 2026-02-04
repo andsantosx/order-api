@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { imageUrlSchema } from '../../utils/validators';
 
 export const createProductSchema = z.object({
     body: z.object({
@@ -8,6 +9,7 @@ export const createProductSchema = z.object({
         currency: z.string().length(3, 'Moeda deve ter 3 caracteres (ex: BRL)'),
         categoryId: z.number().int().positive('ID da categoria inválido'),
         sizeIds: z.array(z.number().int().positive()).min(1, 'Produto deve ter pelo menos um tamanho'),
+        images: z.array(imageUrlSchema).min(1, 'Pelo menos uma imagem é obrigatória').optional(),
     }),
 });
 
@@ -19,5 +21,6 @@ export const updateProductSchema = z.object({
         currency: z.string().length(3).optional(),
         categoryId: z.number().int().positive().optional(),
         sizeIds: z.array(z.number().int().positive()).min(1).optional(),
+        images: z.array(imageUrlSchema).min(1, 'Pelo menos uma imagem é obrigatória').optional(),
     }),
 });

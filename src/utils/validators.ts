@@ -19,14 +19,14 @@ export const validateImageUrl = (url: string): boolean => {
             'images.unsplash.com',
             'cdn.shopify.com',
             'storage.googleapis.com',
+            'postimages.org',
             // Add your trusted domains here
         ];
 
         // If whitelist is defined, check domain
-        // Commented out by default - uncomment to enable whitelist
-        // const hostname = parsed.hostname;
-        // const isAllowed = allowedDomains.some(domain => hostname.endsWith(domain));
-        // if (!isAllowed) return false;
+        const hostname = parsed.hostname;
+        const isAllowed = allowedDomains.some(domain => hostname.endsWith(domain));
+        if (!isAllowed) return false;
 
         return true;
     } catch {
