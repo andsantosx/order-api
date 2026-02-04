@@ -20,6 +20,8 @@ export const validateImageUrl = (url: string): boolean => {
             'cdn.shopify.com',
             'storage.googleapis.com',
             'postimages.org',
+            'postimg.cc',
+            'i.postimg.cc',
             // Add your trusted domains here
         ];
 
