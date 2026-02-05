@@ -10,9 +10,9 @@ export class ProductImage {
     @JoinColumn({ name: 'product_id' })
     product!: Product;
 
-    @Column({ type: 'varchar', length: 500 })
+    @Column()
     url!: string;
 
-    @Column({ type: 'int', default: 0 })
+    @Column({ default: 0 })
     position!: number;
 }
