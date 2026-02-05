@@ -150,7 +150,7 @@ export class Order {
 
   @ManyToOne(() => User)
   @JoinColumn({ name: "user_id" })
-  user!: User | null;
+  user!: User;
 
   @Column({ type: "bigint" })
   total_amount!: number; // Em centavos

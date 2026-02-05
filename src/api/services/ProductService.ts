@@ -303,42 +303,53 @@ export class ProductService {
             }
         }
 
-        // Prepare product
+        // Valida tamanhos primeiro
+        let productSizes: ProductSize[] = [];
+        if (sizesData && sizesData.length > 0) {
+            const sizeIds = sizesData.map(s => s.sizeId);
+            const foundSizes = await this.sizeRepository.findByIds(sizeIds);
+
+            if (foundSizes.length !== sizeIds.length) {
+                log.warn('Tamanhos não encontrados ao criar produto', { 
+                    requested: sizeIds.length, 
+                    found: foundSizes.length 
+                });
+                throw new AppError('Um ou mais tamanhos não foram encontrados', HTTP_STATUS.NOT_FOUND);
+            }
+
+            // Cria entidades ProductSize (cascade vai salvar automaticamente)
+            productSizes = sizesData.map(item => {
+                const size = foundSizes.find(s => s.id === item.sizeId)!;
+                return this.productSizeRepository.create({
+                    size: size
+                });
+            });
+        }
+
+        // Cria entidades ProductImage (cascade vai salvar automaticamente)
+        let productImages: ProductImage[] = [];
+        if (images && images.length > 0) {
+            productImages = images.map((url, index) => this.productImageRepository.create({ 
+                url, 
+                position: index
+            }));
+            log.info('Imagens preparadas para produto', { count: productImages.length });
+        }
+
+        // Prepara produto COM todas as relações
         const product = this.productRepository.create({
             name,
             price_cents,
             description,
             currency,
             category,
-            brand: brand || undefined
+            brand: brand || undefined,
+            sizes: productSizes,
+            images: productImages
         });
 
-        if (images && images.length > 0) {
-            const productImages = images.map((url, index) => this.productImageRepository.create({ url, position: index }));
-            product.images = productImages;
-        }
-
+        // Salva produto com cascade - salva imagens e tamanhos automaticamente
         const savedProduct = await this.productRepository.save(product);
-
-        // Handle sizes (expecting array of objects now)
-        if (sizesData && sizesData.length > 0) {
-            const sizeIds = sizesData.map(s => s.sizeId);
-            const foundSizes = await this.sizeRepository.findByIds(sizeIds);
-
-            if (foundSizes.length !== sizeIds.length) {
-                throw new AppError('Um ou mais tamanhos não foram encontrados', 404);
-            }
-
-            const productSizes = sizesData.map(item => {
-                const size = foundSizes.find(s => s.id === item.sizeId)!;
-                return this.productSizeRepository.create({
-                    product: savedProduct,
-                    size: size
-                });
-            });
-
-            await this.productSizeRepository.save(productSizes);
-        }
 
         log.info('Novo produto criado', {
             productId: savedProduct.id,
@@ -411,43 +422,59 @@ export class ProductService {
             }
         }
 
-        // Update Images if provided
+        // Atualiza imagens se fornecidas
         if (data.images) {
-            // Remove old images
-            await this.productImageRepository.delete({ product: { id } });
-
-            // Add new images with position preservation
+            // Remove imagens antigas primeiro (previne linhas órfãs)
+            if (product.images && product.images.length > 0) {
+                await this.productImageRepository.remove(product.images);
+                log.info('Imagens antigas removidas', { productId: id, count: product.images.length });
+            }
+            
+            // Cria novas entidades ProductImage (cascade vai salvar)
             const productImages = data.images.map((url, index) => this.productImageRepository.create({
                 url,
-                position: index,
-                product // correctly link to product
+                position: index
             }));
-            await this.productImageRepository.save(productImages);
+            
+            // Atribui novas imagens ao produto
+            product.images = productImages;
+            log.info('Novas imagens atribuídas', { productId: id, count: productImages.length });
         }
 
-        // Update sizes if provided
+        // Atualiza tamanhos se fornecidos
         if (data.sizes) {
-            // Remove old associations
-            await this.productSizeRepository.delete({ product: { id } });
-
             const sizeIds = data.sizes.map(s => s.sizeId);
             const foundSizes = await this.sizeRepository.findByIds(sizeIds);
 
             if (foundSizes.length !== sizeIds.length) {
-                throw new AppError('Um ou mais tamanhos não foram encontrados', 404);
+                log.warn('Tamanhos não encontrados ao atualizar produto', { 
+                    productId: id,
+                    requested: sizeIds.length, 
+                    found: foundSizes.length 
+                });
+                throw new AppError('Um ou mais tamanhos não foram encontrados', HTTP_STATUS.NOT_FOUND);
             }
 
+            // Remove tamanhos antigos primeiro (previne linhas órfãs)
+            if (product.sizes && product.sizes.length > 0) {
+                await this.productSizeRepository.remove(product.sizes);
+                log.info('Tamanhos antigos removidos', { productId: id, count: product.sizes.length });
+            }
+
+            // Cria novas entidades ProductSize (cascade vai salvar)
             const productSizes = data.sizes.map(item => {
                 const size = foundSizes.find(s => s.id === item.sizeId)!;
                 return this.productSizeRepository.create({
-                    product: product,
                     size: size
                 });
             });
-
-            await this.productSizeRepository.save(productSizes);
+            
+            // Atribui novos tamanhos ao produto
+            product.sizes = productSizes;
+            log.info('Novos tamanhos atribuídos', { productId: id, count: productSizes.length });
         }
 
+        // Salva produto com cascade - atualiza imagens e tamanhos automaticamente
         await this.productRepository.save(product);
 
         log.info('Produto atualizado', { productId: id, name: product.name });

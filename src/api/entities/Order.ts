@@ -17,9 +17,9 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => User, user => user.orders, { nullable: true })
+  @ManyToOne(() => User, user => user.orders)
   @JoinColumn({ name: 'user_id' })
-  user!: User | null;
+  user!: User;
 
   @Column({ nullable: true })
   guest_email?: string;

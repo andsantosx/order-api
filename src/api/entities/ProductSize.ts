@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Product } from './Product';
 import { Size } from './Size';
 
@@ -7,13 +7,11 @@ export class ProductSize {
     @PrimaryGeneratedColumn('increment')
     id!: number;
 
-    @ManyToOne(() => Product, product => product.sizes, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Product, product => product.sizes, { onDelete: 'CASCADE', nullable: false })
     @JoinColumn({ name: 'product_id' })
     product!: Product;
 
-    @ManyToOne(() => Size)
+    @ManyToOne(() => Size, { nullable: false })
     @JoinColumn({ name: 'size_id' })
     size!: Size;
-
-
 }
