@@ -14,10 +14,11 @@ export class ProductController {
     const limitNum = limit ? parseInt(limit as string) : 20;
 
     // Helper to ensure array
-    const toArray = (val: any): string[] | undefined => {
-      if (!val) return undefined;
-      if (Array.isArray(val)) return val as string[];
-      return (val as string).split(',');
+    const toArray = (val: unknown): string[] | undefined => {
+        if (!val) return undefined;
+        if (typeof val === 'string') return [val];
+        if (Array.isArray(val)) return val.filter((v): v is string => typeof v === 'string');
+        return undefined;
     };
 
     const products = await this.productService.getAll({

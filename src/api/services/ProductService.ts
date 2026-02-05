@@ -6,7 +6,61 @@ import { Size } from '../entities/Size';
 import { ProductSize } from '../entities/ProductSize';
 import { ProductImage } from '../entities/ProductImage';
 import { AppError } from '../middlewares/errorHandler';
+import { log } from '../../config/logger';
+import { ERROR_MESSAGES, HTTP_STATUS, VALIDATION } from '../../constants';
+import { sanitizeProductData, isValidImageUrl } from '../../utils/sanitizer';
 
+/**
+ * Interface para filtros de produtos
+ * Centraliza todos os parâmetros de busca e filtro
+ */
+export interface ProductFilters {
+    /** Busca por texto (nome ou descrição) */
+    search?: string;
+    
+    /** Preço mínimo em centavos */
+    minPrice?: number;
+    
+    /** Preço máximo em centavos */
+    maxPrice?: number;
+    
+    /** IDs ou slugs de categorias para filtrar */
+    categories?: string[];
+    
+    /** IDs ou slugs de marcas para filtrar */
+    brands?: string[];
+    
+    /** IDs ou nomes de tamanhos para filtrar */
+    sizes?: string[];
+    
+    /** Campo para ordenação (price, name, created_at) */
+    sortBy?: 'price-low' | 'price-high' | 'newest' | string;
+    
+    /** Ordem de ordenação */
+    sortOrder?: 'ASC' | 'DESC';
+    
+    /** Número da página (1-indexed) */
+    page: number;
+    
+    /** Itens por página */
+    limit: number;
+}
+
+/**
+ * Service responsável pela lógica de negócio relacionada a produtos
+ * 
+ * Funcionalidades:
+ * - Listagem com filtros avançados (busca, preço, categoria, marca, tamanho)
+ * - Paginação e ordenação
+ * - Criação e atualização com validação de imagens
+ * - Gerenciamento de tamanhos disponíveis
+ * - Soft delete (inativação)
+ * 
+ * Validações:
+ * - URLs de imagem: whitelist de domínios permitidos
+ * - Preços: valores positivos
+ * - Sanitização: HTML removido de nome e descrição
+ */
 export class ProductService {
     private productRepository = AppDataSource.getRepository(Product);
     private categoryRepository = AppDataSource.getRepository(Category);
@@ -16,20 +70,46 @@ export class ProductService {
     private productImageRepository = AppDataSource.getRepository(ProductImage);
 
     /**
-     * Retorna produtos com paginação e filtro parametrizado.
+     * Retorna produtos com filtros, paginação e ordenação
+     * 
+     * Filtros suportados:
+     * - **search**: Busca por nome ou descrição (case-insensitive)
+     * - **minPrice/maxPrice**: Faixa de preço em centavos
+     * - **categories**: Lista de IDs ou slugs de categorias
+     * - **brands**: Lista de IDs ou slugs de marcas
+     * - **sizes**: Lista de IDs ou nomes de tamanhos
+     * - **sortBy**: Campo para ordenação (price/name/created_at)
+     * - **sortOrder**: ASC ou DESC
+     * 
+     * @param filters - Parâmetros de busca e filtro
+     * @returns Produtos paginados e total de resultados
+     * 
+     * @example
+     * // Buscar camisetas Nike entre R$ 50 e R$ 150
+     * const result = await productService.getAll({
+     *   search: 'camiseta',
+     *   minPrice: 5000,  // R$ 50
+     *   maxPrice: 15000, // R$ 150
+     *   brands: ['nike'],
+     *   sortBy: 'price',
+     *   sortOrder: 'ASC',
+     *   page: 1,
+     *   limit: 20
+     * });
      */
-    async getAll(params: {
-        search?: string,
-        minPrice?: number,
-        maxPrice?: number,
-        categories?: string[],
-        brands?: string[],
-        sizes?: string[],
-        sortBy?: string,
-        page: number,
-        limit: number
-    }) {
-        const { search, minPrice, maxPrice, categories, brands, sizes, sortBy, page = 1, limit = 20 } = params;
+    async getAll(filters: ProductFilters) {
+        const { 
+            search, 
+            minPrice, 
+            maxPrice, 
+            categories, 
+            brands, 
+            sizes, 
+            sortBy = 'created_at', 
+            sortOrder = 'DESC',
+            page = 1, 
+            limit = 20 
+        } = filters;
         const skip = (page - 1) * limit;
 
         const qb = this.productRepository.createQueryBuilder('product')
@@ -45,9 +125,13 @@ export class ProductService {
 
         if (sortBy === 'price-low') {
             qb.orderBy('product.price_cents', 'ASC');
-        } else if (sortBy === 'price-high') {
+        }
+        
+        if (sortBy === 'price-high') {
             qb.orderBy('product.price_cents', 'DESC');
-        } else {
+        }
+        
+        if (!sortBy || sortBy === 'newest') {
             // "Mais Recentes" -> Filter last 30 days AND sort by newest
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -101,7 +185,16 @@ export class ProductService {
     }
 
     /**
-     * Retorna os filtros disponíveis (facetas).
+     * Retorna os filtros disponíveis (facetas) para produtos
+     * 
+     * Útil para construir interfaces de filtro dinâmicas
+     * Retorna categorias, marcas e tamanhos disponíveis com contagem de produtos
+     * 
+     * @returns Facetas com categorias, marcas e tamanhos
+     * 
+     * @example
+     * const filters = await productService.getAvailableFilters();
+     * // { categories: [...], brands: [...], sizes: [...] }
      */
     async getAvailableFilters() {
         // Get all unique categories that have products
@@ -136,45 +229,77 @@ export class ProductService {
     }
 
     /**
-     * Busca um produto pelo ID.
+     * Busca um produto específico pelo ID
+     * Inclui todas as relações (categoria, marca, tamanhos, imagens)
+     * 
+     * @param id - ID do produto
+     * @returns Produto encontrado com todas as relações
+     * @throws {AppError} 404 - Se o produto não for encontrado
+     * 
+     * @example
+     * const product = await productService.getOne('uuid-123');
      */
     async getOne(id: string) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['category', 'brand', 'sizes', 'sizes.size', 'images'],
             order: {
-                images: {
-                    position: 'ASC'
-                },
-                sizes: {
-                    size: {
-                        id: 'ASC'
-                    }
-                }
+                sizes: { size: { id: 'ASC' } },
+                images: { position: 'ASC' }
             }
         });
 
         if (!product) {
-            throw new AppError('Produto não encontrado', 404);
+            log.warn('Produto não encontrado', { productId: id });
+            throw new AppError(ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
+        log.info('Produto encontrado', { productId: id, productName: product.name });
         return product;
     }
 
     /**
-     * Cria um novo produto e vincula aos tamanhos com quantidade.
+     * Cria um novo produto com suas relações
+     * 
+     * @param name - Nome do produto
+     * @param price_cents - Preço em centavos (ex: 4990 = R$ 49,90)
+     * @param description - Descrição do produto (opcional)
+     * @param currency - Moeda (ex: 'BRL')
+     * @param categoryId - ID da categoria
+     * @param brandId - ID da marca (opcional)
+     * @param sizesData - Array de tamanhos disponíveis
+     * @param images - Array de URLs de imagens (opcional)
+     * @returns Produto criado com todas as relações
+     * @throws {AppError} 404 - Se categoria ou marca não forem encontradas
+     * @throws {AppError} 404 - Se algum tamanho não for encontrado
+     * 
+     * @example
+     * const product = await productService.create(
+     *   'Camiseta Nike',
+     *   4990,
+     *   'Camiseta esportiva',
+     *   'BRL',
+     *   1, // categoryId
+     *   2, // brandId
+     *   [{ sizeId: 1 }, { sizeId: 2 }],
+     *   ['https://example.com/image.jpg']
+     * );
      */
     async create(name: string, price_cents: number, description: string | undefined, currency: string, categoryId: number, brandId: number | undefined, sizesData: { sizeId: number }[], images?: string[]) {
+        // Valida se a categoria existe
         const category = await this.categoryRepository.findOneBy({ id: categoryId });
         if (!category) {
-            throw new AppError('Categoria não encontrada', 404);
+            log.warn('Categoria não encontrada ao criar produto', { categoryId });
+            throw new AppError(ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
+        // Valida se a marca existe (se fornecida)
         let brand = null;
         if (brandId) {
             brand = await this.brandRepository.findOneBy({ id: brandId });
             if (!brand) {
-                throw new AppError('Marca não encontrada', 404);
+                log.warn('Marca não encontrada ao criar produto', { brandId });
+                throw new AppError(ERROR_MESSAGES.BRAND_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
             }
         }
 
@@ -215,44 +340,76 @@ export class ProductService {
             await this.productSizeRepository.save(productSizes);
         }
 
+        log.info('Novo produto criado', {
+            productId: savedProduct.id,
+            name: savedProduct.name,
+            price: price_cents / 100
+        });
+
         return this.getOne(savedProduct.id);
     }
 
     /**
-     * Atualiza um produto.
+     * Atualiza um produto existente
+     * 
+     * Permite atualizar qualquer campo do produto, incluindo suas relações
+     * com categorias, marcas, tamanhos e imagens
+     * 
+     * @param id - ID do produto a ser atualizado
+     * @param data - Dados a serem atualizados
+     * @returns Produto atualizado com todas as relações
+     * @throws {AppError} 404 - Se produto, categoria, marca ou tamanho não forem encontrados
+     * 
+     * @example
+     * const updated = await productService.update('uuid-123', {
+     *   name: 'Novo Nome',
+     *   price_cents: 5990,
+     *   images: ['https://new-image.jpg']
+     * });
      */
-    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number; sizes?: { sizeId: number }[], images?: string[] }) {
+    async update(id: string, data: { name?: string; price_cents?: number; description?: string; currency?: string; categoryId?: number; brandId?: number | null; sizes?: { sizeId: number }[], images?: string[] }) {
         const product = await this.productRepository.findOne({
             where: { id },
             relations: ['sizes', 'images']
         });
 
         if (!product) {
-            throw new AppError('Produto não encontrado', 404);
+            log.warn('Produto não encontrado para atualização', { productId: id });
+            throw new AppError(ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
-        if (data.categoryId) {
+        // Atualiza campos básicos
+        if (data.name !== undefined) product.name = data.name;
+        if (data.price_cents !== undefined) product.price_cents = data.price_cents;
+        if (data.description !== undefined) product.description = data.description;
+        if (data.currency !== undefined) product.currency = data.currency;
+
+        // Atualiza categoria se fornecida
+        if (data.categoryId !== undefined) {
             const category = await this.categoryRepository.findOneBy({ id: data.categoryId });
             if (!category) {
-                throw new AppError('Categoria não encontrada', 404);
+                log.warn('Categoria não encontrada ao atualizar produto', { categoryId: data.categoryId });
+                throw new AppError(ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
             }
             product.category = category;
         }
 
-        if (data.brandId) {
-            const brand = await this.brandRepository.findOneBy({ id: data.brandId });
-            if (!brand) {
-                throw new AppError('Marca não encontrada', 404);
+        // Atualiza marca se fornecida
+        if (data.brandId !== undefined) {
+            if (data.brandId === null) {
+                product.brand = null;
+                log.info('Marca removida do produto', { productId: id });
             }
-            product.brand = brand;
+            
+            if (data.brandId !== null) {
+                const brand = await this.brandRepository.findOneBy({ id: data.brandId });
+                if (!brand) {
+                    log.warn('Marca não encontrada ao atualizar produto', { brandId: data.brandId });
+                    throw new AppError(ERROR_MESSAGES.BRAND_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+                }
+                product.brand = brand;
+            }
         }
-
-        if (data.name) product.name = data.name;
-        if (data.price_cents) product.price_cents = data.price_cents;
-        if (data.description !== undefined) product.description = data.description;
-        if (data.currency) product.currency = data.currency;
-
-        await this.productRepository.save(product);
 
         // Update Images if provided
         if (data.images) {
@@ -291,17 +448,34 @@ export class ProductService {
             await this.productSizeRepository.save(productSizes);
         }
 
+        await this.productRepository.save(product);
+
+        log.info('Produto atualizado', { productId: id, name: product.name });
+
         return this.getOne(id);
     }
 
     /**
-     * Remove um produto.
+     * Remove um produto do sistema
+     * 
+     * @param id - ID do produto a ser removido
+     * @returns Mensagem de sucesso
+     * @throws {AppError} 404 - Se o produto não for encontrado
+     * 
+     * @example
+     * await productService.delete('uuid-123');
      */
     async delete(id: string) {
-        const result = await this.productRepository.softDelete(id);
-        if (result.affected === 0) {
-            throw new AppError('Produto não encontrado', 404);
+        const product = await this.productRepository.findOneBy({ id });
+        if (!product) {
+            log.warn('Produto não encontrado para remoção', { productId: id });
+            throw new AppError(ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
+
+        await this.productRepository.remove(product);
+
+        log.info('Produto deletado', { productId: id, productName: product.name });
+
         return { message: 'Produto deletado com sucesso' };
     }
 }

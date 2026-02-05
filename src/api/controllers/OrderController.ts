@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/OrderService';
+import { OrderStatus } from '../entities/Order';
 import { PaymentService } from '../services/PaymentService';
 
 export class OrderController {
@@ -10,13 +11,19 @@ export class OrderController {
    * Útil para painel administrativo.
    * Query params: ?status=PENDING (opcional)
    */
-  async getAll(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user?.userId;
-    const isAdmin = req.user?.isAdmin;
-    const status = req.query.status as string | undefined;
-    const orders = await this.orderService.getAll(userId, isAdmin, status as any);
-    res.json(orders);
-  }
+    async getAll(req: Request, res: Response) {
+        try {
+            const userId = req.user?.userId;
+            const isAdmin = req.user?.isAdmin || false;
+            const status = req.query.status as OrderStatus | undefined;
+
+            const orders = await this.orderService.getAll(isAdmin, userId, status);
+            return res.json(orders);
+        } catch (error) {
+            console.error('Erro ao buscar pedidos', { error });
+            throw error;
+        }
+    }
 
   /**
    * Busca um pedido específico pelo ID.

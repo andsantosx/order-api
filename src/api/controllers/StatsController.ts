@@ -1,82 +1,86 @@
-import { Request, Response, NextFunction } from 'express';
-import { StatsService } from '../services/StatsService';
+import { Request, Response } from 'express';
+import { StatsService, StatsPeriod } from '../services/StatsService';
+import { log } from '../../config/logger';
 
+/**
+ * Controller para endpoints de estatísticas e métricas
+ * Usado pelo painel administrativo
+ */
 export class StatsController {
     private statsService = new StatsService();
 
     /**
-     * GET /api/admin/stats/overview
-     * Get overview statistics (total revenue, orders, etc)
+     * GET /api/admin/stats
+     * Retorna estatísticas gerais do sistema
      */
-    async getOverview(req: Request, res: Response, next: NextFunction) {
+    async getOverview(req: Request, res: Response) {
         try {
             const stats = await this.statsService.getOverview();
-            res.json(stats);
+            return res.json(stats);
         } catch (error) {
-            next(error);
+            log.error('Erro ao buscar estatísticas gerais', { error });
+            throw error;
         }
     }
 
     /**
-     * GET /api/admin/stats/sales?period=7days
-     * Get sales data by period
+     * GET /api/admin/stats/sales?period=30d
+     * Retorna vendas por período
      */
-    async getSales(req: Request, res: Response, next: NextFunction) {
+    async getSalesByPeriod(req: Request, res: Response) {
         try {
-            const period = (req.query.period as string) || '30days';
-            const validPeriods = ['7days', '30days', '90days', 'year'];
-
-            if (!validPeriods.includes(period)) {
-                return res.status(400).json({ error: 'Invalid period. Use: 7days, 30days, 90days, or year' });
-            }
-
-            const sales = await this.statsService.getSalesByPeriod(period as any);
-            res.json(sales);
+            const period = (req.query.period as StatsPeriod) || '30d';
+            const sales = await this.statsService.getRevenueByPeriod(period);
+            return res.json(sales);
         } catch (error) {
-            next(error);
+            log.error('Erro ao buscar vendas por período', { error });
+            throw error;
         }
     }
 
     /**
      * GET /api/admin/stats/best-sellers?limit=10
-     * Get best selling products
+     * Retorna produtos mais vendidos
      */
-    async getBestSellers(req: Request, res: Response, next: NextFunction) {
+    async getBestSellers(req: Request, res: Response) {
         try {
             const limit = parseInt(req.query.limit as string) || 10;
-            const bestSellers = await this.statsService.getBestSellers(limit);
-            res.json(bestSellers);
+            const period = (req.query.period as StatsPeriod) || '30d';
+            const bestSellers = await this.statsService.getTopProducts(period, limit);
+            return res.json(bestSellers);
         } catch (error) {
-            next(error);
+            log.error('Erro ao buscar produtos mais vendidos', { error });
+            throw error;
         }
     }
 
     /**
-     * GET /api/admin/stats/revenue?from=2026-01-01&to=2026-01-31
-     * Get revenue statistics
+     * GET /api/admin/stats/revenue?fromDate=...&toDate=...
+     * Retorna estatísticas de receita (deprecated - usar getSalesByPeriod)
      */
-    async getRevenue(req: Request, res: Response, next: NextFunction) {
+    async getRevenueStats(req: Request, res: Response) {
         try {
-            const fromDate = req.query.from ? new Date(req.query.from as string) : undefined;
-            const toDate = req.query.to ? new Date(req.query.to as string) : undefined;
-
-            const revenue = await this.statsService.getRevenueStats(fromDate, toDate);
-            res.json(revenue);
+            // Fallback para método antigo - recomendado usar period-based
+            const period = (req.query.period as StatsPeriod) || '30d';
+            const revenue = await this.statsService.getRevenueByPeriod(period);
+            return res.json(revenue);
         } catch (error) {
-            next(error);
+            log.error('Erro ao buscar estatísticas de receita', { error });
+            throw error;
         }
     }
 
     /**
-     * GET /api/admin/stats/order-status
-     * Get order status breakdown
+     * GET /api/admin/stats/status-breakdown
+     * Retorna distribuição de pedidos por status
      */
-    async getOrderStatus(req: Request, res: Response, next: NextFunction) {
+    async getStatusBreakdown(req: Request, res: Response) {
         try {
             const breakdown = await this.statsService.getOrderStatusBreakdown();
-            res.json(breakdown);
+            return res.json(breakdown);
         } catch (error) {
-            next(error);
+            log.error('Erro ao buscar distribuição de status', { error });
+            throw error;
         }
     }
 }

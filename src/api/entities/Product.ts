@@ -33,7 +33,7 @@ export class Product {
 
   @ManyToOne(() => Brand, brand => brand.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'brand_id' })
-  brand!: Brand;
+  brand!: Brand | null;
 
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images!: ProductImage[];

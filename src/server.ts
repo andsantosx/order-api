@@ -20,6 +20,7 @@ import statsRoutes from './api/routes/statsRoutes';
 import { log } from './config/logger';
 import { requestLogger } from './api/middlewares/requestLogger';
 import { generalLimiter } from './config/rateLimits';
+import { env, isProduction } from './config/env'; // Valida variáveis de ambiente na importação
 
 // Carrega variáveis de ambiente do arquivo .envs from './api/routes/adminRoutes';
 
@@ -27,7 +28,7 @@ import { generalLimiter } from './config/rateLimits';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 
 // ==========================================
 // 1. Middlewares Iniciais
@@ -48,7 +49,7 @@ app.use('/api', generalLimiter);
 
 // CORS - apenas frontend autorizado
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: env.FRONTEND_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -180,15 +181,16 @@ app.use((req: Request, res: Response) => {
 // Primeiro conecta ao banco de dados, depois inicia o servidor HTTP
 AppDataSource.initialize()
   .then(async () => {
-    console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+    log.info('Conexão com o banco de dados estabelecida com sucesso');
     app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+      log.info(`Server running on port ${PORT}`);
+      log.info(`Environment: ${env.NODE_ENV}`);
+      log.info(`Health check: http://localhost:${PORT}/health`);
     });
   })
   .catch((error) => {
-    console.error('❌ Erro ao inicializar o servidor:', error);
+    log.error('Erro ao inicializar o servidor', { error: error.message });
+    process.exit(1); // Encerra o processo em caso de erro crítico
   });
 
 export default app;

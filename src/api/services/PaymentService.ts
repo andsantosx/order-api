@@ -4,229 +4,488 @@ import { User } from '../entities/User';
 import { AppError } from '../middlewares/errorHandler';
 import { Payment, PaymentRefund } from 'mercadopago';
 import { client } from '../../config/mercadopago';
+import { PaymentRequestData, MercadoPagoError, WebhookQuery, WebhookBody } from '../../types/payment';
+import { log } from '../../config/logger';
+import { MONEY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 
+/**
+ * Service responsável pela lógica de negócio de pagamentos
+ * 
+ * Gerencia a integração com Mercado Pago para:
+ * - Processar pagamentos (PIX, cartão, etc)
+ * - Processar reembolsos
+ * - Receber e processar webhooks/IPN
+ * - Cancelar pedidos e pagamentos
+ * 
+ * Todos os valores monetários são em centavos internamente,
+ * convertidos para decimal ao enviar para Mercado Pago.
+ */
 export class PaymentService {
     private orderRepository = AppDataSource.getRepository(Order);
     private userRepository = AppDataSource.getRepository(User);
 
-    async processPayment(orderId: string, paymentData: any) {
+    /**
+     * Processa um pagamento via Mercado Pago
+     * 
+     * Fluxo:
+     * 1. Valida pedido
+     * 2. Prepara dados do pagamento (converte centavos → reais)
+     * 3. Envia para Mercado Pago
+     * 4. Atualiza status do pedido conforme resposta
+     * 
+     * @param orderId - ID do pedido
+     * @param paymentData - Dados do pagamento (payer, payment_method_id, etc)
+     * @returns Resultado do pagamento do Mercado Pago
+     * @throws {AppError} 400 - Dados inválidos
+     * @throws {AppError} 404 - Pedido não encontrado
+     * @throws {AppError} 500 - Erro ao processar pagamento
+     * 
+     * @example
+     * const result = await paymentService.processPayment(orderId, {
+     *     payment_method_id: 'pix',
+     *     payer: {
+     *         email: 'user@example.com',
+     *         identification: { type: 'CPF', number: '12345678900' },
+     *         first_name: 'João',
+     *         last_name: 'Silva'
+     *     }
+     * });
+     */
+    async processPayment(orderId: string, paymentData: PaymentRequestData) {
+        // Valida input
         if (!orderId) {
-            throw new AppError('Order ID is required', 400);
+            throw new AppError('Order ID é obrigatório', HTTP_STATUS.BAD_REQUEST);
         }
 
+        // Busca pedido
         const order = await this.orderRepository.findOne({
             where: { id: orderId },
             relations: ['user'],
         });
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
         try {
             const payment = new Payment(client);
 
-            // Normalize payment data (handle potential formData wrapper from frontend)
-            const rawData = paymentData.formData || paymentData;
+            // Prepara body do pagamento
+            const paymentBody = this.preparePaymentBody(order, paymentData);
 
-            // Enhanced validation
-            const email = rawData.payer?.email || paymentData.payer?.email || order.user?.email || order.guest_email;
-            if (!email) {
-                throw new AppError('Payer email is required', 400);
-            }
-
-            const docType = rawData.payer?.identification?.type || 'CPF';
-            const docNumber = rawData.payer?.identification?.number || paymentData.payer?.identification?.number;
-
-            if (!docNumber) {
-                throw new AppError('Payer identification number is required', 400);
-            }
-
-            const paymentBody: any = {
-                transaction_amount: Number(order.total_amount) / 100, // Converts cents (4990) to decimal (49.90)
-                description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
-                payment_method_id: rawData.payment_method_id,
-                payer: {
-                    email: email,
-                    identification: {
-                        type: docType,
-                        number: docNumber,
-                    },
-                    first_name: rawData.payer?.first_name || '',
-                    last_name: rawData.payer?.last_name || ''
-                },
-                metadata: {
-                    order_id: order.id,
-                },
-            };
-
-            // Enhanced optional fields mapping for Bricks
-            if (rawData.token) paymentBody.token = rawData.token;
-            // Default installments to 1 if not provided (crucial for Debit Cards)
-            paymentBody.installments = rawData.installments ? Number(rawData.installments) : 1;
-            if (rawData.issuer_id) paymentBody.issuer_id = String(rawData.issuer_id);
-
-            console.log('Processing payment with Mercado Pago:', JSON.stringify(paymentBody, null, 2));
-
-            const result = await payment.create({
-                body: paymentBody,
-                requestOptions: { idempotencyKey: `order_${order.id}_${Date.now()}` }
+            log.info('Processando pagamento com Mercado Pago', {
+                orderId: order.id,
+                amount: paymentBody.transaction_amount,
+                paymentMethod: paymentBody.payment_method_id
             });
 
-            console.log('Mercado Pago Payment Result:', result);
+            // Envia para Mercado Pago
+            const result = await payment.create({ body: paymentBody });
 
-            if (result.status === 'approved') {
-                // Save payment_id and update status
-                await this.orderRepository.update({ id: orderId }, {
-                    status: OrderStatus.PAID,
-                    payment_id: result.id?.toString(),
-                    payment_method: result.payment_method_id,
-                    installments: result.installments,
-                    card_last_four: result.card?.last_four_digits
-                });
-            } else if (result.id) {
-                // Even if not approved yet, save the payment_id for future reference
-                await this.orderRepository.update({ id: orderId }, {
-                    payment_id: result.id?.toString(),
-                    payment_method: result.payment_method_id,
-                    installments: result.installments,
-                    card_last_four: result.card?.last_four_digits
-                });
-            }
+            log.info('Pagamento processado com sucesso', {
+                orderId: order.id,
+                paymentId: result.id,
+                status: result.status
+            });
+
+            // Atualiza pedido com dados do pagamento
+            await this.updateOrderWithPaymentResult(order, result as unknown as Record<string, unknown>);
 
             return result;
-        } catch (error: any) {
-            console.error('Mercado Pago Error:', error);
-            // Enhance error message for the client
-            const errorMessage = error.message || 'Payment processing failed';
-            const errorStatus = error.status || 500;
-            // Check for specific Mercado Pago API errors
-            if (error.cause) {
-                console.error('Mercado Pago Error Cause:', JSON.stringify(error.cause, null, 2));
-            }
-            throw new AppError(`Payment processing failed: ${errorMessage}`, errorStatus);
+
+        } catch (error) {
+            return this.handlePaymentError(error, orderId);
         }
     }
 
+    /**
+     * Processa reembolso de um pedido
+     * 
+     * Requisitos:
+     * - Pedido deve estar pago
+     * - Deve ter payment_id do Mercado Pago
+     * 
+     * @param orderId - ID do pedido a reembolsar
+     * @returns Resultado do reembolso
+     * @throws {AppError} 400 - Pedido não está pago ou sem payment_id
+     * @throws {AppError} 404 - Pedido não encontrado
+     * @throws {AppError} 500 - Erro ao processar reembolso
+     */
     async refundPayment(orderId: string) {
-        const order = await this.orderRepository.findOne({ where: { id: orderId } });
-        if (!order) throw new AppError('Order not found', 404);
+        const order = await this.orderRepository.findOneBy({ id: orderId });
 
-        if (order.status !== OrderStatus.PAID) {
-            throw new AppError('Only PAID orders can be refunded', 400);
+        if (!order) {
+            throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
         if (!order.payment_id) {
-            throw new AppError('No usage of payment_id found for this order. Cannot refund automatically.', 400);
+            throw new AppError(
+                'Pedido não possui ID de pagamento associado',
+                HTTP_STATUS.BAD_REQUEST
+            );
+        }
+
+        if (order.status !== OrderStatus.PAID && order.status !== OrderStatus.SHIPPED) {
+            throw new AppError(
+                'Apenas pedidos pagos ou enviados podem ser reembolsados',
+                HTTP_STATUS.BAD_REQUEST
+            );
         }
 
         try {
+            log.info('Iniciando reembolso', {
+                orderId: order.id,
+                paymentId: order.payment_id
+            });
+
             const refundClient = new PaymentRefund(client);
-            console.log(`Attempting to refund payment ${order.payment_id} for order ${order.id}`);
+            const result = await refundClient.create({ payment_id: order.payment_id });
 
-            // Execute refund in Mercado Pago
-            const refund = await refundClient.create({ payment_id: order.payment_id });
-
-            if (refund.status === 'approved' || refund.status === 'refunded' || (refund as any).status === 'null') { // SDK sometimes returns varying statuses
-                await this.orderRepository.update({ id: orderId }, { status: OrderStatus.REFUNDED });
-                return { success: true, message: 'Refund processed successfully', external_reference: refund.id };
-            } else {
-                throw new AppError(`Refund failed with status: ${refund.status}`, 500);
+            if (result.status !== 'approved' && result.status !== 'refunded' && result.status !== null) {
+                throw new AppError(
+                    `Reembolso falhou com status: ${result.status}`,
+                    HTTP_STATUS.INTERNAL_SERVER_ERROR
+                );
             }
 
-        } catch (error: any) {
-            console.error('Refund Error:', error);
-            throw new AppError(`Refund failed: ${error.message}`, 500);
+            // Reembolso aprovado
+            order.status = OrderStatus.REFUNDED;
+            await this.orderRepository.save(order);
+
+            log.info('Reembolso processado com sucesso', {
+                orderId,
+                refundId: result.id,
+                paymentId: order.payment_id
+            });
+
+            return {
+                success: true,
+                message: 'Reembolso processado com sucesso',
+                external_reference: result.id
+            };
+        } catch (error) {
+            log.error('Erro ao processar reembolso', {
+                orderId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            throw new AppError(ERROR_MESSAGES.REFUND_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     }
 
+    /**
+     * Cancela um pedido e tenta cancelar/reembolsar o pagamento
+     * 
+     * Regras de autorização:
+     * - Usuário regular: só pode cancelar seus próprios pedidos pendentes
+     * - Admin: pode cancelar qualquer pedido em qualquer status
+     * 
+     * @param orderId - ID do pedido
+     * @param userId - ID do usuário solicitante
+     * @param isAdmin - Se o usuário é admin
+     * @throws {AppError} 403 - Não autorizado
+     * @throws {AppError} 404 - Pedido não encontrado
+     */
     async cancelOrder(orderId: string, userId: string, isAdmin: boolean = false) {
-        const order = await this.orderRepository.findOne({ where: { id: orderId }, relations: ['user'] });
-        if (!order) throw new AppError('Order not found', 404);
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId },
+            relations: ['user']
+        });
 
-        // Security check: User can only cancel their own orders
-        if (!isAdmin && order.user?.id !== userId && order.guest_email !== userId) { // simplistic guest check
-            if (order.user?.id !== userId) { // Strict check for logged users
-                throw new AppError('Unauthorized', 403);
-            }
+        if (!order) {
+            throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
         }
 
-        if (order.status === OrderStatus.PAID) {
-            throw new AppError('Cannot cancel a PAID order. Please request a refund.', 400);
+        // Verifica autorização
+        if (!isAdmin && order.user?.id !== userId) {
+            throw new AppError(ERROR_MESSAGES.ORDER_UNAUTHORIZED, HTTP_STATUS.FORBIDDEN);
         }
 
-        if (order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
-            throw new AppError('Cannot cancel an order that is already in progress.', 400);
+        // Usuário regular só pode cancelar pedidos pendentes
+        if (!isAdmin && order.status !== OrderStatus.PENDING) {
+            throw new AppError(
+                'Apenas pedidos pendentes podem ser cancelados',
+                HTTP_STATUS.BAD_REQUEST
+            );
         }
 
-        if (order.status === OrderStatus.CANCELED || order.status === OrderStatus.REFUNDED) {
-            return { success: true, message: 'Order is already canceled' };
-        }
-
-        // If it brings a payment_id (e.g. pending pix), try to cancel it in MP too?
+        // Se tem payment_id, tenta cancelar/reembolsar no Mercado Pago
         if (order.payment_id) {
             try {
-                const paymentClient = new Payment(client);
-                await paymentClient.cancel({ id: order.payment_id });
-            } catch (e) {
-                console.warn('Failed to cancel payment in MP, but proceeding with local cancel:', e);
+                const payment = new Payment(client);
+                await payment.cancel({ id: Number(order.payment_id) });
+
+                log.info('Pagamento cancelado no Mercado Pago', {
+                    orderId: order.id,
+                    paymentId: order.payment_id
+                });
+            } catch (error) {
+                log.warn('Falha ao cancelar pagamento no Mercado Pago - prosseguindo com cancelamento local', {
+                    orderId,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
             }
         }
 
-        await this.orderRepository.update({ id: orderId }, { status: OrderStatus.CANCELED });
-        return { success: true, message: 'Order canceled successfully' };
+        // Atualiza status do pedido
+        order.status = OrderStatus.CANCELED;
+        await this.orderRepository.save(order);
+
+        log.info('Pedido cancelado', {
+            orderId: order.id,
+            userId,
+            isAdmin
+        });
+
+        return { success: true, message: 'Pedido cancelado com sucesso' };
     }
 
-    async receiveWebhook(query: any, body: any) {
-        let paymentId = query.id || query['data.id'] || body?.data?.id || body?.id;
-        let type = query.type || query.topic || body?.type;
-
-        if (type === 'test') return { status: 'ok' };
-
-        if (!paymentId && body?.action === 'payment.created') {
-            paymentId = body.data.id;
-        }
-
-        if (!paymentId) {
-            return { status: 'ignored' };
-        }
-
+    /**
+     * Processa webhooks (IPNs) do Mercado Pago
+     * 
+     * Mercado Pago envia notificações quando o status de um pagamento muda.
+     * Este método:
+     * 1. Extrai o ID do pagamento do webhook
+     * 2. Consulta status atualizado do pagamento
+     * 3. Atualiza o pedido correspondente
+     * 
+     * **Importante**: Webhooks podem vir em formatos diferentes (query params ou body).
+     * Este método suporta ambos.
+     * 
+     * @param query - Query parameters do webhook
+     * @param body - Body do webhook
+     * @returns Status HTTP para responder ao Mercado Pago
+     */
+    async receiveWebhook(query: WebhookQuery, body: WebhookBody) {
         try {
-            const paymentClient = new Payment(client);
-            const payment = await paymentClient.get({ id: paymentId });
+            // Extrai payment ID de múltiplas possíveis localizações
+            const paymentId = this.extractPaymentIdFromWebhook(query, body);
+            const webhookType = query.type || query.topic || body?.type || 'unknown';
 
-            if (payment && payment.metadata && payment.metadata.order_id) {
-                const orderId = payment.metadata.order_id;
-                const status = payment.status;
+            log.info('Webhook recebido do Mercado Pago', {
+                type: webhookType,
+                paymentId
+            });
 
-                // Update payment_id if missing
-                await this.orderRepository.update({ id: orderId }, { payment_id: paymentId.toString() });
-
-                if (status === 'approved') {
-                    await this.orderRepository.update({ id: orderId }, {
-                        status: OrderStatus.PAID,
-                        payment_method: payment.payment_method_id,
-                        installments: payment.installments,
-                        card_last_four: payment.card?.last_four_digits
-                    });
-                    console.log(`Order ${orderId} updated to PAID via Webhook/IPN`);
-                } else if (status === 'refunded' || status === 'charged_back') {
-                    await this.orderRepository.update({ id: orderId }, { status: OrderStatus.REFUNDED });
-                    console.log(`Order ${orderId} updated to REFUNDED via Webhook/IPN`);
-                } else if (status === 'cancelled' || status === 'rejected') {
-                    // Only cancel if it was pending? Strategy decision.
-                    const order = await this.orderRepository.findOne({ where: { id: orderId } });
-                    if (order && order.status !== OrderStatus.PAID) {
-                        await this.orderRepository.update({ id: orderId }, { status: OrderStatus.CANCELED });
-                    }
-                }
+            if (!paymentId) {
+                log.warn('Webhook sem payment ID - ignorando', { query, body });
+                return 200; // Retorna 200 para evitar retentativas
             }
 
-            return { status: 'ok' };
+            // Busca informações atualizadas do pagamento
+            const payment = new Payment(client);
+            const paymentInfo = await payment.get({ id: Number(paymentId) });
+
+            log.info('Status do pagamento consultado', {
+                paymentId,
+                status: paymentInfo.status,
+                statusDetail: paymentInfo.status_detail
+            });
+
+            // Atualiza pedido baseado no status do pagamento
+            await this.processPaymentStatusUpdate(paymentInfo as unknown as Record<string, unknown>);
+
+            return 200;
 
         } catch (error) {
-            console.error('Error processing webhook:', error);
-            return { status: 'error', error };
+            log.error('Erro ao processar webhook', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                query,
+                body
+            });
+            return 500;
         }
+    }
+
+    /* ==========================================
+     * MÉTODOS PRIVADOS - HELPERS
+     * ========================================== */
+
+    /**
+     * Prepara body do pagamento para envio ao Mercado Pago
+     * Normaliza dados e converte valores monetários
+     */
+    private preparePaymentBody(order: Order, paymentData: PaymentRequestData): PaymentRequestData {
+        // Normaliza dados (handle formData wrapper do frontend)
+        const rawData = paymentData.formData || paymentData;
+
+        // Valida e extrai email
+        const email = rawData.payer?.email ||
+            paymentData.payer?.email ||
+            order.user?.email ||
+            order.guest_email;
+
+        if (!email) {
+            throw new AppError('Email do pagador é obrigatório', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Valida documento
+        const docType = rawData.payer?.identification?.type || 'CPF';
+        const docNumber = rawData.payer?.identification?.number ||
+            paymentData.payer?.identification?.number;
+
+        if (!docNumber) {
+            throw new AppError(
+                'Número de identificação do pagador é obrigatório',
+                HTTP_STATUS.BAD_REQUEST
+            );
+        }
+
+        // Monta body do pagamento
+        return {
+            transaction_amount: Number(order.total_amount) / MONEY.CENTS_PER_REAL,
+            description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
+            payment_method_id: rawData.payment_method_id,
+            payer: {
+                email,
+                identification: {
+                    type: docType,
+                    number: docNumber,
+                },
+                first_name: rawData.payer?.first_name || '',
+                last_name: rawData.payer?.last_name || ''
+            },
+            metadata: {
+                order_id: order.id,
+            },
+            ...(rawData.installments && { installments: rawData.installments }),
+            ...(rawData.token && { token: rawData.token }),
+            ...(rawData.issuer_id && { issuer_id: Number(rawData.issuer_id) })
+        };
+    }
+
+    /**
+     * Atualiza pedido com resultado do pagamento
+     */
+    private async updateOrderWithPaymentResult(order: Order, paymentResult: Record<string, unknown>): Promise<void> {
+        order.payment_id = String(paymentResult.id);
+        const status = paymentResult.status as string;
+
+        // Aprovado
+        if (status === 'approved') {
+            order.status = OrderStatus.PAID;
+            await this.orderRepository.save(order);
+            log.info('Pedido atualizado para PAID', {
+                orderId: order.id,
+                paymentId: order.payment_id
+            });
+            return;
+        }
+
+        // Pendente
+        if (status === 'pending') {
+            order.status = OrderStatus.PENDING;
+            await this.orderRepository.save(order);
+            log.info('Pedido mantido como PENDING', {
+                orderId: order.id,
+                paymentId: order.payment_id
+            });
+            return;
+        }
+
+        // Rejeitado ou cancelado
+        if (status === 'rejected' || status === 'cancelled') {
+            order.status = OrderStatus.CANCELED;
+            await this.orderRepository.save(order);
+            log.info('Pedido marcado como CANCELED', {
+                orderId: order.id,
+                paymentId: order.payment_id,
+                reason: status
+            });
+            return;
+        }
+
+        // Status desconhecido - apenas salva payment_id
+        await this.orderRepository.save(order);
+        log.warn('Status de pagamento desconhecido', {
+            orderId: order.id,
+            paymentId: order.payment_id,
+            status
+        });
+    }
+
+    /**
+     * Trata erros do Mercado Pago
+     * Loga detalhes e lança AppError apropriado
+     * 
+     * @throws {AppError} sempre - nunca retorna normalmente
+     */
+    private handlePaymentError(error: unknown, orderId: string): never {
+        const mpError = error as MercadoPagoError;
+
+        log.error('Erro ao processar pagamento', {
+            orderId,
+            message: mpError.message,
+            status: mpError.status,
+            cause: mpError.cause
+        });
+
+        // Loga detalhes técnicos se disponíveis
+        if (mpError.cause) {
+            log.error('Detalhes do erro do Mercado Pago', {
+                orderId,
+                cause: typeof mpError.cause === 'object'
+                    ? JSON.stringify(mpError.cause)
+                    : String(mpError.cause)
+            });
+        }
+
+        throw new AppError(
+            ERROR_MESSAGES.PAYMENT_FAILED,
+            HTTP_STATUS.INTERNAL_SERVER_ERROR
+        );
+    }
+
+    /**
+     * Extrai payment ID de webhook
+     * Suporta múltiplos formatos enviados pelo Mercado Pago
+     */
+    private extractPaymentIdFromWebhook(query: WebhookQuery, body: WebhookBody): string | undefined {
+        return query.id ||
+            query['data.id'] ||
+            body?.data?.id ||
+            body?.id;
+    }
+
+    /**
+     * Processa atualização de status de pagamento via webhook
+     * Atualiza o pedido correspondente no banco
+     */
+    private async processPaymentStatusUpdate(paymentInfo: Record<string, unknown>): Promise<void> {
+        const orderId = (paymentInfo.metadata as Record<string, unknown>)?.order_id as string;
+
+        if (!orderId) {
+            log.warn('Webhook sem order_id no metadata', { paymentInfo });
+            return;
+        }
+
+        const order = await this.orderRepository.findOneBy({ id: orderId });
+        if (!order) {
+            log.warn('Pedido não encontrado para webhook', { orderId });
+            return;
+        }
+
+        const status = paymentInfo.status as string;
+
+        // Atualiza status do pedido com base no pagamento
+        if (status === 'approved' && order.status !== OrderStatus.PAID) {
+            order.status = OrderStatus.PAID;
+            await this.orderRepository.save(order);
+            log.info('Pedido atualizado para PAID via webhook', { orderId });
+            return;
+        }
+
+        if (status === 'refunded' && order.status !== OrderStatus.REFUNDED) {
+            order.status = OrderStatus.REFUNDED;
+            await this.orderRepository.save(order);
+            log.info('Pedido atualizado para REFUNDED via webhook', { orderId });
+            return;
+        }
+
+        // Status recebido mas sem alteração necessária
+        log.info('Status de pagamento recebido mas pedido não alterado', {
+            orderId,
+            paymentStatus: status,
+            currentOrderStatus: order.status
+        });
     }
 }

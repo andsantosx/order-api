@@ -5,37 +5,23 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 const router = Router();
 const statsController = new StatsController();
 
-// All stats routes require admin authentication
-// Admin middleware should check req.user?.isAdmin
-
 /**
- * GET /api/admin/stats/overview
- * Overview statistics: total revenue, orders, etc
+ * Todas as rotas de estatísticas requerem autenticação
  */
-router.get('/overview', authMiddleware, statsController.getOverview.bind(statsController));
 
-/**
- * GET /api/admin/stats/sales?period=7days
- * Sales data by period (7days, 30days, 90days, year)
- */
-router.get('/sales', authMiddleware, statsController.getSales.bind(statsController));
+// GET /api/admin/stats - Overview geral
+router.get('/', authMiddleware, statsController.getOverview.bind(statsController));
 
-/**
- * GET /api/admin/stats/best-sellers?limit=10
- * Best selling products
- */
+// GET /api/admin/stats/sales?period=30d - Vendas por período  
+router.get('/sales', authMiddleware, statsController.getSalesByPeriod.bind(statsController));
+
+// GET /api/admin/stats/best-sellers?limit=10&period=30d - Produtos mais vendidos
 router.get('/best-sellers', authMiddleware, statsController.getBestSellers.bind(statsController));
 
-/**
- * GET /api/admin/stats/revenue?from=2026-01-01&to=2026-01-31
- * Revenue statistics with optional date range
- */
-router.get('/revenue', authMiddleware, statsController.getRevenue.bind(statsController));
+// GET /api/admin/stats/revenue?period=30d - Receita (deprecated, usar /sales)
+router.get('/revenue', authMiddleware, statsController.getRevenueStats.bind(statsController));
 
-/**
- * GET /api/admin/stats/order-status
- * Order status breakdown
- */
-router.get('/order-status', authMiddleware, statsController.getOrderStatus.bind(statsController));
+// GET /api/admin/stats/status-breakdown - Distribuição de status
+router.get('/status-breakdown', authMiddleware, statsController.getStatusBreakdown.bind(statsController));
 
 export default router;

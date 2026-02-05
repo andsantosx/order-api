@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middlewares/validate';
-import { registerSchema, loginSchema } from '../schemas/userSchemas';
+import { registerSchema, loginSchema, updateProfileSchema } from '../schemas/userSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { authLimiter } from '../../config/rateLimits';
 
@@ -13,6 +13,6 @@ router.post('/register', authLimiter, validate(registerSchema), authController.r
 router.post('/login', authLimiter, validate(loginSchema), authController.login.bind(authController));
 
 router.get('/me', authMiddleware, authController.getProfile.bind(authController));
-router.put('/me', authMiddleware, authController.updateProfile.bind(authController));
+router.put('/me', authMiddleware, validate(updateProfileSchema), authController.updateProfile.bind(authController));
 
 export default router;

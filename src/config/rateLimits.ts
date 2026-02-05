@@ -1,63 +1,139 @@
 import rateLimit from 'express-rate-limit';
+import { env } from './env';
 
 /**
- * Rate limiter for authentication endpoints (login, register)
- * Prevents brute force attacks
+ * Configurações de Rate Limiting baseadas em variáveis de ambiente
+ * 
+ * Protege contra abuso e ataques de força bruta
+ * Cada limiter é aplicado em rotas específicas
  */
-export const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per windowMs
-    message: {
-        error: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
-    },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    // Skip successful requests (optional - only count failed attempts)
-    skipSuccessfulRequests: false,
-});
 
 /**
- * Rate limiter for order creation
- * Prevents order spam
- */
-export const orderLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // 10 orders per hour
-    message: {
-        error: 'Limite de pedidos atingido. Tente novamente em 1 hora.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-/**
- * Rate limiter for payment processing
- * Prevents payment spam/abuse
- */
-export const paymentLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 payment attempts per 15 minutes
-    message: {
-        error: 'Muitas tentativas de pagamento. Tente novamente em 15 minutos.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-/**
- * General API rate limiter
- * Applies to all routes as a baseline protection
+ * Rate Limiter Geral
+ * Aplicado em todas as rotas da API como baseline de proteção
+ * 
+ * Limite padrão: 100 requisições por 15 minutos por IP
+ * Configurável via RATE_LIMIT_WINDOW_MS e RATE_LIMIT_MAX
  */
 export const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per 15 minutes
+    windowMs: env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutos
+    max: env.RATE_LIMIT_MAX || 100,
     message: {
-        error: 'Muitas requisições. Tente novamente em alguns minutos.'
+        status: 'error',
+        message: 'Muitas requisições. Tente novamente em alguns minutos.'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => {
-        // Skip rate limiting for admin users (optional)
-        return req.user?.isAdmin === true;
-    }
+});
+
+/**
+ * Rate Limiter para Autenticação (Login/Registro)
+ * 
+ * Protege contra ataques de força bruta em credenciais
+ * Limite padrão: 5 tentativas por 15 minutos por IP
+ * 
+ * Aplicar em:
+ * - POST /api/auth/login
+ * - POST /api/auth/register
+ */
+export const authLimiter = rateLimit({
+    windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
+    max: env.AUTH_RATE_LIMIT_MAX || 5,
+    skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
+    message: {
+        status: 'error',
+        message: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+/**
+ * Rate Limiter para Criação de Pedidos
+ * 
+ * Previne spam e abuso do sistema de pedidos
+ * Limite padrão: 10 pedidos por hora por IP
+ * 
+ * Aplicar em:
+ * - POST /api/orders
+ */
+export const orderCreationLimiter = rateLimit({
+    windowMs: env.ORDER_RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000, // 1 hora
+    max: env.ORDER_RATE_LIMIT_MAX || 10,
+    message: {
+        status: 'error',
+        message: 'Limite de pedidos atingido. Tente novamente em 1 hora.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+/**
+ * Alias para compatibilidade com código existente
+ */
+export const orderLimiter = orderCreationLimiter;
+
+/**
+ * Rate Limiter para Processamento de Pagamentos
+ * 
+ * Protege contra tentativas excessivas de pagamento
+ * Limite padrão: 5 tentativas por 15 minutos por IP
+ * 
+ * Aplicar em:
+ * - POST /api/payments/:id
+ */
+export const paymentProcessingLimiter = rateLimit({
+    windowMs: env.PAYMENT_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
+    max: env.PAYMENT_RATE_LIMIT_MAX || 5,
+    message: {
+        status: 'error',
+        message: 'Muitas tentativas de pagamento. Tente novamente em alguns minutos.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+/**
+ * Alias para compatibilidade com código existente
+ */
+export const paymentLimiter = paymentProcessingLimiter;
+
+/**
+ * Rate Limiter para Webhooks
+ * 
+ * Protege endpoint de webhook contra spam
+ * Limite padrão: 100 webhooks por minuto
+ * 
+ * Aplicar em:
+ * - POST /api/payments/webhook
+ */
+export const webhookLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: 100,
+    message: {
+        status: 'error',
+        message: 'Muitas requisições de webhook'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+/**
+ * Rate Limiter para Busca de Produtos
+ * 
+ * Previne scraping excessivo do catálogo
+ * Limite padrão: 30 requisições por minuto por IP
+ * 
+ * Aplicar em:
+ * - GET /api/products
+ */
+export const productSearchLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: 30,
+    message: {
+        status: 'error',
+        message: 'Muitas buscas. Aguarde antes de continuar.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
