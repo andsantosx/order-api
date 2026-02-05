@@ -3,6 +3,7 @@ import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { ShippingAddress } from '../entities/ShippingAddress';
 import { User } from '../entities/User';
+import { Size } from '../entities/Size';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middlewares/errorHandler';
 import { AppDataSource } from '../../data-source';
@@ -50,6 +51,7 @@ export class OrderService {
     private orderItemRepository = AppDataSource.getRepository(OrderItem);
     private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
     private userRepository = AppDataSource.getRepository(User);
+    private sizeRepository = AppDataSource.getRepository(Size);
 
     /**
      * Retorna pedidos filtrados por usuário e/ou status
@@ -201,7 +203,7 @@ export class OrderService {
         const finalEmail = guestEmail || user.email;
 
         // 3. Valida produtos e calcula total
-        const { productsMap, totalAmount, shippingCost } = await this.validateAndCalculateOrder(items);
+        const { productsMap, sizeNamesMap, totalAmount, shippingCost } = await this.validateAndCalculateOrder(items);
 
         // 4. Verifica duplicação (idempotência)
         const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount);
@@ -216,6 +218,7 @@ export class OrderService {
             finalEmail,
             items,
             productsMap,
+            sizeNamesMap,
             totalAmount,
             shippingCost,
             shippingAddressData
@@ -286,15 +289,18 @@ export class OrderService {
     /**
      * Valida produtos e calcula total do pedido
      * 
-     * @returns Mapa de produtos, total e custo de envio
+     * @returns Mapa de produtos, mapa de nomes de tamanhos, total e custo de envio
      * @throws {AppError} 404 - se algum produto não for encontrado
+     * @throws {AppError} 400 - se algum tamanho for inválido
      */
     private async validateAndCalculateOrder(items: OrderItemInput[]): Promise<{
         productsMap: Map<string, Product>;
+        sizeNamesMap: Map<string, string>;
         totalAmount: number;
         shippingCost: number;
     }> {
         const productsMap = new Map<string, Product>();
+        const sizeNamesMap = new Map<string, string>();
         let subtotal = 0;
 
         for (const item of items) {
@@ -309,8 +315,29 @@ export class OrderService {
                 );
             }
 
+            // Busca o nome do tamanho pelo ID
+            const sizeId = parseInt(item.size, 10);
+            if (isNaN(sizeId)) {
+                throw new AppError(
+                    `Tamanho inválido: ${item.size}`,
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
+
+            const size = await this.sizeRepository.findOne({
+                where: { id: sizeId }
+            });
+
+            if (!size) {
+                throw new AppError(
+                    `Tamanho com ID ${item.size} não encontrado`,
+                    HTTP_STATUS.NOT_FOUND
+                );
+            }
+
             subtotal += product.price_cents * item.quantity;
             productsMap.set(item.productId, product);
+            sizeNamesMap.set(item.size, size.name);
         }
 
         // Calcula frete (grátis acima do threshold)
@@ -329,7 +356,7 @@ export class OrderService {
             throw new AppError(ERROR_MESSAGES.ORDER_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
         }
 
-        return { productsMap, totalAmount, shippingCost };
+        return { productsMap, sizeNamesMap, totalAmount, shippingCost };
     }
 
     /* ==========================================
@@ -500,13 +527,14 @@ export class OrderService {
         finalEmail: string | undefined,
         items: OrderItemInput[],
         productsMap: Map<string, Product>,
+        sizeNamesMap: Map<string, string>,
         totalAmount: number,
         shippingCost: number,
         shippingAddressData: ShippingAddressData
     ): Promise<Order> {
         return await executeInTransaction(async (manager) => {
             // Cria items do pedido
-            const orderItems = this.createOrderItems(items, productsMap);
+            const orderItems = this.createOrderItems(items, productsMap, sizeNamesMap);
 
             // Cria o pedido
             const newOrder = manager.create(Order, {
@@ -543,10 +571,12 @@ export class OrderService {
      */
     private createOrderItems(
         items: OrderItemInput[],
-        productsMap: Map<string, Product>
+        productsMap: Map<string, Product>,
+        sizeNamesMap: Map<string, string>
     ): OrderItem[] {
         return items.map(item => {
             const product = productsMap.get(item.productId)!;
+            const sizeName = sizeNamesMap.get(item.size)!;
             const itemTotalPrice = product.price_cents * item.quantity;
 
             return this.orderItemRepository.create({
@@ -554,7 +584,7 @@ export class OrderService {
                 quantity: item.quantity,
                 unit_price: product.price_cents,
                 total_price: itemTotalPrice,
-                size: item.size
+                size: sizeName
             });
         });
     }
