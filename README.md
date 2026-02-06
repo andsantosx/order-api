@@ -147,12 +147,6 @@ O projeto inclui configurações para deploy em contêineres. Certifique-se de c
 
 ---
 
-## 📝 Licença
-
-MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
----
-
 ## 👨‍💻 Autor
 
 **Anderson Santos**
