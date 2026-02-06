@@ -1,0 +1,1039 @@
+{
+	"info": {
+		"_postman_id": "order-api-collection-v2",
+		"name": "Order API - Documentação Completa",
+		"description": "# Order API - Documentação Completa\n\n## 📖 Sobre\nAPI REST completa para gerenciamento de e-commerce, incluindo produtos, pedidos, pagamentos e administração.\n\n## 🔑 Autenticação\nA maioria dos endpoints requer autenticação via Bearer Token JWT.\n\n**Como usar:**\n1. Faça login via `POST /api/auth/login`\n2. Copie o token retornado\n3. Configure a variável `{{TOKEN}}` no ambiente\n4. O token será automaticamente incluído nos headers das requisições autenticadas\n\n## 🌍 Ambientes\n- **Development**: `http://localhost:3000`\n- **Production**: Configure conforme necessário\n\n## 📝 Status de Pedidos\n- `PENDING`: Aguardando pagamento\n- `PAID`: Pagamento confirmado\n- `SHIPPED`: Em transporte\n- `DELIVERED`: Entregue\n- `CANCELED`: Cancelado\n- `REFUNDED`: Reembolsado\n\n## 💰 Valores Monetários\nTodos os preços são em **centavos** (ex: R$ 100,00 = 10000 centavos)\n\n## 🔗 Links Úteis\n- [Repositório](https://github.com/seu-repo)\n- [Documentação Técnica](https://docs.example.com)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Auth",
+			"description": "Endpoints de autenticação e gerenciamento de perfil de usuário",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Testa se a resposta foi bem-sucedida",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"// Testa se retornou um token",
+									"pm.test('Response has token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"    pm.expect(jsonData.token.length).to.be.above(0);",
+									"});",
+									"",
+									"// Salva o token automaticamente",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('TOKEN', jsonData.token);",
+									"    console.log('✅ Token salvo automaticamente');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"password\": \"senha123\",\n  \"document\": \"12345678901\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/register",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "## Cadastro de Novo Usuário\n\nCria uma nova conta de usuário no sistema.\n\n### Request Body\n- **name** (string, obrigatório): Nome completo do usuário\n- **email** (string, obrigatório): Email único e válido\n- **password** (string, obrigatório): Senha (mínimo 6 caracteres)\n- **document** (string, opcional): CPF do usuário\n\n### Response 201 - Success\n```json\n{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"name\": \"João Silva\",\n    \"email\": \"joao@example.com\",\n    \"isAdmin\": false,\n    \"document\": \"12345678901\"\n  }\n}\n```\n\n### Errors\n- **400**: Email já cadastrado ou dados inválidos\n- **500**: Erro interno do servidor"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has token and user', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"});",
+									"",
+									"// Salva o token automaticamente",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('TOKEN', jsonData.token);",
+									"    pm.environment.set('USER_ID', jsonData.user.id);",
+									"    console.log('✅ Token e User ID salvos automaticamente');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"joao@example.com\",\n  \"password\": \"senha123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/login",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "## Login de Usuário\n\nAutentica um usuário e retorna um token JWT.\n\n### Request Body\n- **email** (string, obrigatório): Email cadastrado\n- **password** (string, obrigatório): Senha do usuário\n\n### Response 200 - Success\n```json\n{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"name\": \"João Silva\",\n    \"email\": \"joao@example.com\",\n    \"isAdmin\": false\n  }\n}\n```\n\n### Errors\n- **401**: Credenciais inválidas\n- **429**: Muitas tentativas de login (rate limit)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has user data', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}",
+								"description": "Token JWT obtido no login"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/me",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "me"]
+						},
+						"description": "## Obter Perfil do Usuário\n\nRetorna os dados do usuário autenticado.\n\n### Headers\n- **Authorization**: Bearer {token}\n\n### Response 200 - Success\n```json\n{\n  \"id\": \"uuid\",\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"document\": \"12345678901\",\n  \"isAdmin\": false\n}\n```\n\n### Errors\n- **401**: Token inválido ou expirado"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Profile was updated', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva Updated\",\n  \"document\": \"12345678901\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/me",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "me"]
+						},
+						"description": "## Atualizar Perfil\n\nAtualiza os dados do usuário autenticado.\n\n### Request Body\n- **name** (string, opcional): Novo nome\n- **document** (string, opcional): Novo CPF\n\n### Response 200 - Success\n```json\n{\n  \"id\": \"uuid\",\n  \"name\": \"João Silva Updated\",\n  \"email\": \"joao@example.com\",\n  \"document\": \"12345678901\",\n  \"isAdmin\": false\n}\n```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🛍️ Products",
+			"description": "Endpoints para gerenciamento e consulta de produtos",
+			"item": [
+				{
+					"name": "Get All Products",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has products array', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Response has pagination metadata', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('total');",
+									"    pm.expect(jsonData).to.have.property('limit');",
+									"    pm.expect(jsonData).to.have.property('offset');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/products?search=&category=&brand=&minPrice=&maxPrice=&sortBy=newest&limit=20&offset=0",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products"],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"description": "Busca por nome ou descrição"
+								},
+								{
+									"key": "category",
+									"value": "",
+									"description": "ID da categoria para filtrar"
+								},
+								{
+									"key": "brand",
+									"value": "",
+									"description": "ID da marca para filtrar"
+								},
+								{
+									"key": "minPrice",
+									"value": "",
+									"description": "Preço mínimo em centavos"
+								},
+								{
+									"key": "maxPrice",
+									"value": "",
+									"description": "Preço máximo em centavos"
+								},
+								{
+									"key": "sortBy",
+									"value": "newest",
+									"description": "Ordenação: newest, price_asc, price_desc, name"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Número de produtos por página"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Offset para paginação"
+								}
+							]
+						},
+						"description": "## Listar Produtos\n\nRetorna uma lista paginada de produtos com filtros e ordenação.\n\n### Query Parameters\n- **search** (string, opcional): Busca por nome ou descrição\n- **category** (number, opcional): Filtro por categoria\n- **brand** (number, opcional): Filtro por marca\n- **minPrice** (number, opcional): Preço mínimo em centavos\n- **maxPrice** (number, opcional): Preço máximo em centavos\n- **sortBy** (string, opcional): Ordenação (newest, price_asc, price_desc, name)\n- **limit** (number, opcional): Produtos por página (padrão: 20)\n- **offset** (number, opcional): Offset para paginação (padrão: 0)\n\n### Response 200 - Success\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"uuid\",\n      \"name\": \"Camiseta Básica\",\n      \"price_cents\": 4990,\n      \"currency\": \"BRL\",\n      \"description\": \"Camiseta 100% algodão\",\n      \"category\": {\n        \"id\": 1,\n        \"name\": \"Camisetas\"\n      },\n      \"brand\": {\n        \"id\": 1,\n        \"name\": \"Nike\"\n      },\n      \"images\": [\n        {\n          \"id\": 1,\n          \"url\": \"https://example.com/image.jpg\",\n          \"display_order\": 0\n        }\n      ],\n      \"sizes\": [\n        {\n          \"id\": 1,\n          \"size\": {\n            \"id\": 1,\n            \"name\": \"M\",\n            \"type\": \"clothing\"\n          }\n        }\n      ]\n    }\n  ],\n  \"total\": 100,\n  \"limit\": 20,\n  \"offset\": 0\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Filters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has filter data', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('categories');",
+									"    pm.expect(jsonData).to.have.property('brands');",
+									"    pm.expect(jsonData).to.have.property('priceRange');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/products/filters",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products", "filters"]
+						},
+						"description": "## Obter Filtros Disponíveis\n\nRetorna todas as opções de filtros disponíveis para produtos.\n\n### Response 200 - Success\n```json\n{\n  \"categories\": [\n    {\"id\": 1, \"name\": \"Camisetas\", \"count\": 50}\n  ],\n  \"brands\": [\n    {\"id\": 1, \"name\": \"Nike\", \"count\": 30}\n  ],\n  \"priceRange\": {\n    \"min\": 1990,\n    \"max\": 99990\n  },\n  \"sizes\": [\n    {\"id\": 1, \"name\": \"M\", \"type\": \"clothing\"}\n  ]\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Product has required fields', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('price_cents');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/products/:id",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "UUID do produto"
+								}
+							]
+						},
+						"description": "## Obter Produto por ID\n\nRetorna os detalhes completos de um produto específico.\n\n### Path Parameters\n- **id** (uuid, obrigatório): ID do produto\n\n### Response 200 - Success\n```json\n{\n  \"id\": \"uuid\",\n  \"name\": \"Camiseta Básica\",\n  \"price_cents\": 4990,\n  \"currency\": \"BRL\",\n  \"description\": \"Camiseta 100% algodão\",\n  \"category\": {...},\n  \"brand\": {...},\n  \"images\": [...],\n  \"sizes\": [...]\n}\n```\n\n### Errors\n- **404**: Produto não encontrado"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"// Salva o ID do produto criado",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('LAST_PRODUCT_ID', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Camiseta Premium\",\n  \"price_cents\": 7990,\n  \"description\": \"Camiseta de alta qualidade 100% algodão\",\n  \"currency\": \"BRL\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"imageUrls\": [\n    \"https://example.com/image1.jpg\",\n    \"https://example.com/image2.jpg\"\n  ],\n  \"sizeIds\": [1, 2, 3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/products",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products"]
+						},
+						"description": "## Criar Produto (Admin)\n\nCria um novo produto no catálogo.\n\n### Request Body\n- **name** (string, obrigatório): Nome do produto\n- **price_cents** (number, obrigatório): Preço em centavos\n- **currency** (string, obrigatório): Moeda (BRL)\n- **description** (string, opcional): Descrição do produto\n- **categoryId** (number, obrigatório): ID da categoria\n- **brandId** (number, opcional): ID da marca\n- **imageUrls** (array, obrigatório): URLs das imagens\n- **sizeIds** (array, obrigatório): IDs dos tamanhos disponíveis\n\n### Response 201 - Success\n```json\n{\n  \"id\": \"uuid\",\n  \"name\": \"Camiseta Premium\",\n  \"price_cents\": 7990,\n  ...\n}\n```\n\n### Errors\n- **401**: Não autenticado\n- **403**: Não é administrador\n- **400**: Dados inválidos"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Camiseta Premium Atualizada\",\n  \"price_cents\": 8990,\n  \"description\": \"Nova descrição\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"imageUrls\": [\"https://example.com/new-image.jpg\"],\n  \"sizeIds\": [1, 2]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/products/{{LAST_PRODUCT_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products", "{{LAST_PRODUCT_ID}}"]
+						},
+						"description": "## Atualizar Produto (Admin)\n\nAtualiza um produto existente.\n\n### Errors\n- **404**: Produto não encontrado\n- **403**: Não é administrador"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/products/{{LAST_PRODUCT_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "products", "{{LAST_PRODUCT_ID}}"]
+						},
+						"description": "## Deletar Produto (Admin)\n\nRemove um produto do catálogo (soft delete)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📦 Orders",
+			"description": "Endpoints para criação e gerenciamento de pedidos",
+			"item": [
+				{
+					"name": "Get All Orders (User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is array', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/orders",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "orders"]
+						},
+						"description": "## Listar Pedidos do Usuário\n\nRetorna todos os pedidos do usuário autenticado.\n\n### Response 200 - Success\n```json\n[\n  {\n    \"id\": \"uuid\",\n    \"total_amount\": 15990,\n    \"currency\": \"BRL\",\n    \"status\": \"PAID\",\n    \"created_at\": \"2024-01-01T10:00:00Z\",\n    \"items\": [\n      {\n        \"id\": \"uuid\",\n        \"quantity\": 2,\n        \"size\": \"M\",\n        \"unit_price\": 4990,\n        \"total_price\": 9980,\n        \"product\": {...}\n      }\n    ],\n    \"shippingAddress\": [...]\n  }\n]\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/orders/:id",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "orders", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "## Obter Pedido por ID\n\nRetorna os detalhes completos de um pedido específico."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order (Guest Checkout)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Order has required fields', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('total_amount');",
+									"    pm.expect(jsonData.items).to.be.an('array');",
+									"});",
+									"",
+									"// Salva o ID do pedido",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('LAST_ORDER_ID', jsonData.id);",
+									"    console.log('✅ Order ID saved:', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"guestEmail\": \"guest@example.com\",\n  \"items\": [\n    {\n      \"productId\": \"uuid-do-produto\",\n      \"quantity\": 1,\n      \"size\": \"1\"\n    }\n  ],\n  \"shippingAddress\": {\n    \"street\": \"Rua Exemplo, 123\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01234567\",\n    \"country\": \"Brasil\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/orders",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "orders"]
+						},
+						"description": "## Criar Pedido (Guest Checkout)\n\nCria um pedido sem necessidade de autenticação.\n\n### Request Body\n- **guestEmail** (string, obrigatório): Email do cliente\n- **items** (array, obrigatório): Lista de itens do pedido\n  - **productId** (uuid): ID do produto\n  - **quantity** (number): Quantidade\n  - **size** (string): ID do tamanho (será convertido para nome automaticamente)\n- **shippingAddress** (object, obrigatório): Endereço de entrega\n  - **street** (string): Rua e número\n  - **city** (string): Cidade\n  - **state** (string): Estado (UF)\n  - **zipCode** (string): CEP\n  - **country** (string): País\n\n### ⚠️ IMPORTANTE: Campo Size\nO campo `size` deve conter o **ID do tamanho** (ex: \"1\", \"2\", \"3\"). O backend irá automaticamente converter este ID para o **nome do tamanho** (ex: \"M\", \"G\", \"42\") antes de salvar no banco de dados.\n\n### Response 201 - Success\n```json\n{\n  \"id\": \"uuid\",\n  \"total_amount\": 15990,\n  \"currency\": \"BRL\",\n  \"status\": \"PENDING\",\n  \"guest_email\": \"guest@example.com\",\n  \"items\": [\n    {\n      \"id\": \"uuid\",\n      \"quantity\": 1,\n      \"size\": \"M\",\n      \"unit_price\": 4990,\n      \"total_price\": 4990,\n      \"product\": {...}\n    }\n  ],\n  \"shippingAddress\": [...]\n}\n```\n\n### Errors\n- **400**: Dados inválidos (CEP, items vazios, etc.)\n- **404**: Produto ou tamanho não encontrado\n- **429**: Rate limit excedido"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order (Authenticated)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('LAST_ORDER_ID', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"uuid-do-produto\",\n      \"quantity\": 2,\n      \"size\": \"1\"\n    }\n  ],\n  \"shippingAddress\": {\n    \"street\": \"Rua Exemplo, 123\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01234567\",\n    \"country\": \"Brasil\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/orders",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "orders"]
+						},
+						"description": "## Criar Pedido (Autenticado)\n\nCria um pedido para o usuário autenticado.\n\n**Diferença do Guest:** Não precisa enviar `guestEmail`, o usuário é identificado pelo token."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"PAID\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/orders/{{LAST_ORDER_ID}}/status",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "orders", "{{LAST_ORDER_ID}}", "status"]
+						},
+						"description": "## Atualizar Status do Pedido (Admin)\n\nAtualiza o status de um pedido.\n\n### Status Válidos\n- PENDING\n- PAID\n- SHIPPED\n- DELIVERED\n- CANCELED\n- REFUNDED"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💳 Payments",
+			"item": [
+				{
+					"name": "Process Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has payment data', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('paymentId');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": \"{{LAST_ORDER_ID}}\",\n  \"paymentMethod\": \"pix\",\n  \"email\": \"cliente@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/payments/process",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "payments", "process"]
+						},
+						"description": "## Processar Pagamento\n\nInicia o processo de pagamento via Mercado Pago.\n\n### Request Body\n- **orderId** (uuid, obrigatório): ID do pedido\n- **paymentMethod** (string, obrigatório): Método de pagamento (pix, credit_card, etc.)\n- **email** (string, obrigatório): Email do pagador\n\n### Response 200 - Success\n```json\n{\n  \"paymentId\": \"mp-payment-id\",\n  \"status\": \"pending\",\n  \"qrCode\": \"base64-encoded-qr-code\",\n  \"qrCodeUrl\": \"https://...\"\n}\n```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👤 Profile",
+			"item": [
+				{
+					"name": "Get Addresses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/profile/addresses",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "profile", "addresses"]
+						},
+						"description": "## Listar Endereços\n\nRetorna todos os endereços salvos do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"street\": \"Rua Exemplo, 123\",\n  \"city\": \"São Paulo\",\n  \"state\": \"SP\",\n  \"zipCode\": \"01234567\",\n  \"country\": \"Brasil\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/profile/addresses",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "profile", "addresses"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏷️ Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/categories",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "categories"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏭 Brands",
+			"item": [
+				{
+					"name": "Get All Brands",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/brands",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "brands"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📏 Sizes",
+			"item": [
+				{
+					"name": "Get All Sizes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/sizes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "sizes"]
+						},
+						"description": "## Listar Tamanhos\n\nRetorna todos os tamanhos disponíveis.\n\n### Response 200 - Success\n```json\n[\n  {\n    \"id\": 1,\n    \"name\": \"P\",\n    \"type\": \"clothing\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"M\",\n    \"type\": \"clothing\"\n  },\n  {\n    \"id\": 3,\n    \"name\": \"G\",\n    \"type\": \"clothing\"\n  }\n]\n```"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔧 Admin",
+			"item": [
+				{
+					"name": "Get All Orders (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/admin/orders?status=&userId=",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "admin", "orders"],
+							"query": [
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filtro por status"
+								},
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filtro por usuário"
+								}
+							]
+						},
+						"description": "## Listar Todos os Pedidos (Admin)\n\nRetorna todos os pedidos do sistema com filtros opcionais."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dashboard Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/admin/stats/overview?period=30days",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "admin", "stats", "overview"],
+							"query": [
+								{
+									"key": "period",
+									"value": "30days",
+									"description": "Período: 7days, 30days, 90days, 1year"
+								}
+							]
+						},
+						"description": "## Estatísticas do Dashboard\n\nRetorna estatísticas gerais do sistema."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💌 Contact",
+			"item": [
+				{
+					"name": "Send Contact Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"subject\": \"Dúvida sobre produto\",\n  \"message\": \"Gostaria de saber mais informações sobre o produto X\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/contact",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "contact"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏥 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('API is healthy', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.equal('ok');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/health",
+							"host": ["{{BASE_URL}}"],
+							"path": ["health"]
+						},
+						"description": "## Health Check\n\nVerifica o status da API e suas dependências.\n\n### Response 200 - Success\n```json\n{\n  \"status\": \"ok\",\n  \"timestamp\": \"2024-01-01T10:00:00Z\",\n  \"uptime\": 123456,\n  \"version\": \"1.0.0\",\n  \"checks\": {\n    \"database\": {\"status\": \"ok\", \"responseTime\": \"5ms\"},\n    \"mercadopago\": {\"status\": \"ok\", \"responseTime\": \"120ms\"}\n  }\n}\n```"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Script executado antes de cada requisição",
+					"",
+					"// Log da requisição atual",
+					"console.log('🚀 Iniciando requisição:', pm.info.requestName);",
+					"",
+					"// Verifica se o token está definido para requisições autenticadas",
+					"if (pm.request.headers.has('Authorization')) {",
+					"    const token = pm.environment.get('TOKEN');",
+					"    if (!token) {",
+					"        console.warn('⚠️ Token não encontrado! Faça login primeiro.');",
+					"    }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Script executado após cada requisição",
+					"",
+					"// Log do tempo de resposta",
+					"console.log('⏱️ Tempo de resposta:', pm.response.responseTime, 'ms');",
+					"",
+					"// Log do status",
+					"const status = pm.response.code;",
+					"if (status >= 200 && status < 300) {",
+					"    console.log('✅ Sucesso:', status);",
+					"} else if (status >= 400 && status < 500) {",
+					"    console.log('⚠️ Erro do cliente:', status);",
+					"} else if (status >= 500) {",
+					"    console.log('❌ Erro do servidor:', status);",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "TOKEN",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "USER_ID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "LAST_ORDER_ID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "LAST_PRODUCT_ID",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
