@@ -13,7 +13,11 @@ router.use(authMiddleware);
 
 // Addresses
 router.get('/addresses', addressController.list.bind(addressController));
-router.post('/addresses', validate(createAddressSchema), addressController.create.bind(addressController));
+router.post(
+  '/addresses',
+  validate(createAddressSchema),
+  addressController.create.bind(addressController),
+);
 router.delete('/addresses/:id', addressController.delete.bind(addressController));
 
 // Wishlist

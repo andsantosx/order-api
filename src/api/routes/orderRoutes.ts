@@ -13,8 +13,19 @@ const orderController = new OrderController();
 router.get('/', authMiddleware, orderController.getAll.bind(orderController));
 router.get('/:id', authMiddleware, orderController.getOne.bind(orderController));
 // POST /orders is public (Guest Checkout) but rate limited to prevent spam
-router.post('/', orderLimiter, optionalAuthMiddleware, validate(createOrderSchema), orderController.create.bind(orderController));
-router.put('/:id/status', authMiddleware, validate(updateStatusSchema), orderController.updateStatus.bind(orderController));
+router.post(
+  '/',
+  orderLimiter,
+  optionalAuthMiddleware,
+  validate(createOrderSchema),
+  orderController.create.bind(orderController),
+);
+router.put(
+  '/:id/status',
+  authMiddleware,
+  validate(updateStatusSchema),
+  orderController.updateStatus.bind(orderController),
+);
 router.post('/:id/refund', authMiddleware, orderController.refund.bind(orderController));
 router.post('/:id/cancel', authMiddleware, orderController.cancel.bind(orderController));
 

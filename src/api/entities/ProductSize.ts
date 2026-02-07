@@ -4,14 +4,14 @@ import { Size } from './Size';
 
 @Entity('product_sizes')
 export class ProductSize {
-    @PrimaryGeneratedColumn('increment')
-    id!: number;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
-    @ManyToOne(() => Product, product => product.sizes, { onDelete: 'CASCADE', nullable: false })
-    @JoinColumn({ name: 'product_id' })
-    product!: Product;
+  @ManyToOne(() => Product, (product) => product.sizes, { onDelete: 'CASCADE', nullable: false })
+  @JoinColumn({ name: 'product_id' })
+  product!: Product;
 
-    @ManyToOne(() => Size, { nullable: false })
-    @JoinColumn({ name: 'size_id' })
-    size!: Size;
+  @ManyToOne(() => Size, { nullable: false })
+  @JoinColumn({ name: 'size_id' })
+  size!: Size;
 }

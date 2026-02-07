@@ -22,9 +22,9 @@ export class User {
   @Column({ nullable: true })
   document!: string;
 
-  @OneToMany(() => Order, order => order.user)
+  @OneToMany(() => Order, (order) => order.user)
   orders!: Order[];
 
-  @OneToMany(() => Wishlist, wishlist => wishlist.user)
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
   wishlist!: Wishlist[];
 }

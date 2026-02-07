@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { User } from './User';
 import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
@@ -9,7 +17,7 @@ export enum OrderStatus {
   SHIPPED = 'SHIPPED',
   DELIVERED = 'DELIVERED',
   CANCELED = 'CANCELED',
-  REFUNDED = 'REFUNDED'
+  REFUNDED = 'REFUNDED',
 }
 
 @Entity('orders')
@@ -17,7 +25,7 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => User, user => user.orders)
+  @ManyToOne(() => User, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
@@ -25,10 +33,11 @@ export class Order {
   guest_email?: string;
 
   @Column({
-    type: 'bigint', transformer: {
+    type: 'bigint',
+    transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10)
-    }
+      from: (value: string) => parseInt(value, 10),
+    },
   })
   total_amount!: number;
 
@@ -53,16 +62,16 @@ export class Order {
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.PENDING
+    default: OrderStatus.PENDING,
   })
   status!: OrderStatus;
 
   @CreateDateColumn()
   created_at!: Date;
 
-  @OneToMany(() => OrderItem, item => item.order, { cascade: true })
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 
-  @OneToMany(() => ShippingAddress, address => address.order, { cascade: true })
+  @OneToMany(() => ShippingAddress, (address) => address.order, { cascade: true })
   shippingAddress!: ShippingAddress[];
 }

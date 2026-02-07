@@ -7,7 +7,7 @@ export class OrderItem {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Order, order => order.items, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 
@@ -22,18 +22,22 @@ export class OrderItem {
   size?: string;
 
   @Column({
-    type: 'bigint', comment: 'Preço unitário no momento da compra', transformer: {
+    type: 'bigint',
+    comment: 'Preço unitário no momento da compra',
+    transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10)
-    }
+      from: (value: string) => parseInt(value, 10),
+    },
   })
   unit_price!: number;
 
   @Column({
-    type: 'bigint', comment: 'Preço total (quantidade * preço unitário)', transformer: {
+    type: 'bigint',
+    comment: 'Preço total (quantidade * preço unitário)',
+    transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10)
-    }
+      from: (value: string) => parseInt(value, 10),
+    },
   })
   total_price!: number;
 }

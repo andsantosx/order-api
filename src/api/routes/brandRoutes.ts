@@ -13,8 +13,18 @@ router.get('/:id', brandController.getOne.bind(brandController));
 router.get('/slug/:slug', brandController.getBySlug.bind(brandController));
 
 // Admin routes
-router.post('/', authMiddleware, validate(createBrandSchema), brandController.create.bind(brandController));
-router.put('/:id', authMiddleware, validate(updateBrandSchema), brandController.update.bind(brandController));
+router.post(
+  '/',
+  authMiddleware,
+  validate(createBrandSchema),
+  brandController.create.bind(brandController),
+);
+router.put(
+  '/:id',
+  authMiddleware,
+  validate(updateBrandSchema),
+  brandController.update.bind(brandController),
+);
 router.delete('/:id', authMiddleware, brandController.delete.bind(brandController));
 
 export default router;

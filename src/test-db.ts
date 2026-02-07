@@ -8,7 +8,6 @@ async function testConnection() {
     // Testa uma query simples
     const result = await AppDataSource.query('SELECT NOW()');
     console.log('🕒 Hora atual do banco de dados:', result[0].now);
-
   } catch (error) {
     console.error('❌ Erro ao conectar com o banco de dados:', error);
   } finally {

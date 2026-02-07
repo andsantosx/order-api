@@ -13,8 +13,18 @@ router.get('/filters', productController.getFilters.bind(productController));
 router.get('/:id', productController.getOne.bind(productController));
 
 // Admin routes
-router.post('/', authMiddleware, validate(createProductSchema), productController.create.bind(productController));
-router.put('/:id', authMiddleware, validate(updateProductSchema), productController.update.bind(productController));
+router.post(
+  '/',
+  authMiddleware,
+  validate(createProductSchema),
+  productController.create.bind(productController),
+);
+router.put(
+  '/:id',
+  authMiddleware,
+  validate(updateProductSchema),
+  productController.update.bind(productController),
+);
 router.delete('/:id', authMiddleware, productController.delete.bind(productController));
 
 export default router;

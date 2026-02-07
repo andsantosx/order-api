@@ -18,574 +18,571 @@ import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '.
  * Interface para dados de endereço de entrega
  */
 interface ShippingAddressData {
-    street: string;
-    city: string;
-    state: string;
-    zipCode?: string;
-    country: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode?: string;
+  country: string;
 }
 
 /**
  * Interface para item do pedido (input)
  */
 interface OrderItemInput {
-    productId: string;
-    quantity: number;
-    size: string;
+  productId: string;
+  quantity: number;
+  size: string;
 }
 
 /**
  * Service responsável pela lógica de negócio de pedidos
- * 
+ *
  * Gerencia todo o ciclo de vida dos pedidos:
  * - Criação com validações e cálculos
  * - Consulta e filtragem
  * - Atualização de status
- * 
+ *
  * Implementa idempotência para evitar pedidos duplicados
  * e criação automática de contas para usuários convidados.
  */
 export class OrderService {
-    private orderRepository = AppDataSource.getRepository(Order);
-    private productRepository = AppDataSource.getRepository(Product);
-    private orderItemRepository = AppDataSource.getRepository(OrderItem);
-    private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
-    private userRepository = AppDataSource.getRepository(User);
-    private sizeRepository = AppDataSource.getRepository(Size);
+  private orderRepository = AppDataSource.getRepository(Order);
+  private productRepository = AppDataSource.getRepository(Product);
+  private orderItemRepository = AppDataSource.getRepository(OrderItem);
+  private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
+  private userRepository = AppDataSource.getRepository(User);
+  private sizeRepository = AppDataSource.getRepository(Size);
 
-    /**
-     * Retorna pedidos filtrados por usuário e/ou status
-     * 
-     * Administradores podem ver todos os pedidos
-     * Usuários regulares veem apenas seus próprios pedidos
-     * 
-     * @param userId - ID do usuário (opcional para admin)
-     * @param isAdmin - Se true, retorna todos os pedidos
-     * @param status - Filtro de status (opcional)
-     * @returns Lista de pedidos com relações carregadas
-     * 
-     * @example
-     * // Admin vendo todos os pedidos pendentes
-     * await orderService.getAll(undefined, true, OrderStatus.PENDING);
-     * 
-     * // Usuário vendo seus próprios pedidos
-     * await orderService.getAll(userId, false);
-     */
-    async getAll(isAdmin: boolean, userId?: string, status?: OrderStatus) {
-        // Admin: pode ver todos os pedidos ou filtrar por usuário
-        if (isAdmin) {
-            const whereCondition: FindOptionsWhere<Order> = {};
-            
-            if (userId) {
-                whereCondition.user = { id: userId };
-            }
-            if (status) {
-                whereCondition.status = status;
-            }
+  /**
+   * Retorna pedidos filtrados por usuário e/ou status
+   *
+   * Administradores podem ver todos os pedidos
+   * Usuários regulares veem apenas seus próprios pedidos
+   *
+   * @param userId - ID do usuário (opcional para admin)
+   * @param isAdmin - Se true, retorna todos os pedidos
+   * @param status - Filtro de status (opcional)
+   * @returns Lista de pedidos com relações carregadas
+   *
+   * @example
+   * // Admin vendo todos os pedidos pendentes
+   * await orderService.getAll(undefined, true, OrderStatus.PENDING);
+   *
+   * // Usuário vendo seus próprios pedidos
+   * await orderService.getAll(userId, false);
+   */
+  async getAll(isAdmin: boolean, userId?: string, status?: OrderStatus) {
+    // Admin: pode ver todos os pedidos ou filtrar por usuário
+    if (isAdmin) {
+      const whereCondition: FindOptionsWhere<Order> = {};
 
-            const orders = await this.orderRepository.find({
-                where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
-                relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
-                order: { created_at: 'DESC' }
-            });
+      if (userId) {
+        whereCondition.user = { id: userId };
+      }
+      if (status) {
+        whereCondition.status = status;
+      }
 
-            log.info('Pedidos listados (admin)', { count: orders.length, userId });
-            return orders;
-        }
+      const orders = await this.orderRepository.find({
+        where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
+        relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+        order: { created_at: 'DESC' },
+      });
 
-        // Usuário não autenticado
-        if (!userId) {
-            log.info('Usuário não autenticado tentou listar pedidos');
-            return [];
-        }
-
-        // Usuário normal: apenas seus pedidos
-        const whereCondition: FindOptionsWhere<Order> = { user: { id: userId } };
-        if (status) {
-            whereCondition.status = status;
-        }
-
-        const orders = await this.orderRepository.find({
-            where: whereCondition,
-            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
-            order: { created_at: 'DESC' }
-        });
-
-        log.info('Pedidos listados (usuário)', { count: orders.length, userId });
-        return orders;
+      log.info('Pedidos listados (admin)', { count: orders.length, userId });
+      return orders;
     }
 
-    /**
-     * Transforma pedido para formato de resposta
-     * Converte endereço de snake_case para camelCase
-     */
-    transform(order: Order) {
-        return order;
+    // Usuário não autenticado
+    if (!userId) {
+      log.info('Usuário não autenticado tentou listar pedidos');
+      return [];
     }
 
-    /**
-     * Busca um pedido pelo ID
-     * 
-     * @param id - ID do pedido
-     * @returns Pedido com todas as relações
-     * @throws {AppError} 404 - Se o pedido não for encontrado
-     */
-    async getOne(id: string) {
-        const order = await this.orderRepository.findOne({
-            where: { id },
-            relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress']
-        });
-
-        if (!order) {
-            throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-        }
-
-        log.info('Pedido consultado', { orderId: id });
-        return order;
+    // Usuário normal: apenas seus pedidos
+    const whereCondition: FindOptionsWhere<Order> = { user: { id: userId } };
+    if (status) {
+      whereCondition.status = status;
     }
 
-    /**
-     * Atualiza o status de um pedido
-     * 
-     * @param id - ID do pedido
-     * @param status - Novo status
-     * @returns Pedido atualizado
-     * @throws {AppError} 404 - Se o pedido não for encontrado
-     */
-    async updateStatus(id: string, status: OrderStatus) {
-        const order = await this.orderRepository.findOneBy({ id });
+    const orders = await this.orderRepository.find({
+      where: whereCondition,
+      relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+      order: { created_at: 'DESC' },
+    });
 
-        if (!order) {
-            throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-        }
+    log.info('Pedidos listados (usuário)', { count: orders.length, userId });
+    return orders;
+  }
 
-        order.status = status;
-        await this.orderRepository.save(order);
+  /**
+   * Transforma pedido para formato de resposta
+   * Converte endereço de snake_case para camelCase
+   */
+  transform(order: Order) {
+    return order;
+  }
 
-        log.info('Status do pedido atualizado', { orderId: id, newStatus: status });
-        return order;
+  /**
+   * Busca um pedido pelo ID
+   *
+   * @param id - ID do pedido
+   * @returns Pedido com todas as relações
+   * @throws {AppError} 404 - Se o pedido não for encontrado
+   */
+  async getOne(id: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id },
+      relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+    });
+
+    if (!order) {
+      throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    /**
-     * Cria um novo pedido
-     * 
-     * Fluxo completo de criação:
-     * 1. Valida dados de entrada (CEP, email, items)
-     * 2. Identifica ou cria usuário (auto-signup para guests)
-     * 3. Valida produtos e calcula totais
-     * 4. Verifica idempotência (evita duplicatas)
-     * 5. Cria pedido, items e endereço em transação atômica
-     * 
-     * @param userId - ID do usuário autenticado (opcional)
-     * @param guestName - Nome do convidado (opcional)
-     * @param guestEmail - Email do convidado (obrigatório se não autenticado)
-     * @param guestCpf - CPF do convidado (opcional)
-     * @param items - Lista de items do pedido
-     * @param shippingAddressData - Dados do endereço de entrega
-     * @returns Pedido criado com todas as relações
-     * @throws {AppError} 400 - Dados inválidos
-     * @throws {AppError} 404 - Produto não encontrado
-     * @throws {AppError} 500 - Erro ao criar conta ou processar pedido
-     */
-    async create(
-        userId: string | undefined,
-        guestName: string | undefined,
-        guestEmail: string | undefined,
-        guestCpf: string | undefined,
-        items: OrderItemInput[],
-        shippingAddressData: ShippingAddressData
-    ) {
-        // 1. Validações iniciais
-        this.validateOrderInput(userId, guestEmail, shippingAddressData, items);
+    log.info('Pedido consultado', { orderId: id });
+    return order;
+  }
 
-        // 2. Identifica ou cria usuário
-        const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf);
-        const finalEmail = guestEmail || user.email;
+  /**
+   * Atualiza o status de um pedido
+   *
+   * @param id - ID do pedido
+   * @param status - Novo status
+   * @returns Pedido atualizado
+   * @throws {AppError} 404 - Se o pedido não for encontrado
+   */
+  async updateStatus(id: string, status: OrderStatus) {
+    const order = await this.orderRepository.findOneBy({ id });
 
-        // 3. Valida produtos e calcula total
-        const { productsMap, sizeNamesMap, totalAmount, shippingCost } = await this.validateAndCalculateOrder(items);
-
-        // 4. Verifica duplicação (idempotência)
-        const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount);
-        if (existingOrder) {
-            log.info('Pedido duplicado detectado - retornando pedido existente', { orderId: existingOrder.id });
-            return this.getOne(existingOrder.id);
-        }
-
-        // 5. Cria pedido em transação
-        const order = await this.createOrderTransaction(
-            user,
-            finalEmail,
-            items,
-            productsMap,
-            sizeNamesMap,
-            totalAmount,
-            shippingCost,
-            shippingAddressData
-        );
-
-        log.info('Pedido criado com sucesso', { 
-            orderId: order.id, 
-            userId: user.id, 
-            total: totalAmount 
-        });
-
-        return this.getOne(order.id);
+    if (!order) {
+      throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    /* ==========================================
-     * MÉTODOS PRIVADOS - VALIDAÇÃO
-     * ========================================== */
+    order.status = status;
+    await this.orderRepository.save(order);
 
-    /**
-     * Valida dados de entrada do pedido
-     * Verifica se todos os campos obrigatórios estão presentes
-     * 
-     * @throws {AppError} 400 - Se dados obrigatórios estiverem faltando
-     */
-    private validateOrderInput(
-        userId: string | undefined,
-        guestEmail: string | undefined,
-        shippingAddress: ShippingAddressData,
-        items: OrderItemInput[]
-    ): void {
-        // Valida CEP
-        if (!shippingAddress.zipCode) {
-            throw new AppError(ERROR_MESSAGES.ZIPCODE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
-        }
+    log.info('Status do pedido atualizado', { orderId: id, newStatus: status });
+    return order;
+  }
 
-        if (!isValidZipCode(shippingAddress.zipCode)) {
-            throw new AppError(ERROR_MESSAGES.INVALID_ZIPCODE, HTTP_STATUS.BAD_REQUEST);
-        }
+  /**
+   * Cria um novo pedido
+   *
+   * Fluxo completo de criação:
+   * 1. Valida dados de entrada (CEP, email, items)
+   * 2. Identifica ou cria usuário (auto-signup para guests)
+   * 3. Valida produtos e calcula totais
+   * 4. Verifica idempotência (evita duplicatas)
+   * 5. Cria pedido, items e endereço em transação atômica
+   *
+   * @param userId - ID do usuário autenticado (opcional)
+   * @param guestName - Nome do convidado (opcional)
+   * @param guestEmail - Email do convidado (obrigatório se não autenticado)
+   * @param guestCpf - CPF do convidado (opcional)
+   * @param items - Lista de items do pedido
+   * @param shippingAddressData - Dados do endereço de entrega
+   * @returns Pedido criado com todas as relações
+   * @throws {AppError} 400 - Dados inválidos
+   * @throws {AppError} 404 - Produto não encontrado
+   * @throws {AppError} 500 - Erro ao criar conta ou processar pedido
+   */
+  async create(
+    userId: string | undefined,
+    guestName: string | undefined,
+    guestEmail: string | undefined,
+    guestCpf: string | undefined,
+    items: OrderItemInput[],
+    shippingAddressData: ShippingAddressData,
+  ) {
+    // 1. Validações iniciais
+    this.validateOrderInput(userId, guestEmail, shippingAddressData, items);
 
-        // Valida identificação do usuário
-        if (!userId && !guestEmail) {
-            throw new AppError(
-                'É necessário estar logado ou fornecer um email para continuar',
-                HTTP_STATUS.BAD_REQUEST
-            );
-        }
+    // 2. Identifica ou cria usuário
+    const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf);
+    const finalEmail = guestEmail || user.email;
 
-        // Valida items
-        if (!items || items.length === 0) {
-            throw new AppError('O pedido deve conter pelo menos um item', HTTP_STATUS.BAD_REQUEST);
-        }
+    // 3. Valida produtos e calcula total
+    const { productsMap, sizeNamesMap, totalAmount, shippingCost } =
+      await this.validateAndCalculateOrder(items);
 
-        if (items.length > ORDER.MAX_ITEMS_PER_ORDER) {
-            throw new AppError(ERROR_MESSAGES.TOO_MANY_ITEMS, HTTP_STATUS.BAD_REQUEST);
-        }
-
-        // Valida quantidade de cada item
-        items.forEach((item, index) => {
-            if (item.quantity < ORDER.MIN_ITEM_QUANTITY || item.quantity > ORDER.MAX_ITEM_QUANTITY) {
-                throw new AppError(
-                    `Item ${index + 1}: ${ERROR_MESSAGES.INVALID_QUANTITY}`,
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
-        });
+    // 4. Verifica duplicação (idempotência)
+    const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount);
+    if (existingOrder) {
+      log.info('Pedido duplicado detectado - retornando pedido existente', {
+        orderId: existingOrder.id,
+      });
+      return this.getOne(existingOrder.id);
     }
 
-    /**
-     * Valida produtos e calcula total do pedido
-     * 
-     * @returns Mapa de produtos, mapa de nomes de tamanhos, total e custo de envio
-     * @throws {AppError} 404 - se algum produto não for encontrado
-     * @throws {AppError} 400 - se algum tamanho for inválido
-     */
-    private async validateAndCalculateOrder(items: OrderItemInput[]): Promise<{
-        productsMap: Map<string, Product>;
-        sizeNamesMap: Map<string, string>;
-        totalAmount: number;
-        shippingCost: number;
-    }> {
-        const productsMap = new Map<string, Product>();
-        const sizeNamesMap = new Map<string, string>();
-        let subtotal = 0;
+    // 5. Cria pedido em transação
+    const order = await this.createOrderTransaction(
+      user,
+      finalEmail,
+      items,
+      productsMap,
+      sizeNamesMap,
+      totalAmount,
+      shippingCost,
+      shippingAddressData,
+    );
 
-        for (const item of items) {
-            const product = await this.productRepository.findOne({
-                where: { id: item.productId }
-            });
+    log.info('Pedido criado com sucesso', {
+      orderId: order.id,
+      userId: user.id,
+      total: totalAmount,
+    });
 
-            if (!product) {
-                throw new AppError(
-                    `Produto com ID ${item.productId} não encontrado`,
-                    HTTP_STATUS.NOT_FOUND
-                );
-            }
+    return this.getOne(order.id);
+  }
 
-            // Busca o nome do tamanho pelo ID
-            const sizeId = parseInt(item.size, 10);
-            if (isNaN(sizeId)) {
-                throw new AppError(
-                    `Tamanho inválido: ${item.size}`,
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+  /* ==========================================
+   * MÉTODOS PRIVADOS - VALIDAÇÃO
+   * ========================================== */
 
-            const size = await this.sizeRepository.findOne({
-                where: { id: sizeId }
-            });
-
-            if (!size) {
-                throw new AppError(
-                    `Tamanho com ID ${item.size} não encontrado`,
-                    HTTP_STATUS.NOT_FOUND
-                );
-            }
-
-            subtotal += product.price_cents * item.quantity;
-            productsMap.set(item.productId, product);
-            sizeNamesMap.set(item.size, size.name);
-        }
-
-        // Calcula frete (grátis acima do threshold)
-        const shippingCost = subtotal >= SHIPPING.FREE_SHIPPING_THRESHOLD_CENTS
-            ? 0
-            : SHIPPING.FIXED_SHIPPING_COST_CENTS;
-
-        const totalAmount = subtotal + shippingCost;
-
-        // Valida limites do pedido
-        if (totalAmount < MONEY.MIN_ORDER_VALUE_CENTS) {
-            throw new AppError(ERROR_MESSAGES.ORDER_TOO_SMALL, HTTP_STATUS.BAD_REQUEST);
-        }
-
-        if (totalAmount > MONEY.MAX_ORDER_VALUE_CENTS) {
-            throw new AppError(ERROR_MESSAGES.ORDER_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
-        }
-
-        return { productsMap, sizeNamesMap, totalAmount, shippingCost };
+  /**
+   * Valida dados de entrada do pedido
+   * Verifica se todos os campos obrigatórios estão presentes
+   *
+   * @throws {AppError} 400 - Se dados obrigatórios estiverem faltando
+   */
+  private validateOrderInput(
+    userId: string | undefined,
+    guestEmail: string | undefined,
+    shippingAddress: ShippingAddressData,
+    items: OrderItemInput[],
+  ): void {
+    // Valida CEP
+    if (!shippingAddress.zipCode) {
+      throw new AppError(ERROR_MESSAGES.ZIPCODE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
     }
 
-    /* ==========================================
-     * MÉTODOS PRIVADOS - USUÁRIO
-     * ========================================== */
+    if (!isValidZipCode(shippingAddress.zipCode)) {
+      throw new AppError(ERROR_MESSAGES.INVALID_ZIPCODE, HTTP_STATUS.BAD_REQUEST);
+    }
 
-    /**
-     * Resolve o usuário para o pedido
-     * 
-     * Se userId fornecido: busca usuário
-     * Se guest com email existente: vincula ao usuário existente
-     * Se guest com email novo: cria conta automaticamente (auto-signup)
-     * 
-     * @returns Usuário (encontrado ou criado)
-     * @throws {AppError} 400 - Se não for possível identificar usuário
-     * @throws {AppError} 500 - Se falhar ao criar conta
-     */
-    private async resolveUser(
-        userId: string | undefined,
-        guestEmail: string | undefined,
-        guestName: string | undefined,
-        guestCpf: string | undefined
-    ): Promise<User> {
-        // Usuário autenticado
-        if (userId) {
-            const user = await this.userRepository.findOneBy({ id: userId });
-            if (user) {
-                return user;
-            }
-        }
+    // Valida identificação do usuário
+    if (!userId && !guestEmail) {
+      throw new AppError(
+        'É necessário estar logado ou fornecer um email para continuar',
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
 
-        // Guest checkout
-        if (guestEmail) {
-            return await this.handleGuestUser(guestEmail, guestName, guestCpf);
-        }
+    // Valida items
+    if (!items || items.length === 0) {
+      throw new AppError('O pedido deve conter pelo menos um item', HTTP_STATUS.BAD_REQUEST);
+    }
 
+    if (items.length > ORDER.MAX_ITEMS_PER_ORDER) {
+      throw new AppError(ERROR_MESSAGES.TOO_MANY_ITEMS, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Valida quantidade de cada item
+    items.forEach((item, index) => {
+      if (item.quantity < ORDER.MIN_ITEM_QUANTITY || item.quantity > ORDER.MAX_ITEM_QUANTITY) {
         throw new AppError(
-            'Não foi possível identificar o usuário para o pedido',
-            HTTP_STATUS.BAD_REQUEST
+          `Item ${index + 1}: ${ERROR_MESSAGES.INVALID_QUANTITY}`,
+          HTTP_STATUS.BAD_REQUEST,
         );
+      }
+    });
+  }
+
+  /**
+   * Valida produtos e calcula total do pedido
+   *
+   * @returns Mapa de produtos, mapa de nomes de tamanhos, total e custo de envio
+   * @throws {AppError} 404 - se algum produto não for encontrado
+   * @throws {AppError} 400 - se algum tamanho for inválido
+   */
+  private async validateAndCalculateOrder(items: OrderItemInput[]): Promise<{
+    productsMap: Map<string, Product>;
+    sizeNamesMap: Map<string, string>;
+    totalAmount: number;
+    shippingCost: number;
+  }> {
+    const productsMap = new Map<string, Product>();
+    const sizeNamesMap = new Map<string, string>();
+    let subtotal = 0;
+
+    for (const item of items) {
+      const product = await this.productRepository.findOne({
+        where: { id: item.productId },
+      });
+
+      if (!product) {
+        throw new AppError(
+          `Produto com ID ${item.productId} não encontrado`,
+          HTTP_STATUS.NOT_FOUND,
+        );
+      }
+
+      // Busca o nome do tamanho pelo ID
+      const sizeId = parseInt(item.size, 10);
+      if (isNaN(sizeId)) {
+        throw new AppError(`Tamanho inválido: ${item.size}`, HTTP_STATUS.BAD_REQUEST);
+      }
+
+      const size = await this.sizeRepository.findOne({
+        where: { id: sizeId },
+      });
+
+      if (!size) {
+        throw new AppError(`Tamanho com ID ${item.size} não encontrado`, HTTP_STATUS.NOT_FOUND);
+      }
+
+      subtotal += product.price_cents * item.quantity;
+      productsMap.set(item.productId, product);
+      sizeNamesMap.set(item.size, size.name);
     }
 
-    /**
-     * Gerencia usuário guest
-     * Cria nova conta se não existir, ou vincula à existente
-     */
-    private async handleGuestUser(
-        email: string,
-        name: string | undefined,
-        cpf: string | undefined
-    ): Promise<User> {
-        const existingUser = await this.userRepository.findOneBy({ email });
+    // Calcula frete (grátis acima do threshold)
+    const shippingCost =
+      subtotal >= SHIPPING.FREE_SHIPPING_THRESHOLD_CENTS ? 0 : SHIPPING.FIXED_SHIPPING_COST_CENTS;
 
-        if (existingUser) {
-            // Atualiza CPF se fornecido e não existir
-            if (cpf && !existingUser.document) {
-                existingUser.document = cpf;
-                await this.userRepository.save(existingUser);
-            }
-            return existingUser;
-        }
+    const totalAmount = subtotal + shippingCost;
 
-        // Cria nova conta automaticamente
-        return await this.createGuestAccount(email, name, cpf);
+    // Valida limites do pedido
+    if (totalAmount < MONEY.MIN_ORDER_VALUE_CENTS) {
+      throw new AppError(ERROR_MESSAGES.ORDER_TOO_SMALL, HTTP_STATUS.BAD_REQUEST);
     }
 
-    /**
-     * Cria conta automática para guest user
-     * Gera senha aleatória e loga para que seja enviada por email
-     * 
-     * @throws {AppError} 500 - Se falhar ao criar conta
-     */
-    private async createGuestAccount(
-        email: string,
-        name: string | undefined,
-        cpf: string | undefined
-    ): Promise<User> {
-        try {
-            // Gera senha aleatória forte
-            const randomPassword = Math.random().toString(36).slice(-8) + 
-                                   Math.random().toString(36).slice(-8);
-            const hashedPassword = await bcrypt.hash(randomPassword, SECURITY.BCRYPT_SALT_ROUNDS);
-
-            const newUser = this.userRepository.create({
-                name: name || 'Cliente',
-                email,
-                password_hash: hashedPassword,
-                isAdmin: false,
-                document: cpf
-            });
-
-            const savedUser = await this.userRepository.save(newUser);
-
-            log.info('Conta criada automaticamente para guest', { 
-                email, 
-                userId: savedUser.id 
-            });
-            log.warn('Senha temporária gerada - deve ser enviada por email', { 
-                email,
-                // TODO: Integrar serviço de email para enviar credenciais
-                password: randomPassword 
-            });
-
-            return savedUser;
-        } catch (error) {
-            log.error('Falha ao criar conta automática', { email, error });
-            throw new AppError(
-                'Falha ao criar conta automática para o pedido',
-                HTTP_STATUS.INTERNAL_SERVER_ERROR
-            );
-        }
+    if (totalAmount > MONEY.MAX_ORDER_VALUE_CENTS) {
+      throw new AppError(ERROR_MESSAGES.ORDER_TOO_LARGE, HTTP_STATUS.BAD_REQUEST);
     }
 
-    /* ==========================================
-     * MÉTODOS PRIVADOS - IDEMPOTÊNCIA
-     * ========================================== */
+    return { productsMap, sizeNamesMap, totalAmount, shippingCost };
+  }
 
-    /**
-     * Verifica se já existe pedido idêntico recente
-     * 
-     * Previne duplicação acidental de pedidos ao verificar:
-     * - Mesmo valor total
-     * - Mesmo usuário/email
-     * - Criado nos últimos 30 segundos
-     * 
-     * @returns Pedido existente ou null
-     */
-    private async checkIdempotency(
-        userId: string,
-        email: string | undefined,
-        totalAmount: number
-    ): Promise<Order | null> {
-        const threshold = new Date(Date.now() - (ORDER.IDEMPOTENCY_WINDOW_SECONDS * 1000));
+  /* ==========================================
+   * MÉTODOS PRIVADOS - USUÁRIO
+   * ========================================== */
 
-        const queryBuilder = this.orderRepository.createQueryBuilder('order')
-            .where('order.total_amount = :totalAmount', { totalAmount })
-            .andWhere('order.created_at >= :date', { date: threshold });
-
-        // Usuário autenticado: busca por userId
-        if (userId) {
-            queryBuilder.andWhere('order.user_id = :userId', { userId });
-            return await queryBuilder.getOne();
-        }
-
-        // Guest: busca por email
-        if (email) {
-            queryBuilder.andWhere('order.guest_email = :guestEmail', { guestEmail: email });
-            return await queryBuilder.getOne();
-        }
-
-        // Sem userId nem email (não deveria acontecer)
-        log.warn('checkIdempotency chamado sem userId nem email', { totalAmount });
-        return null;
+  /**
+   * Resolve o usuário para o pedido
+   *
+   * Se userId fornecido: busca usuário
+   * Se guest com email existente: vincula ao usuário existente
+   * Se guest com email novo: cria conta automaticamente (auto-signup)
+   *
+   * @returns Usuário (encontrado ou criado)
+   * @throws {AppError} 400 - Se não for possível identificar usuário
+   * @throws {AppError} 500 - Se falhar ao criar conta
+   */
+  private async resolveUser(
+    userId: string | undefined,
+    guestEmail: string | undefined,
+    guestName: string | undefined,
+    guestCpf: string | undefined,
+  ): Promise<User> {
+    // Usuário autenticado
+    if (userId) {
+      const user = await this.userRepository.findOneBy({ id: userId });
+      if (user) {
+        return user;
+      }
     }
 
-    /* ==========================================
-     * MÉTODOS PRIVADOS - CRIAÇÃO
-     * ========================================== */
-
-    /**
-     * Cria o pedido completo dentro de uma transação
-     * Garante atomicidade: ou tudo é salvo, ou nada
-     * 
-     * @returns Pedido criado
-     */
-    private async createOrderTransaction(
-        user: User,
-        finalEmail: string | undefined,
-        items: OrderItemInput[],
-        productsMap: Map<string, Product>,
-        sizeNamesMap: Map<string, string>,
-        totalAmount: number,
-        shippingCost: number,
-        shippingAddressData: ShippingAddressData
-    ): Promise<Order> {
-        return await executeInTransaction(async (manager) => {
-            // Cria items do pedido
-            const orderItems = this.createOrderItems(items, productsMap, sizeNamesMap);
-
-            // Cria o pedido
-            const newOrder = manager.create(Order, {
-                user,
-                guest_email: finalEmail,
-                items: orderItems,
-                total_amount: totalAmount,
-                currency: MONEY.DEFAULT_CURRENCY,
-                idempotency_key: uuidv4(),
-                status: OrderStatus.PENDING,
-            });
-
-            const savedOrder = await manager.save(newOrder);
-
-            // Cria endereço de entrega
-            const sanitizedAddress = sanitizeAddressData(shippingAddressData);
-            const shippingAddress = manager.create(ShippingAddress, {
-                order: savedOrder,
-                street: sanitizedAddress.street || shippingAddressData.street,
-                city: sanitizedAddress.city || shippingAddressData.city,
-                state: sanitizedAddress.state || shippingAddressData.state,
-                zip_code: sanitizedAddress.zipCode || shippingAddressData.zipCode,
-                country: sanitizedAddress.country || shippingAddressData.country,
-            });
-
-            await manager.save(shippingAddress);
-
-            return savedOrder;
-        });
+    // Guest checkout
+    if (guestEmail) {
+      return await this.handleGuestUser(guestEmail, guestName, guestCpf);
     }
 
-    /**
-     * Cria lista de OrderItems a partir dos inputs
-     */
-    private createOrderItems(
-        items: OrderItemInput[],
-        productsMap: Map<string, Product>,
-        sizeNamesMap: Map<string, string>
-    ): OrderItem[] {
-        return items.map(item => {
-            const product = productsMap.get(item.productId)!;
-            const sizeName = sizeNamesMap.get(item.size)!;
-            const itemTotalPrice = product.price_cents * item.quantity;
+    throw new AppError(
+      'Não foi possível identificar o usuário para o pedido',
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
 
-            return this.orderItemRepository.create({
-                product,
-                quantity: item.quantity,
-                unit_price: product.price_cents,
-                total_price: itemTotalPrice,
-                size: sizeName
-            });
-        });
+  /**
+   * Gerencia usuário guest
+   * Cria nova conta se não existir, ou vincula à existente
+   */
+  private async handleGuestUser(
+    email: string,
+    name: string | undefined,
+    cpf: string | undefined,
+  ): Promise<User> {
+    const existingUser = await this.userRepository.findOneBy({ email });
+
+    if (existingUser) {
+      // Atualiza CPF se fornecido e não existir
+      if (cpf && !existingUser.document) {
+        existingUser.document = cpf;
+        await this.userRepository.save(existingUser);
+      }
+      return existingUser;
     }
+
+    // Cria nova conta automaticamente
+    return await this.createGuestAccount(email, name, cpf);
+  }
+
+  /**
+   * Cria conta automática para guest user
+   * Gera senha aleatória e loga para que seja enviada por email
+   *
+   * @throws {AppError} 500 - Se falhar ao criar conta
+   */
+  private async createGuestAccount(
+    email: string,
+    name: string | undefined,
+    cpf: string | undefined,
+  ): Promise<User> {
+    try {
+      // Gera senha aleatória forte
+      const randomPassword =
+        Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const hashedPassword = await bcrypt.hash(randomPassword, SECURITY.BCRYPT_SALT_ROUNDS);
+
+      const newUser = this.userRepository.create({
+        name: name || 'Cliente',
+        email,
+        password_hash: hashedPassword,
+        isAdmin: false,
+        document: cpf,
+      });
+
+      const savedUser = await this.userRepository.save(newUser);
+
+      log.info('Conta criada automaticamente para guest', {
+        email,
+        userId: savedUser.id,
+      });
+      log.warn('Senha temporária gerada - deve ser enviada por email', {
+        email,
+        // TODO: Integrar serviço de email para enviar credenciais
+        password: randomPassword,
+      });
+
+      return savedUser;
+    } catch (error) {
+      log.error('Falha ao criar conta automática', { email, error });
+      throw new AppError(
+        'Falha ao criar conta automática para o pedido',
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /* ==========================================
+   * MÉTODOS PRIVADOS - IDEMPOTÊNCIA
+   * ========================================== */
+
+  /**
+   * Verifica se já existe pedido idêntico recente
+   *
+   * Previne duplicação acidental de pedidos ao verificar:
+   * - Mesmo valor total
+   * - Mesmo usuário/email
+   * - Criado nos últimos 30 segundos
+   *
+   * @returns Pedido existente ou null
+   */
+  private async checkIdempotency(
+    userId: string,
+    email: string | undefined,
+    totalAmount: number,
+  ): Promise<Order | null> {
+    const threshold = new Date(Date.now() - ORDER.IDEMPOTENCY_WINDOW_SECONDS * 1000);
+
+    const queryBuilder = this.orderRepository
+      .createQueryBuilder('order')
+      .where('order.total_amount = :totalAmount', { totalAmount })
+      .andWhere('order.created_at >= :date', { date: threshold });
+
+    // Usuário autenticado: busca por userId
+    if (userId) {
+      queryBuilder.andWhere('order.user_id = :userId', { userId });
+      return await queryBuilder.getOne();
+    }
+
+    // Guest: busca por email
+    if (email) {
+      queryBuilder.andWhere('order.guest_email = :guestEmail', { guestEmail: email });
+      return await queryBuilder.getOne();
+    }
+
+    // Sem userId nem email (não deveria acontecer)
+    log.warn('checkIdempotency chamado sem userId nem email', { totalAmount });
+    return null;
+  }
+
+  /* ==========================================
+   * MÉTODOS PRIVADOS - CRIAÇÃO
+   * ========================================== */
+
+  /**
+   * Cria o pedido completo dentro de uma transação
+   * Garante atomicidade: ou tudo é salvo, ou nada
+   *
+   * @returns Pedido criado
+   */
+  private async createOrderTransaction(
+    user: User,
+    finalEmail: string | undefined,
+    items: OrderItemInput[],
+    productsMap: Map<string, Product>,
+    sizeNamesMap: Map<string, string>,
+    totalAmount: number,
+    shippingCost: number,
+    shippingAddressData: ShippingAddressData,
+  ): Promise<Order> {
+    return await executeInTransaction(async (manager) => {
+      // Cria items do pedido
+      const orderItems = this.createOrderItems(items, productsMap, sizeNamesMap);
+
+      // Cria o pedido
+      const newOrder = manager.create(Order, {
+        user,
+        guest_email: finalEmail,
+        items: orderItems,
+        total_amount: totalAmount,
+        currency: MONEY.DEFAULT_CURRENCY,
+        idempotency_key: uuidv4(),
+        status: OrderStatus.PENDING,
+      });
+
+      const savedOrder = await manager.save(newOrder);
+
+      // Cria endereço de entrega
+      const sanitizedAddress = sanitizeAddressData(shippingAddressData);
+      const shippingAddress = manager.create(ShippingAddress, {
+        order: savedOrder,
+        street: sanitizedAddress.street || shippingAddressData.street,
+        city: sanitizedAddress.city || shippingAddressData.city,
+        state: sanitizedAddress.state || shippingAddressData.state,
+        zip_code: sanitizedAddress.zipCode || shippingAddressData.zipCode,
+        country: sanitizedAddress.country || shippingAddressData.country,
+      });
+
+      await manager.save(shippingAddress);
+
+      return savedOrder;
+    });
+  }
+
+  /**
+   * Cria lista de OrderItems a partir dos inputs
+   */
+  private createOrderItems(
+    items: OrderItemInput[],
+    productsMap: Map<string, Product>,
+    sizeNamesMap: Map<string, string>,
+  ): OrderItem[] {
+    return items.map((item) => {
+      const product = productsMap.get(item.productId)!;
+      const sizeName = sizeNamesMap.get(item.size)!;
+      const itemTotalPrice = product.price_cents * item.quantity;
+
+      return this.orderItemRepository.create({
+        product,
+        quantity: item.quantity,
+        unit_price: product.price_cents,
+        total_price: itemTotalPrice,
+        size: sizeName,
+      });
+    });
+  }
 }

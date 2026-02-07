@@ -260,6 +260,7 @@ graph TD
 3. **Transação Atômica**: Order + Items + Address salvos juntos
 4. **Cálculo de Frete**: Grátis acima de R$ 200
 5. **Validações**: CEP, limites de valor, quantidade de items
+6. **Flexibilidade de Tamanho**: Suporte a IDs numéricos (traduzidos dinamicamente para nomes no DB)
 
 ---
 
@@ -528,7 +529,7 @@ RATE_LIMIT_PAYMENT_MAX=5
 
 ### Alta Prioridade
 
-1. **Testes Automatizados**: Unit + Integration tests
+1. **Testes Automatizados**: Unit + Integration tests (15 testes passando no PostgreSQL via Docker)
 2. **Email Service**: Envio de credenciais de auto-signup
 3. **Refresh Tokens**: Melhorar experiência de autenticação
 
@@ -554,7 +555,8 @@ RATE_LIMIT_PAYMENT_MAX=5
 | express            | ^4.x   | Framework web        |
 | typeorm            | ^0.3.x | ORM                  |
 | pg                 | ^8.x   | Driver PostgreSQL    |
-| typescript         | ^5.x   | Type safety          |
+| typescript         | ^5.6.3 | Type safety (Stable) |
+| @types/babel__core | ^7.20.5| Tipos implícitos p/ Babel |
 | zod                | ^3.x   | Validação de schema  |
 | winston            | ^3.x   | Logging estruturado  |
 | bcryptjs           | ^2.x   | Hash de senhas       |
@@ -566,25 +568,22 @@ RATE_LIMIT_PAYMENT_MAX=5
 
 ---
 
-## Comandos Úteis
+# Comandos Úteis (Ambiente Docker)
 
 ```bash
 # Desenvolvimento
 npm run dev          # Inicia servidor com hot-reload
 
-# Build
-npm run build        # Compila TypeScript
-npm start            # Inicia servidor compilado
+# Qualidade (Recomendado dentro do Docker)
+docker exec order-api-app-1 npm run lint
+docker exec order-api-app-1 npm run format
+
+# Testes (Banco PostgreSQL isolado: order_db_test)
+docker exec -e DB_HOST=db order-api-app-1 npm test
 
 # Database
-npm run typeorm migration:generate -- -n NomeDaMigracao
 npm run typeorm migration:run
 npm run seed         # Popula dados iniciais
-
-# Qualidade
-npm run lint         # ESLint
-npm test             # Testes (quando implementados)
-npm audit            # Verifica vulnerabilidades
 ```
 
 ---

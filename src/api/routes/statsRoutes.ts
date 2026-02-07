@@ -12,7 +12,7 @@ const statsController = new StatsController();
 // GET /api/admin/stats - Overview geral
 router.get('/', authMiddleware, statsController.getOverview.bind(statsController));
 
-// GET /api/admin/stats/sales?period=30d - Vendas por período  
+// GET /api/admin/stats/sales?period=30d - Vendas por período
 router.get('/sales', authMiddleware, statsController.getSalesByPeriod.bind(statsController));
 
 // GET /api/admin/stats/best-sellers?limit=10&period=30d - Produtos mais vendidos
@@ -22,6 +22,10 @@ router.get('/best-sellers', authMiddleware, statsController.getBestSellers.bind(
 router.get('/revenue', authMiddleware, statsController.getRevenueStats.bind(statsController));
 
 // GET /api/admin/stats/status-breakdown - Distribuição de status
-router.get('/status-breakdown', authMiddleware, statsController.getStatusBreakdown.bind(statsController));
+router.get(
+  '/status-breakdown',
+  authMiddleware,
+  statsController.getStatusBreakdown.bind(statsController),
+);
 
 export default router;

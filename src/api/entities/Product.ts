@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, DeleteDateColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  DeleteDateColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { Category } from './Category';
 import { Brand } from './Brand';
 import { ProductImage } from './ProductImage';
@@ -14,10 +23,12 @@ export class Product {
   name!: string;
 
   @Column({
-    type: 'bigint', comment: 'Preço em centavos', transformer: {
+    type: 'bigint',
+    comment: 'Preço em centavos',
+    transformer: {
       to: (value: number) => value,
-      from: (value: string) => parseInt(value, 10)
-    }
+      from: (value: string) => parseInt(value, 10),
+    },
   })
   price_cents!: number;
 
@@ -27,21 +38,21 @@ export class Product {
   @Column({ length: 3 })
   currency!: string;
 
-  @ManyToOne(() => Category, category => category.products, { nullable: true, eager: true })
+  @ManyToOne(() => Category, (category) => category.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'category_id' })
   category!: Category;
 
-  @ManyToOne(() => Brand, brand => brand.products, { nullable: true, eager: true })
+  @ManyToOne(() => Brand, (brand) => brand.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'brand_id' })
   brand!: Brand | null;
 
-  @OneToMany(() => ProductImage, image => image.product, { cascade: true })
+  @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
   images!: ProductImage[];
 
-  @OneToMany(() => ProductSize, productSize => productSize.product, { cascade: true })
+  @OneToMany(() => ProductSize, (productSize) => productSize.product, { cascade: true })
   sizes!: ProductSize[];
 
-  @OneToMany(() => Wishlist, wishlist => wishlist.product)
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
   wishlist!: Wishlist[];
 
   @DeleteDateColumn()

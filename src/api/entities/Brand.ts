@@ -3,15 +3,15 @@ import { Product } from './Product';
 
 @Entity('brands')
 export class Brand {
-    @PrimaryGeneratedColumn('increment')
-    id!: number;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
-    @Column()
-    name!: string;
+  @Column()
+  name!: string;
 
-    @Column({ unique: true })
-    slug!: string;
+  @Column({ unique: true })
+  slug!: string;
 
-    @OneToMany(() => Product, product => product.brand)
-    products!: Product[];
+  @OneToMany(() => Product, (product) => product.brand)
+  products!: Product[];
 }

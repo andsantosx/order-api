@@ -36,7 +36,7 @@ export const AppDataSource = new DataSource({
     UserAddress,
     Wishlist,
     ContactMessage,
-    Brand
+    Brand,
   ],
   migrations: [],
   subscribers: [],

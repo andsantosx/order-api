@@ -11,7 +11,12 @@ const imageController = new ImageController();
 router.get('/product/:productId', imageController.getByProduct.bind(imageController));
 
 // Admin routes
-router.post('/product/:productId', authMiddleware, validate(createImageSchema), imageController.create.bind(imageController));
+router.post(
+  '/product/:productId',
+  authMiddleware,
+  validate(createImageSchema),
+  imageController.create.bind(imageController),
+);
 router.delete('/:id', authMiddleware, imageController.delete.bind(imageController));
 
 export default router;

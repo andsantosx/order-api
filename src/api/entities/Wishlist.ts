@@ -4,17 +4,17 @@ import { Product } from './Product';
 
 @Entity('wishlists')
 export class Wishlist {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
-    @ManyToOne(() => User, user => user.wishlist, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'user_id' })
-    user!: User;
+  @ManyToOne(() => User, (user) => user.wishlist, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
-    @ManyToOne(() => Product, product => product.wishlist, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'product_id' })
-    product!: Product;
+  @ManyToOne(() => Product, (product) => product.wishlist, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'product_id' })
+  product!: Product;
 
-    @CreateDateColumn()
-    added_at!: Date;
+  @CreateDateColumn()
+  added_at!: Date;
 }

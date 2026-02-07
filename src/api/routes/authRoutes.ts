@@ -9,10 +9,25 @@ const router = Router();
 const authController = new AuthController();
 
 // Apply rate limiting to prevent brute force attacks
-router.post('/register', authLimiter, validate(registerSchema), authController.register.bind(authController));
-router.post('/login', authLimiter, validate(loginSchema), authController.login.bind(authController));
+router.post(
+  '/register',
+  authLimiter,
+  validate(registerSchema),
+  authController.register.bind(authController),
+);
+router.post(
+  '/login',
+  authLimiter,
+  validate(loginSchema),
+  authController.login.bind(authController),
+);
 
 router.get('/me', authMiddleware, authController.getProfile.bind(authController));
-router.put('/me', authMiddleware, validate(updateProfileSchema), authController.updateProfile.bind(authController));
+router.put(
+  '/me',
+  authMiddleware,
+  validate(updateProfileSchema),
+  authController.updateProfile.bind(authController),
+);
 
 export default router;

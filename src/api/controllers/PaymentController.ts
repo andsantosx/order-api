@@ -15,7 +15,7 @@ export class PaymentController {
     }
   }
 
-  async handleWebhook(req: Request, res: Response, next: NextFunction) {
+  async handleWebhook(req: Request, res: Response, _next: NextFunction) {
     try {
       const query = req.query;
       const body = req.body;

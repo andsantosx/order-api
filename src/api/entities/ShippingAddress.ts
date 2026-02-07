@@ -3,25 +3,25 @@ import { Order } from './Order';
 
 @Entity('shipping_addresses')
 export class ShippingAddress {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
-    @ManyToOne(() => Order, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'order_id' })
-    order!: Order;
+  @ManyToOne(() => Order, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'order_id' })
+  order!: Order;
 
-    @Column()
-    street!: string;
+  @Column()
+  street!: string;
 
-    @Column()
-    city!: string;
+  @Column()
+  city!: string;
 
-    @Column()
-    state!: string;
+  @Column()
+  state!: string;
 
-    @Column()
-    zip_code!: string;
+  @Column()
+  zip_code!: string;
 
-    @Column()
-    country!: string;
+  @Column()
+  country!: string;
 }

@@ -16,9 +16,9 @@ export type NodeEnvironment = 'development' | 'production' | 'test';
  * Estrutura de erro do TypeORM para PostgreSQL
  */
 export interface PostgresQueryError {
-    code: string;
-    detail?: string;
-    message: string;
-    table?: string;
-    constraint?: string;
+  code: string;
+  detail?: string;
+  message: string;
+  table?: string;
+  constraint?: string;
 }

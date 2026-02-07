@@ -11,25 +11,25 @@ export class OrderController {
    * Útil para painel administrativo.
    * Query params: ?status=PENDING (opcional)
    */
-    async getAll(req: Request, res: Response) {
-        try {
-            const userId = req.user?.userId;
-            const isAdmin = req.user?.isAdmin || false;
-            const status = req.query.status as OrderStatus | undefined;
+  async getAll(req: Request, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      const isAdmin = req.user?.isAdmin || false;
+      const status = req.query.status as OrderStatus | undefined;
 
-            const orders = await this.orderService.getAll(isAdmin, userId, status);
-            return res.json(orders);
-        } catch (error) {
-            console.error('Erro ao buscar pedidos', { error });
-            throw error;
-        }
+      const orders = await this.orderService.getAll(isAdmin, userId, status);
+      return res.json(orders);
+    } catch (error) {
+      console.error('Erro ao buscar pedidos', { error });
+      throw error;
     }
+  }
 
   /**
    * Busca um pedido específico pelo ID.
    * Retorna detalhes completos incluindo itens e usuário.
    */
-  async getOne(req: Request, res: Response, next: NextFunction) {
+  async getOne(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
     const order = await this.orderService.getOne(id as string);
     res.json(order);
@@ -39,17 +39,24 @@ export class OrderController {
    * Cria um novo pedido.
    * Espera receber: guestEmail, items e shippingAddress.
    */
-  async create(req: Request, res: Response, next: NextFunction) {
+  async create(req: Request, res: Response, _next: NextFunction) {
     const { guestName, guestEmail, guestCpf, items, shippingAddress } = req.body;
     const userId = req.user?.userId;
-    const order = await this.orderService.create(userId, guestName, guestEmail, guestCpf, items, shippingAddress);
+    const order = await this.orderService.create(
+      userId,
+      guestName,
+      guestEmail,
+      guestCpf,
+      items,
+      shippingAddress,
+    );
     res.status(201).json(order);
   }
 
   /**
    * Atualiza o status do pedido.
    */
-  async updateStatus(req: Request, res: Response, next: NextFunction) {
+  async updateStatus(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
     const { status } = req.body;
     const order = await this.orderService.updateStatus(id as string, status);
