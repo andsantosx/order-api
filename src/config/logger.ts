@@ -1,6 +1,8 @@
 import winston from 'winston';
 import path from 'path';
 
+import { isProduction } from './env';
+
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 
 /**
@@ -23,6 +25,34 @@ const logFormat = printf(({ level, message, timestamp, stack, ...metadata }) => 
 });
 
 /**
+ * Configure transports based on environment
+ */
+const transports: winston.transport[] = [
+  new winston.transports.Console({
+    format: combine(colorize(), timestamp({ format: 'HH:mm:ss' }), logFormat),
+  }),
+];
+
+// Only add file logging if NOT in production to avoid permission issues
+if (!isProduction()) {
+  transports.push(
+    new winston.transports.File({
+      filename: path.join('logs', 'error.log'),
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+  );
+  transports.push(
+    new winston.transports.File({
+      filename: path.join('logs', 'combined.log'),
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+  );
+}
+
+/**
  * Winston logger instance
  */
 const logger = winston.createLogger({
@@ -32,33 +62,8 @@ const logger = winston.createLogger({
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     logFormat,
   ),
-  transports: [
-    // Error logs - only errors
-    new winston.transports.File({
-      filename: path.join('logs', 'error.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    // Combined logs - all levels
-    new winston.transports.File({
-      filename: path.join('logs', 'combined.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-  ],
+  transports,
 });
-
-/**
- * Add console transport in development
- */
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: combine(colorize(), timestamp({ format: 'HH:mm:ss' }), logFormat),
-    }),
-  );
-}
 
 /**
  * Helper methods for common logging patterns
