@@ -68,9 +68,14 @@ beforeAll(async () => {
 
     // Synchronize the schema (create all tables)
     await TestDataSource.synchronize();
+
+    // 4. Seed Database for Tests
+    // This ensures every test run starts with a populated database
+    const { seedDatabase } = await import('./seed/seeder'); // Dynamic import to avoid circular dep issues in some envs
+    await seedDatabase(TestDataSource);
   } catch (error) {
-    console.error('CRITICAL: Schema synchronization failed:', error);
-    throw error; // Fail the tests if we can't sync
+    console.error('CRITICAL: Schema synchronization or seeding failed:', error);
+    throw error; // Fail the tests if we can't sync or seed
   }
 });
 

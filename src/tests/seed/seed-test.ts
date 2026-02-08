@@ -1,0 +1,25 @@
+import { TestDataSource } from '../test-data-source';
+import { seedDatabase } from './seeder';
+
+async function runTestSeed() {
+  // We need to initialize the TestDataSource similarly to how setup.ts does it,
+  // but without the teardown/rebuild of the database itself.
+  // However, we probably want to clean the data before seeding?
+  // For now, let's just seed idempotently (check if exists).
+
+  try {
+    // Ensure we can connect.
+    // initialization is handled inside seedDatabase if not already initialized,
+    // but TestDataSource needs correct config.
+    // src/tests/test-data-source.ts has hardcoded config but relies on env vars too.
+
+    await seedDatabase(TestDataSource);
+    console.log('✅ Test database seeded successfully!');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Test database seeding failed:', error);
+    process.exit(1);
+  }
+}
+
+runTestSeed();

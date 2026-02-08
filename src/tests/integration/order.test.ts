@@ -10,8 +10,6 @@ import app from '../../app';
 import { DataSource } from 'typeorm';
 import { Product } from '../../api/entities/Product';
 import { Size } from '../../api/entities/Size';
-import { Category } from '../../api/entities/Category';
-import { Brand } from '../../api/entities/Brand';
 
 describe('Order Integration', () => {
   let connection: DataSource;
@@ -23,42 +21,28 @@ describe('Order Integration', () => {
     connection = TestDataSource;
 
     // Create a user and get token
-    await request(app).post('/api/auth/register').send({
-      name: 'Order User',
-      email: 'order@example.com',
-      password: 'password123',
-      confirmPassword: 'password123',
-      document: '12345678901',
-    });
+    // We can use the seeded 'john@example.com' user
     const loginRes = await request(app).post('/api/auth/login').send({
-      email: 'order@example.com',
+      email: 'john@example.com',
       password: 'password123',
     });
     token = loginRes.body.token;
 
-    // Seed necessary data (Brand, Category, Size, Product)
-    const brand = await connection
-      .getRepository(Brand)
-      .save({ name: 'Brand X', slug: 'brand-x', active: true });
-    const category = await connection
-      .getRepository(Category)
-      .save({ name: 'Cat X', slug: 'cat-x', active: true });
-    const size = await connection
-      .getRepository(Size)
-      .save({ name: 'M', active: true, type: 'clothing' });
-    sizeId = size.id; // Correctly get ID as number but use it properly
-
-    const product = await connection.getRepository(Product).save({
-      name: 'Test Product',
-      slug: 'test-product',
-      description: 'Desc',
-      price_cents: 1000,
-      active: true,
-      brand,
-      category,
-      currency: 'BRL',
+    // Fetch seeded data
+    // Find by name since slug is not a column in Product entity
+    const productByNam = await connection.getRepository(Product).findOne({
+      where: { name: 'Nike Air Force 1' },
     });
-    productId = product.id;
+
+    if (!productByNam) throw new Error('Seeded product not found');
+
+    productId = productByNam.id;
+
+    // Find a size that this product has
+    // The seed adds '38', '39', '40', '41', '42' to Nike Air Force 1
+    const size = await connection.getRepository(Size).findOneBy({ name: '38' });
+    if (!size) throw new Error('Seeded size not found');
+    sizeId = size.id;
   });
 
   it('should create a new order', async () => {
@@ -93,7 +77,7 @@ describe('Order Integration', () => {
     expect(response.body.total_amount).toBeDefined(); // Should be calculated
     expect(response.body.status).toBe('PENDING');
     // Verify that the size NAME is stored, not the ID
-    expect(response.body.items[0].size).toBe('M');
+    expect(response.body.items[0].size).toBe('38');
   });
 
   it('should fail to create order with invalid product', async () => {

@@ -15,7 +15,8 @@
     "test:cov": "NODE_ENV=test jest --coverage --runInBand",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:build": "docker compose up -d --build"
+    "docker:build": "docker compose up -d --build",
+    "seed": "ts-node-dev --transpile-only src/tests/seed/seed-test.ts"
   },
   "keywords": [
     "express",
