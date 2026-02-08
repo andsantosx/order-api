@@ -38,6 +38,10 @@ export const AppDataSource = new DataSource({
     ContactMessage,
     Brand,
   ],
-  migrations: [],
+  migrations: [
+    process.env.NODE_ENV === 'production'
+      ? './dist/migrations/*.js'
+      : './src/migrations/*.ts',
+  ],
   subscribers: [],
 });

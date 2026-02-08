@@ -22,6 +22,8 @@ const envSchema = z.object({
 
   // Mercado Pago
   MERCADOPAGO_ACCESS_TOKEN: z.string().min(1, 'Mercado Pago Access Token é obrigatório'),
+  MERCADOPAGO_PUBLIC_KEY: z.string().min(1, 'Mercado Pago Public Key é obrigatório'),
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().min(1, 'Mercado Pago Webhook Secret é obrigatório'),
 
   // Rate Limiting (opcional)
   RATE_LIMIT_GENERAL_WINDOW: z

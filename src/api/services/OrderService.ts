@@ -54,65 +54,65 @@ export class OrderService {
   private sizeRepository = AppDataSource.getRepository(Size);
 
   /**
-   * Retorna pedidos filtrados por usuário e/ou status
+   * Retorna pedidos filtrados por usuário e/ou status com paginação
    *
    * Administradores podem ver todos os pedidos
    * Usuários regulares veem apenas seus próprios pedidos
    *
-   * @param userId - ID do usuário (opcional para admin)
    * @param isAdmin - Se true, retorna todos os pedidos
+   * @param userId - ID do usuário (opcional para admin)
    * @param status - Filtro de status (opcional)
-   * @returns Lista de pedidos com relações carregadas
-   *
-   * @example
-   * // Admin vendo todos os pedidos pendentes
-   * await orderService.getAll(undefined, true, OrderStatus.PENDING);
-   *
-   * // Usuário vendo seus próprios pedidos
-   * await orderService.getAll(userId, false);
+   * @param page - Número da página (padrão: 1)
+   * @param limit - Itens por página (padrão: 20)
+   * @returns Lista de pedidos paginada
    */
-  async getAll(isAdmin: boolean, userId?: string, status?: OrderStatus) {
+  async getAll(
+    isAdmin: boolean,
+    userId?: string,
+    status?: OrderStatus,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const skip = (page - 1) * limit;
+    const whereCondition: FindOptionsWhere<Order> = {};
+
     // Admin: pode ver todos os pedidos ou filtrar por usuário
     if (isAdmin) {
-      const whereCondition: FindOptionsWhere<Order> = {};
-
       if (userId) {
         whereCondition.user = { id: userId };
       }
       if (status) {
         whereCondition.status = status;
       }
-
-      const orders = await this.orderRepository.find({
-        where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
-        relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
-        order: { created_at: 'DESC' },
-      });
-
-      log.info('Pedidos listados (admin)', { count: orders.length, userId });
-      return orders;
+    } else {
+      // Usuário regular: apenas seus pedidos
+      if (!userId) {
+        log.info('Usuário não autenticado tentou listar pedidos');
+        return { data: [], total: 0, page, limit };
+      }
+      whereCondition.user = { id: userId };
+      if (status) {
+        whereCondition.status = status;
+      }
     }
 
-    // Usuário não autenticado
-    if (!userId) {
-      log.info('Usuário não autenticado tentou listar pedidos');
-      return [];
-    }
-
-    // Usuário normal: apenas seus pedidos
-    const whereCondition: FindOptionsWhere<Order> = { user: { id: userId } };
-    if (status) {
-      whereCondition.status = status;
-    }
-
-    const orders = await this.orderRepository.find({
-      where: whereCondition,
+    const [orders, total] = await this.orderRepository.findAndCount({
+      where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
       relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
       order: { created_at: 'DESC' },
+      skip,
+      take: limit,
     });
 
-    log.info('Pedidos listados (usuário)', { count: orders.length, userId });
-    return orders;
+    log.info('Pedidos listados', { count: orders.length, total, userId, isAdmin, page });
+
+    return {
+      data: orders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**

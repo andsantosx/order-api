@@ -7,18 +7,19 @@ export class OrderController {
   private orderService = new OrderService();
 
   /**
-   * Retorna todos os pedidos cadastrados.
-   * Útil para painel administrativo.
-   * Query params: ?status=PENDING (opcional)
+   * Retorna todos os pedidos cadastrados com paginação.
+   * Query params: ?status=PENDING&page=1&limit=20
    */
   async getAll(req: Request, res: Response) {
     try {
       const userId = req.user?.userId;
       const isAdmin = req.user?.isAdmin || false;
       const status = req.query.status as OrderStatus | undefined;
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
 
-      const orders = await this.orderService.getAll(isAdmin, userId, status);
-      return res.json(orders);
+      const result = await this.orderService.getAll(isAdmin, userId, status, page, limit);
+      return res.json(result);
     } catch (error) {
       console.error('Erro ao buscar pedidos', { error });
       throw error;
