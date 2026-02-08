@@ -39,7 +39,11 @@ app.set('trust proxy', 1);
 app.use(requestLogger);
 
 // Security headers
-app.use(helmet());
+app.use(
+  helmet({
+    hidePoweredBy: true, // Explicitly hide X-Powered-By (though default in Helmet)
+  }),
+);
 
 // General rate limiting
 app.use('/api', generalLimiter);
@@ -57,7 +61,7 @@ app.use(
 // ==========================================
 // 2. Middlewares Globais de JSON
 // ==========================================
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Limit JSON body size to 10kb to prevent DoS
 
 // ==========================================
 // 3. Rotas de Monitoramento (Health Check)

@@ -5,6 +5,25 @@ import { log } from './config/logger';
 
 const PORT = env.PORT || 3000;
 
+// ==========================================
+// Tratamento Global de Erros Críticos
+// ==========================================
+
+// Captura exceções não tratadas (bugs síncronos)
+// Deve ser registrado antes de qualquer outro código que possa falhar
+process.on('uncaughtException', (error) => {
+  log.error('❌ Uncaught Exception thrown', { error });
+  // Em caso de uncaughtException, é recomendado reiniciar o processo
+  // pois o estado da aplicação pode estar inconsistente
+  process.exit(1);
+});
+
+// Captura promessas rejeitadas sem catch (bugs assíncronos)
+process.on('unhandledRejection', (reason) => {
+  log.error('❌ Unhandled Rejection at Promise', { reason });
+  process.exit(1);
+});
+
 // Inicialização do Servidor
 // Primeiro conecta ao banco de dados, depois inicia o servidor HTTP
 AppDataSource.initialize()

@@ -16,8 +16,8 @@ import { env } from './env';
  * Configurável via RATE_LIMIT_WINDOW_MS e RATE_LIMIT_MAX
  */
 export const generalLimiter = rateLimit({
-  windowMs: env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutos
-  max: env.RATE_LIMIT_MAX || 100,
+  windowMs: env.RATE_LIMIT_GENERAL_WINDOW || 15 * 60 * 1000, // 15 minutos
+  max: env.RATE_LIMIT_GENERAL_MAX || 100,
   message: {
     status: 'error',
     message: 'Muitas requisições. Tente novamente em alguns minutos.',
@@ -37,8 +37,8 @@ export const generalLimiter = rateLimit({
  * - POST /api/auth/register
  */
 export const authLimiter = rateLimit({
-  windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
-  max: env.AUTH_RATE_LIMIT_MAX || 5,
+  windowMs: env.RATE_LIMIT_AUTH_WINDOW || 15 * 60 * 1000,
+  max: env.RATE_LIMIT_AUTH_MAX || 5,
   skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
   message: {
     status: 'error',
@@ -58,8 +58,8 @@ export const authLimiter = rateLimit({
  * - POST /api/orders
  */
 export const orderCreationLimiter = rateLimit({
-  windowMs: env.ORDER_RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000, // 1 hora
-  max: env.ORDER_RATE_LIMIT_MAX || 10,
+  windowMs: env.RATE_LIMIT_ORDER_WINDOW || 60 * 60 * 1000, // 1 hora
+  max: env.RATE_LIMIT_ORDER_MAX || 10,
   message: {
     status: 'error',
     message: 'Limite de pedidos atingido. Tente novamente em 1 hora.',
@@ -83,8 +83,8 @@ export const orderLimiter = orderCreationLimiter;
  * - POST /api/payments/:id
  */
 export const paymentProcessingLimiter = rateLimit({
-  windowMs: env.PAYMENT_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
-  max: env.PAYMENT_RATE_LIMIT_MAX || 5,
+  windowMs: env.RATE_LIMIT_PAYMENT_WINDOW || 15 * 60 * 1000,
+  max: env.RATE_LIMIT_PAYMENT_MAX || 5,
   message: {
     status: 'error',
     message: 'Muitas tentativas de pagamento. Tente novamente em alguns minutos.',
