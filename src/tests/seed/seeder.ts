@@ -214,10 +214,6 @@ export async function seedDatabase(dataSource: DataSource) {
             });
 
             if (!psExists) {
-              // ProductSize normally doesn't have a stock field in many schemas or maybe I missed it.
-              // I need to check ProductSize entity.
-              // Checked ProductSize.ts: it ONLY has product and size. NO stock.
-              // So I must remove stock: 50
               await productSizeRepo.save(
                 productSizeRepo.create({
                   product: savedProduct,
