@@ -7,13 +7,14 @@ import { Product } from '../../api/entities/Product';
 import { ProductImage } from '../../api/entities/ProductImage';
 import { ProductSize } from '../../api/entities/ProductSize';
 import bcrypt from 'bcryptjs';
+import { log } from '../../config/logger';
 
 export async function seedDatabase(dataSource: DataSource) {
   try {
     if (!dataSource.isInitialized) {
       await dataSource.initialize();
     }
-    console.log(`✅ Connected to database: ${dataSource.options.database}`);
+    log.info(`✅ Connected to database: ${dataSource.options.database}`);
 
     const categoryRepo = dataSource.getRepository(Category);
     const sizeRepo = dataSource.getRepository(Size);
@@ -37,7 +38,7 @@ export async function seedDatabase(dataSource: DataSource) {
       let category = await categoryRepo.findOneBy({ slug: cat.slug });
       if (!category) {
         category = await categoryRepo.save(categoryRepo.create(cat));
-        console.log(`Created category: ${cat.name}`);
+        log.info(`Created category: ${cat.name}`);
       }
       categoryMap.set(cat.slug, category);
     }
@@ -61,7 +62,7 @@ export async function seedDatabase(dataSource: DataSource) {
       let sizeEntity = await sizeRepo.findOneBy({ name: size.name });
       if (!sizeEntity) {
         sizeEntity = await sizeRepo.save(sizeRepo.create(size));
-        console.log(`Created size: ${size.name}`);
+        log.info(`Created size: ${size.name}`);
       }
       sizeMap.set(size.name, sizeEntity);
     }
@@ -100,12 +101,12 @@ export async function seedDatabase(dataSource: DataSource) {
             isAdmin: userData.isAdmin,
           }),
         );
-        console.log(`Created User: ${userData.email}`);
+        log.info(`Created User: ${userData.email}`);
       } else {
         if (userData.isAdmin && !exists.isAdmin) {
           exists.isAdmin = true;
           await userRepo.save(exists);
-          console.log(`Updated User: ${userData.email} to Admin`);
+          log.info(`Updated User: ${userData.email} to Admin`);
         }
       }
     }
@@ -124,7 +125,7 @@ export async function seedDatabase(dataSource: DataSource) {
       let brand = await brandRepo.findOneBy({ slug: brandData.slug });
       if (!brand) {
         brand = await brandRepo.save(brandRepo.create(brandData));
-        console.log(`Created Brand: ${brand.name}`);
+        log.info(`Created Brand: ${brand.name}`);
       }
       brandMap.set(brand.slug, brand);
     }
@@ -176,7 +177,7 @@ export async function seedDatabase(dataSource: DataSource) {
         const brand = brandMap.get(prodData.brandSlug);
 
         if (!category) {
-          console.warn(`Category not found for product ${prodData.name}: ${prodData.categorySlug}`);
+          log.warn(`Category not found for product ${prodData.name}: ${prodData.categorySlug}`);
           continue;
         }
 
@@ -190,7 +191,7 @@ export async function seedDatabase(dataSource: DataSource) {
         });
 
         const savedProduct = await productRepo.save(product);
-        console.log(`Created Product: ${savedProduct.name}`);
+        log.info(`Created Product: ${savedProduct.name}`);
 
         // Images
         for (const imageUrl of prodData.images) {
@@ -229,9 +230,9 @@ export async function seedDatabase(dataSource: DataSource) {
       }
     }
 
-    console.log('✅ Seeding logic completed!');
+    log.info('✅ Seeding logic completed!');
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    log.error('❌ Seeding failed:', { error });
     throw error;
   }
 }

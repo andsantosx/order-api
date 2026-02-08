@@ -19,7 +19,7 @@ export class User {
   @Column({ default: false })
   isAdmin!: boolean;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   document!: string;
 
   @OneToMany(() => Order, (order) => order.user)

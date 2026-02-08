@@ -21,44 +21,6 @@ API REST completa para e-commerce de roupas com sistema de pedidos, pagamentos v
 
 ---
 
-## ✨ Funcionalidades
-
-### 🛍️ Catálogo
-
-- ✅ Produtos com múltiplas imagens
-- ✅ Categorias e marcas
-- ✅ Tamanhos disponíveis por produto
-- ✅ Filtros avançados (preço, categoria, marca, busca)
-- ✅ Ordenação e Paginação
-
-### 📦 Pedidos
-
-- ✅ Guest Checkout (compra sem cadastro)
-- ✅ Checkout autenticado
-- ✅ Criação automática de conta para guests
-- ✅ Idempotência (previne pedidos duplicados)
-- ✅ Cálculo automático de frete
-- ✅ Gestão de status
-- ✅ Conversão automática de IDs para nomes
-
-### 💳 Pagamentos
-
-- ✅ Integração com Mercado Pago
-- ✅ Webhooks para atualização automática
-
-### 👤 Usuários
-
-- ✅ Autenticação JWT
-- ✅ Gestão de perfil e endereços
-- ✅ ACL (Admin/User)
-
-### 🔧 Admin
-
-- ✅ Dashboard com estatísticas
-- ✅ Gestão completa de recursos
-
----
-
 ## 🚀 Início Rápido
 
 ### Pré-requisitos

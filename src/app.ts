@@ -112,11 +112,11 @@ app.get('/health', async (req: Request, res: Response) => {
 // ==========================================
 // 4. Registro de Rotas da API
 // ==========================================
-console.log('🔧 Registering routes...');
+log.info('🔧 Registering routes...');
 
 // Documentação Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-console.log('📄 Swagger docs available at /api-docs');
+log.info('📄 Swagger docs available at /api-docs');
 
 // Rotas da API
 app.use('/api/auth', authRoutes);

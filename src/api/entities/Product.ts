@@ -7,6 +7,7 @@ import {
   JoinColumn,
   DeleteDateColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { Category } from './Category';
 import { Brand } from './Brand';
@@ -19,9 +20,11 @@ export class Product {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index()
   @Column()
   name!: string;
 
+  @Index()
   @Column({
     type: 'bigint',
     comment: 'Preço em centavos',
@@ -58,6 +61,7 @@ export class Product {
   @DeleteDateColumn()
   deleted_at?: Date;
 
+  @Index()
   @CreateDateColumn()
   created_at!: Date;
 }

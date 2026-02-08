@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from './User';
 import { OrderItem } from './OrderItem';
@@ -32,6 +33,7 @@ export class Order {
   @Column({ nullable: true })
   guest_email?: string;
 
+  @Index()
   @Column({
     type: 'bigint',
     transformer: {
@@ -59,6 +61,7 @@ export class Order {
   @Column({ nullable: true })
   card_last_four?: string;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: OrderStatus,
@@ -66,6 +69,7 @@ export class Order {
   })
   status!: OrderStatus;
 
+  @Index()
   @CreateDateColumn()
   created_at!: Date;
 

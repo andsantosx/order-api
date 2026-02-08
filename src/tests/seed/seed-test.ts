@@ -1,5 +1,6 @@
 import { TestDataSource } from '../test-data-source';
 import { seedDatabase } from './seeder';
+import { log } from '../../config/logger';
 
 async function runTestSeed() {
   // We need to initialize the TestDataSource similarly to how setup.ts does it,
@@ -14,10 +15,10 @@ async function runTestSeed() {
     // src/tests/test-data-source.ts has hardcoded config but relies on env vars too.
 
     await seedDatabase(TestDataSource);
-    console.log('✅ Test database seeded successfully!');
+    log.info('✅ Test database seeded successfully!');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Test database seeding failed:', error);
+    log.error('❌ Test database seeding failed:', { error });
     process.exit(1);
   }
 }
