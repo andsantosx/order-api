@@ -137,7 +137,7 @@ const isValid = await bcrypt.compare(plainPassword, user.password_hash);
 | **Orders (Create)**       | `RATE_LIMIT_ORDER_MAX` <br> `RATE_LIMIT_ORDER_WINDOW`     | 10 req/1h     | Spam de pedidos                  |
 | **Payments (Process)**    | `RATE_LIMIT_PAYMENT_MAX` <br> `RATE_LIMIT_PAYMENT_WINDOW` | 5 req/15min   | Abuso de tentativas de pagamento |
 | **General (Todos)**       | `RATE_LIMIT_GENERAL_MAX` <br> `RATE_LIMIT_GENERAL_WINDOW` | 100 req/15min | Abuso geral da API               |
-| **Webhooks**              | (hardcoded)                                               | 100 req/1min  | Spam em callbacks                |
+| **Webhooks**              | `MERCADOPAGO_WEBHOOK_SECRET`                              | 100 req/1min  | Spam em callbacks                |
 | **Product Search**        | (hardcoded)                                               | 30 req/1min   | Scraping de catálogo             |
 
 ### Implementação

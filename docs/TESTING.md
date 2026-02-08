@@ -10,11 +10,11 @@ O objetivo é **100% de funcionalidade** e **confiabilidade**. Cada funcionalida
 - **Experiência do Usuário (UX)**: Garantir que o backend responde de forma graciosa (ex: mensagens de erro claras).
 
 ### Protocolo de Manutenção
-> **Consulte o [Protocolo Completo](PROTOCOL.md)** para detalhes sobre o workflow obrigatório.
+> **Consulte o [Protocolo Completo](CONTRIBUTING.md)** para detalhes sobre o workflow obrigatório.
 > **Regra Crítica**: Sempre que o código for modificado, o seguinte **DEVE** acontecer:
 > 1.  **Atualizar Testes**: Ajustar testes existentes ou adicionar novos para cobrir as mudanças.
 > 2.  **Verificar Todos os Cenários**: Rodar a suíte completa de testes para garantir que não houve regressão.
-> 3.  **Atualizar Documentação**: Refletir mudanças no `implementation_plan.md`, `walkthrough.md` e neste documento.
+> 3.  **Atualizar Documentação**: Refletir mudanças no `walkthrough.md` e neste documento.
 
 ---
 
@@ -91,4 +91,3 @@ Este erro ocorre no PostgreSQL quando o TypeORM tenta criar um `ENUM` que já ex
 ### Erro: `function uuid_generate_v4() does not exist`
 Ocorre se a extensão `uuid-ossp` for removida (ex: pelo comando `CASCADE`) e não for recriada.
 **Solução**: Verifique se o `setup.ts` inclui o comando `CREATE EXTENSION` logo após recriar o schema `public`.
-

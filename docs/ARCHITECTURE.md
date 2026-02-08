@@ -378,6 +378,12 @@ router.post('/orders', validate(orderSchema), ...)
 - `error` - Erros que impedem operação
 - `warn` - Situações anormais mas recuperáveis
 - `info` - Eventos importantes (pedido criado, pagamento processado)
+- [📢 API Reference](docs/API.md)
+- [🏗️ Arquitetura](docs/ARCHITECTURE.md)
+- [🔒 Segurança](docs/SECURITY.md)
+- [🧪 Guia de Testes](docs/TESTING.md)
+- [🚀 Manual de Deploy](docs/DEPLOYMENT.md)
+- [✨ Guia de Contribuição](docs/CONTRIBUTING.md)
 - `debug` - Detalhes técnicos (desenvolvimento)
 
 **Formato**:

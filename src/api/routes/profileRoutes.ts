@@ -3,7 +3,7 @@ import { AddressController } from '../controllers/AddressController';
 import { WishlistController } from '../controllers/WishlistController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { validate } from '../middlewares/validate';
-import { createAddressSchema } from '../schemas/userSchemas';
+import { createAddressSchema } from '../schemas/addressSchemas';
 
 const router = Router();
 const addressController = new AddressController();
