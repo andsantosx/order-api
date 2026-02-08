@@ -8,8 +8,8 @@ import { ProductImage } from '../entities/ProductImage';
 import { AppError } from '../middlewares/errorHandler';
 import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { sanitizeProductData, isValidImageUrl } from '../../utils/sanitizer';
+import { sanitizeProductData } from '../../utils/sanitizer';
+import { executeInTransaction } from '../../utils/transaction';
 
 /**
  * Interface para filtros de produtos
@@ -304,6 +304,12 @@ export class ProductService {
     sizesData: { sizeId: number }[],
     images?: string[],
   ) {
+    // Sanitização de dados
+    const sanitized = sanitizeProductData({ name, description, images });
+    const safeName = sanitized.name || name;
+    const safeDescription = sanitized.description;
+    const safeImages = sanitized.images || [];
+
     // Valida se a categoria existe
     const category = await this.categoryRepository.findOneBy({ id: categoryId });
     if (!category) {
@@ -345,22 +351,21 @@ export class ProductService {
     }
 
     // Cria entidades ProductImage (cascade vai salvar automaticamente)
-    let productImages: ProductImage[] = [];
-    if (images && images.length > 0) {
-      productImages = images.map((url, index) =>
-        this.productImageRepository.create({
-          url,
-          position: index,
-        }),
-      );
+    const productImages = safeImages.map((url, index) =>
+      this.productImageRepository.create({
+        url,
+        position: index,
+      }),
+    );
+    if (productImages.length > 0) {
       log.info('Imagens preparadas para produto', { count: productImages.length });
     }
 
     // Prepara produto COM todas as relações
     const product = this.productRepository.create({
-      name,
+      name: safeName,
       price_cents,
-      description,
+      description: safeDescription,
       currency,
       category,
       brand: brand || undefined,
@@ -381,7 +386,7 @@ export class ProductService {
   }
 
   /**
-   * Atualiza um produto existente
+   * Atualiza um produto existente (Transactional)
    *
    * Permite atualizar qualquer campo do produto, incluindo suas relações
    * com categorias, marcas, tamanhos e imagens
@@ -411,109 +416,128 @@ export class ProductService {
       images?: string[];
     },
   ) {
-    const product = await this.productRepository.findOne({
-      where: { id },
-      relations: ['sizes', 'images'],
+    // Sanitização de dados de entrada
+    const sanitized = sanitizeProductData({
+      name: data.name,
+      description: data.description,
+      images: data.images,
     });
 
-    if (!product) {
-      log.warn('Produto não encontrado para atualização', { productId: id });
-      throw new AppError(ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-    }
+    // Executa toda a atualização dentro de uma transação para garantir integridade
+    return executeInTransaction(async (entityManager) => {
+      const productRepo = entityManager.getRepository(Product);
+      const categoryRepo = entityManager.getRepository(Category);
+      const brandRepo = entityManager.getRepository(Brand);
+      const sizeRepo = entityManager.getRepository(Size);
+      const productImageRepo = entityManager.getRepository(ProductImage);
+      const productSizeRepo = entityManager.getRepository(ProductSize);
 
-    // Atualiza campos básicos
-    if (data.name !== undefined) product.name = data.name;
-    if (data.price_cents !== undefined) product.price_cents = data.price_cents;
-    if (data.description !== undefined) product.description = data.description;
-    if (data.currency !== undefined) product.currency = data.currency;
-
-    // Atualiza categoria se fornecida
-    if (data.categoryId !== undefined) {
-      const category = await this.categoryRepository.findOneBy({ id: data.categoryId });
-      if (!category) {
-        log.warn('Categoria não encontrada ao atualizar produto', { categoryId: data.categoryId });
-        throw new AppError(ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-      }
-      product.category = category;
-    }
-
-    // Atualiza marca se fornecida
-    if (data.brandId !== undefined) {
-      if (data.brandId === null) {
-        product.brand = null;
-        log.info('Marca removida do produto', { productId: id });
-      }
-
-      if (data.brandId !== null) {
-        const brand = await this.brandRepository.findOneBy({ id: data.brandId });
-        if (!brand) {
-          log.warn('Marca não encontrada ao atualizar produto', { brandId: data.brandId });
-          throw new AppError(ERROR_MESSAGES.BRAND_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-        }
-        product.brand = brand;
-      }
-    }
-
-    // Atualiza imagens se fornecidas
-    if (data.images) {
-      // Remove imagens antigas primeiro (previne linhas órfãs)
-      if (product.images && product.images.length > 0) {
-        await this.productImageRepository.remove(product.images);
-        log.info('Imagens antigas removidas', { productId: id, count: product.images.length });
-      }
-
-      // Cria novas entidades ProductImage (cascade vai salvar)
-      const productImages = data.images.map((url, index) =>
-        this.productImageRepository.create({
-          url,
-          position: index,
-        }),
-      );
-
-      // Atribui novas imagens ao produto
-      product.images = productImages;
-      log.info('Novas imagens atribuídas', { productId: id, count: productImages.length });
-    }
-
-    // Atualiza tamanhos se fornecidos
-    if (data.sizes) {
-      const sizeIds = data.sizes.map((s) => s.sizeId);
-      const foundSizes = await this.sizeRepository.findByIds(sizeIds);
-
-      if (foundSizes.length !== sizeIds.length) {
-        log.warn('Tamanhos não encontrados ao atualizar produto', {
-          productId: id,
-          requested: sizeIds.length,
-          found: foundSizes.length,
-        });
-        throw new AppError('Um ou mais tamanhos não foram encontrados', HTTP_STATUS.NOT_FOUND);
-      }
-
-      // Remove tamanhos antigos primeiro (previne linhas órfãs)
-      if (product.sizes && product.sizes.length > 0) {
-        await this.productSizeRepository.remove(product.sizes);
-        log.info('Tamanhos antigos removidos', { productId: id, count: product.sizes.length });
-      }
-
-      // Cria novas entidades ProductSize (cascade vai salvar)
-      const productSizes = data.sizes.map((item) => {
-        const size = foundSizes.find((s) => s.id === item.sizeId)!;
-        return this.productSizeRepository.create({
-          size: size,
-        });
+      const product = await productRepo.findOne({
+        where: { id },
+        relations: ['sizes', 'images'],
       });
 
-      // Atribui novos tamanhos ao produto
-      product.sizes = productSizes;
-      log.info('Novos tamanhos atribuídos', { productId: id, count: productSizes.length });
-    }
+      if (!product) {
+        log.warn('Produto não encontrado para atualização', { productId: id });
+        throw new AppError(ERROR_MESSAGES.PRODUCT_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+      }
 
-    // Salva produto com cascade - atualiza imagens e tamanhos automaticamente
-    await this.productRepository.save(product);
+      // Atualiza campos básicos
+      if (data.name !== undefined) product.name = sanitized.name!;
+      if (data.price_cents !== undefined) product.price_cents = data.price_cents;
+      if (data.description !== undefined) product.description = sanitized.description;
+      if (data.currency !== undefined) product.currency = data.currency;
 
-    log.info('Produto atualizado', { productId: id, name: product.name });
+      // Atualiza categoria se fornecida
+      if (data.categoryId !== undefined) {
+        const category = await categoryRepo.findOneBy({ id: data.categoryId });
+        if (!category) {
+          log.warn('Categoria não encontrada ao atualizar produto', {
+            categoryId: data.categoryId,
+          });
+          throw new AppError(ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+        }
+        product.category = category;
+      }
 
-    return this.getOne(id);
+      // Atualiza marca se fornecida
+      if (data.brandId !== undefined) {
+        if (data.brandId === null) {
+          product.brand = null;
+          log.info('Marca removida do produto', { productId: id });
+        }
+
+        if (data.brandId !== null) {
+          const brand = await brandRepo.findOneBy({ id: data.brandId });
+          if (!brand) {
+            log.warn('Marca não encontrada ao atualizar produto', { brandId: data.brandId });
+            throw new AppError(ERROR_MESSAGES.BRAND_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+          }
+          product.brand = brand;
+        }
+      }
+
+      // Atualiza imagens se fornecidas
+      if (sanitized.images) {
+        // Remove imagens antigas primeiro (previne linhas órfãs)
+        if (product.images && product.images.length > 0) {
+          await productImageRepo.remove(product.images);
+          log.info('Imagens antigas removidas', { productId: id, count: product.images.length });
+        }
+
+        // Cria novas entidades ProductImage (cascade vai salvar)
+        const productImages = sanitized.images.map((url, index) =>
+          productImageRepo.create({
+            url,
+            position: index,
+          }),
+        );
+
+        // Atribui novas imagens ao produto
+        product.images = productImages;
+        log.info('Novas imagens atribuídas', { productId: id, count: productImages.length });
+      }
+
+      // Atualiza tamanhos se fornecidos
+      if (data.sizes) {
+        const sizeIds = data.sizes.map((s) => s.sizeId);
+        const foundSizes = await sizeRepo.findByIds(sizeIds);
+
+        if (foundSizes.length !== sizeIds.length) {
+          log.warn('Tamanhos não encontrados ao atualizar produto', {
+            productId: id,
+            requested: sizeIds.length,
+            found: foundSizes.length,
+          });
+          throw new AppError('Um ou mais tamanhos não foram encontrados', HTTP_STATUS.NOT_FOUND);
+        }
+
+        // Remove tamanhos antigos primeiro (previne linhas órfãs)
+        if (product.sizes && product.sizes.length > 0) {
+          await productSizeRepo.remove(product.sizes);
+          log.info('Tamanhos antigos removidos', { productId: id, count: product.sizes.length });
+        }
+
+        // Cria novas entidades ProductSize (cascade vai salvar)
+        const productSizes = data.sizes.map((item) => {
+          const size = foundSizes.find((s) => s.id === item.sizeId)!;
+          return productSizeRepo.create({
+            size: size,
+          });
+        });
+
+        // Atribui novos tamanhos ao produto
+        product.sizes = productSizes;
+        log.info('Novos tamanhos atribuídos', { productId: id, count: productSizes.length });
+      }
+
+      // Salva produto com cascade - atualiza imagens e tamanhos automaticamente
+      await productRepo.save(product);
+
+      log.info('Produto atualizado', { productId: id, name: product.name });
+
+      return this.getOne(id);
+    });
   }
 
   /**
