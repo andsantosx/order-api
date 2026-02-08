@@ -17,8 +17,8 @@ export class PaymentController {
 
   async handleWebhook(req: Request, res: Response, _next: NextFunction) {
     try {
-      const signature = req.headers['x-signature'] as string || '';
-      const requestId = req.headers['x-request-id'] as string || '';
+      const signature = (req.headers['x-signature'] as string) || '';
+      const requestId = (req.headers['x-request-id'] as string) || '';
 
       // Validação de assinatura
       if (!this.isValidSignature(signature, requestId, req.query as WebhookQuery)) {

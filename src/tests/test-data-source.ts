@@ -36,6 +36,6 @@ export const TestDataSource = new DataSource({
     ContactMessage,
     Brand,
   ],
-  synchronize: false,
+  synchronize: true,
   logging: false,
 });

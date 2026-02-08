@@ -39,9 +39,7 @@ export const AppDataSource = new DataSource({
     Brand,
   ],
   migrations: [
-    process.env.NODE_ENV === 'production'
-      ? './dist/migrations/*.js'
-      : './src/migrations/*.ts',
+    process.env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts',
   ],
   subscribers: [],
 });
