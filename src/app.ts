@@ -35,20 +35,10 @@ const app = express();
 // Trust proxy
 app.set('trust proxy', 1);
 
-// Request logging
+// Request logging (Mantenha o mais alto possível para capturar tudo)
 app.use(requestLogger);
 
-// Security headers
-app.use(
-  helmet({
-    hidePoweredBy: true, // Explicitly hide X-Powered-By (though default in Helmet)
-  }),
-);
-
-// General rate limiting
-app.use('/api', generalLimiter);
-
-// CORS
+// CORS - Deve vir ANTES do Rate Limiting para lidar com pre-flights adequadamente
 app.use(
   cors({
     origin: env.FRONTEND_URL,
@@ -57,6 +47,16 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
+
+// Security headers
+app.use(
+  helmet({
+    hidePoweredBy: true,
+  }),
+);
+
+// General rate limiting (Apenas para as rotas /api)
+app.use('/api', generalLimiter);
 
 // ==========================================
 // 2. Middlewares Globais de JSON

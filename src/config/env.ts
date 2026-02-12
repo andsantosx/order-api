@@ -6,15 +6,16 @@ dotenv.config();
 
 // Define o esquema de validação com Zod
 const envSchema = z.object({
-  // Banco de Dados
+  // Banco de Dados (Exatamente como na imagem da Railway)
   DB_HOST: z.string().min(1, 'DB_HOST é obrigatório'),
-  DB_PORT: z
-    .string()
-    .default('5432')
-    .transform((val) => parseInt(val, 10)),
   DB_NAME: z.string().min(1, 'DB_NAME é obrigatório'),
   DB_USER: z.string().min(1, 'DB_USER é obrigatório'),
   DB_PASSWORD: z.string().min(1, 'DB_PASSWORD é obrigatório'),
+  DB_port: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .or(z.number())
+    .default(5432),
 
   // Autenticação e Segurança
   JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter pelo menos 32 caracteres'),
@@ -22,8 +23,9 @@ const envSchema = z.object({
   // Servidor
   PORT: z
     .string()
-    .default('3000')
-    .transform((val) => parseInt(val, 10)),
+    .transform((val) => parseInt(val, 10))
+    .or(z.number())
+    .default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 
@@ -51,7 +53,7 @@ const envSchema = z.object({
   RATE_LIMIT_PAYMENT_MAX: z.string().regex(/^\d+$/).transform(Number).optional(),
 });
 
-// Valida as variáveis de ambiente
+// Valida as variáveis de ambiente (Eritamente o que está no process.env)
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {

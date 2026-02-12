@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import dotenv from 'dotenv';
+import { env } from './config/env';
 import { Product } from './api/entities/Product';
 import { User } from './api/entities/User';
 import { Order } from './api/entities/Order';
@@ -15,17 +15,15 @@ import { Wishlist } from './api/entities/Wishlist';
 import { ContactMessage } from './api/entities/ContactMessage';
 import { Brand } from './api/entities/Brand';
 
-dotenv.config();
-
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: env.DB_HOST,
+  port: env.DB_port,
+  username: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development',
+  logging: env.NODE_ENV === 'development',
   entities: [
     Product,
     User,
@@ -42,7 +40,7 @@ export const AppDataSource = new DataSource({
     Brand,
   ],
   migrations: [
-    process.env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts',
+    env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts',
   ],
   subscribers: [],
 });
