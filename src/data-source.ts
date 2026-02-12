@@ -18,7 +18,7 @@ import { Brand } from './api/entities/Brand';
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: env.DB_HOST,
-  port: env.DB_port,
+  port: env.DB_PORT,
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,

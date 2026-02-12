@@ -11,7 +11,7 @@ const envSchema = z.object({
   DB_NAME: z.string().min(1, 'DB_NAME é obrigatório'),
   DB_USER: z.string().min(1, 'DB_USER é obrigatório'),
   DB_PASSWORD: z.string().min(1, 'DB_PASSWORD é obrigatório'),
-  DB_port: z
+  DB_PORT: z
     .string()
     .transform((val) => parseInt(val, 10))
     .or(z.number())
