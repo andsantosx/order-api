@@ -120,10 +120,7 @@ const hashedPassword = await bcrypt.hash(password, SECURITY.BCRYPT_SALT_ROUNDS);
 const isValid = await bcrypt.compare(plainPassword, user.password_hash);
 ```
 
-**Auto-Signup**:
-
-- Senhas geradas: 16 caracteres aleatórios
-- TODO: Enviar por email seguro (implementar)
+- Senhas geradas: 16 caracteres aleatórios (exibido nos logs de sistema para conferência)
 
 ---
 
@@ -610,7 +607,7 @@ npm audit --audit-level=critical
 
 - [ ] `NODE_ENV=production`
 - [ ] `JWT_SECRET` com 64+ caracteres aleatórios
-- [ ] `DATABASE_URL` com SSL obrigatório
+- [ ] Banco de Dados configurado com SSL obrigatório
 - [ ] CORS restrito ao frontend exato
 - [ ] Rate limits configurados (valores restritivos)
 - [ ] HTTPS configurado (certificado válido)

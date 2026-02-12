@@ -1,6 +1,10 @@
 # Especificação da API (Technical Reference)
 
-Este documento descreve os padrões técnicos, fluxos de autenticação e contratos da API. Para a lista interativa de endpoints, consulte o [Swagger UI](/api-docs).
+> [!IMPORTANT]
+> **SEGURANÇA**: Todos os exemplos abaixo utilizam dados fictícios. 
+> Jamais utilize credenciais reais nestes formatos em ambientes de produção sem a devida criptografia/segurança.
+
+---
 
 ## 1. Padrões de Comunicação
 

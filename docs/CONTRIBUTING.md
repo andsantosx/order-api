@@ -1,6 +1,9 @@
 # Guia de Contribuição e Qualidade
 
-Este documento define os padrões técnicos e processos de desenvolvimento para o projeto. O objetivo é garantir a integridade, segurança e manutenibilidade do código.
+> [!WARNING]
+> **POLÍTICA DE SEGURANÇA**: É estritamente proibido o commit de arquivos `.env` ou qualquer forma de segredo (chaves de API, senhas, tokens) neste repositório.
+
+---
 
 ## 1. Princípios de Engenharia
 

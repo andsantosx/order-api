@@ -1,6 +1,9 @@
 # Auditoria de Segurança - Order API
 
-## Auditoria de Validação de Inputs
+> [!NOTE]
+> Este documento é uma auditoria técnica de processos e não contém dados de acesso ou vulnerabilidades ativas.
+
+---
 
 ### ✅ Rotas com Validação Zod
 

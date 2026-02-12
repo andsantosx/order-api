@@ -2,7 +2,6 @@ import { AppDataSource } from '../../data-source';
 import { Order, OrderStatus } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
-import { In } from 'typeorm';
 import { log } from '../../config/logger';
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
@@ -52,31 +51,48 @@ export class StatsService {
    */
   async getOverview() {
     try {
-      const [totalRevenue, totalOrders, pendingOrders, completedOrders] = await Promise.all([
-        this.getTotalRevenue(),
-        this.orderRepository.count(),
-        this.orderRepository.count({ where: { status: OrderStatus.PENDING } }),
-        this.orderRepository.count({
-          where: { status: In([OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED]) },
-        }),
-      ]);
+      // Get counts grouped by status
+      const statusCounts = await this.orderRepository
+        .createQueryBuilder('order')
+        .select('order.status', 'status')
+        .addSelect('COUNT(order.id)', 'count')
+        .groupBy('order.status')
+        .getRawMany();
 
-      // Last 30 days revenue
+      const countsMap = statusCounts.reduce(
+        (acc, curr) => {
+          acc[curr.status] = parseInt(curr.count, 10);
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      const totalOrders = (Object.values(countsMap) as number[]).reduce((a, b) => a + b, 0);
+      const pendingOrders = countsMap[OrderStatus.PENDING] || 0;
+      const completedOrders =
+        (countsMap[OrderStatus.PAID] || 0) +
+        (countsMap[OrderStatus.SHIPPED] || 0) +
+        (countsMap[OrderStatus.DELIVERED] || 0);
+
+      // Get revenue total and last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const recentRevenue = await this.orderRepository
-        .createQueryBuilder('order')
-        .select('SUM(order.total_amount)', 'total')
-        .where('order.created_at >= :date', { date: thirtyDaysAgo })
-        .andWhere('order.status IN (:...statuses)', {
-          statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
-        })
-        .getRawOne();
+      const [totalRevenueResult, recentRevenueResult] = await Promise.all([
+        this.getTotalRevenue(),
+        this.orderRepository
+          .createQueryBuilder('order')
+          .select('SUM(order.total_amount)', 'total')
+          .where('order.created_at >= :date', { date: thirtyDaysAgo })
+          .andWhere('order.status IN (:...statuses)', {
+            statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+          })
+          .getRawOne(),
+      ]);
 
       return {
-        totalRevenue: totalRevenue || 0,
-        revenueLastMonth: parseInt(recentRevenue?.total || '0', 10),
+        totalRevenue: totalRevenueResult || 0,
+        revenueLastMonth: parseInt(recentRevenueResult?.total || '0', 10),
         totalOrders,
         pendingOrders,
         completedOrders,

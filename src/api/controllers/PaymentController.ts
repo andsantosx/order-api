@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/PaymentService';
 import { WebhookQuery } from '../../types/payment';
+import { log } from '../../config/logger';
 
 export class PaymentController {
   private paymentService = new PaymentService();
@@ -22,7 +23,7 @@ export class PaymentController {
 
       // Validação de assinatura
       if (!this.isValidSignature(signature, requestId, req.query as WebhookQuery)) {
-        console.warn('Webhook com assinatura inválida recebido', { signature, requestId });
+        log.warn('Webhook com assinatura inválida recebido', { signature, requestId });
         // Retornamos 200/403 dependendo da estratégia, aqui 403 para negar
         return res.status(403).send('Invalid signature');
       }
@@ -34,7 +35,7 @@ export class PaymentController {
 
       return res.status(200).send('OK');
     } catch (error) {
-      console.error('Webhook Error:', error);
+      log.error('Webhook Error:', { error });
       return res.status(200).send('OK');
     }
   }

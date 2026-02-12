@@ -9,6 +9,11 @@ API RESTful empresarial para e-commerce, construída com foco em escalabilidade,
 | **Deploy** | [Ver Manual de Deploy](docs/DEPLOYMENT.md) |
 | **Segurança** | [Ver Protocolos](docs/SECURITY.md) |
 
+> [!IMPORTANT]
+> **SEGURANÇA EM PRIMEIRO LUGAR**:
+> Este projeto utiliza variáveis de ambiente para todas as configurações sensíveis.
+> **NUNCA** versione o arquivo `.env` no Git. Use o `.env.example` como guia.
+
 ---
 
 ## 🏗️ Visão Geral da Arquitetura
@@ -18,7 +23,7 @@ O projeto segue os princípios de **Clean Architecture** adaptados para Node.js/
 - **Camada de Domínio**: Entidades (`src/api/entities`) definem o núcleo do negócio.
 - **Camada de Aplicação**: Services (`src/api/services`) encapsulam a lógica de negócio pura.
 - **Camada de Interface**: Controllers (`src/api/controllers`) gerenciam entrada/saída HTTP.
-- **Camada de Infraestrutura**: Configurações de banco (TypeORM), bibliotecas externas e adapters.
+- **Camada de Infraestrutura**: Configurações de banco (TypeORM), logging centralizado e adapters externos.
 
 ## 🚀 Tecnologias Chave
 
@@ -26,7 +31,7 @@ O projeto segue os princípios de **Clean Architecture** adaptados para Node.js/
 - **TypeORM + PostgreSQL**: Persistência de dados relacional com Migrations automáticas.
 - **Express 5 + Helmet + RateLimit**: Segurança na camada HTTP.
 - **Zod**: Validação rigorosa de inputs e variáveis de ambiente.
-- **Winston**: Logging estruturado para observabilidade.
+- **Winston**: Logging estruturado para observabilidade e rastreabilidade.
 - **Jest**: Testes unitários e de integração.
 
 ## 🔒 Segurança

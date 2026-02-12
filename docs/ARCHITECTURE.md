@@ -505,10 +505,18 @@ export const ORDER = {
 
 ### Obrigatórias
 
+> [!CAUTION]
+> **NUNCA** insira valores reais de produção em arquivos de documentação ou versão.
+> Use sempre o arquivo `.env` (que deve ser ignorado pelo Git).
+
 ```bash
-DATABASE_URL=postgresql://...
-JWT_SECRET=<mínimo 32 caracteres>
-MERCADOPAGO_ACCESS_TOKEN=<token do MP>
+DB_HOST=localhost      # Use 'db' para Docker
+DB_PORT=5432
+DB_NAME=sua_db_nome
+DB_USER=seu_usuario
+DB_PASSWORD=SUA_SENHA_SEGURA_AQUI
+JWT_SECRET=GERAR_STRING_ALEATORIA_64_CHARS
+MERCADOPAGO_ACCESS_TOKEN=SEU_TOKEN_MP_AQUI
 ```
 
 ### Opcionais (com defaults)
@@ -536,8 +544,7 @@ RATE_LIMIT_PAYMENT_MAX=5
 ### Alta Prioridade
 
 1. **Testes Automatizados**: Unit + Integration tests (15 testes passando no PostgreSQL via Docker)
-2. **Email Service**: Envio de credenciais de auto-signup
-3. **Refresh Tokens**: Melhorar experiência de autenticação
+2. **Refresh Tokens**: Melhorar experiência de autenticação
 
 ### Média Prioridade
 

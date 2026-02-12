@@ -1,6 +1,9 @@
 # Guia de Testes e Estratégia de Manutenção
 
-Este documento descreve a estratégia de testes para o projeto Order API. Ele serve como guia para os testes existentes e como protocolo para manter a integridade do sistema durante desenvolvimentos futuros.
+> [!IMPORTANT]
+> **DADOS DE TESTE**: Use exclusivamente dados fictícios e bancos de dados isolados (`order_db_test`) para a execução de suítes de teste.
+
+---
 
 ## 1. Filosofia de Testes
 O objetivo é **100% de funcionalidade** e **confiabilidade**. Cada funcionalidade deve ser testada contra:

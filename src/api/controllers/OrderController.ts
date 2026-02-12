@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/OrderService';
 import { OrderStatus } from '../entities/Order';
 import { PaymentService } from '../services/PaymentService';
+import { log } from '../../config/logger';
 
 export class OrderController {
   private orderService = new OrderService();
@@ -21,7 +22,7 @@ export class OrderController {
       const result = await this.orderService.getAll(isAdmin, userId, status, page, limit);
       return res.json(result);
     } catch (error) {
-      console.error('Erro ao buscar pedidos', { error });
+      log.error('Erro ao buscar pedidos', { error });
       throw error;
     }
   }
