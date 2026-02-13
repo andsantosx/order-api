@@ -207,9 +207,9 @@ export function isValidImageUrl(url: string): boolean {
     }
 
     // Verifica se o domínio está na lista de permitidos
-    const fullUrl = url.toLowerCase();
+    const hostname = parsedUrl.hostname.toLowerCase();
     return VALIDATION.ALLOWED_IMAGE_DOMAINS.some((domain: string) =>
-      fullUrl.startsWith(domain.toLowerCase()),
+      hostname === domain.toLowerCase() || hostname.endsWith('.' + domain.toLowerCase()),
     );
   } catch {
     return false;

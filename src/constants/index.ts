@@ -146,6 +146,8 @@ export const VALIDATION = {
     'imgur.com',
     'cdn.shopify.com',
     'images.pexels.com',
+    'i.postimg.cc',
+    'postimg.cc',
   ],
 } as const;
 
