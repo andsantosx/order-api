@@ -4,7 +4,8 @@ import { User } from '../entities/User';
 import { AppError } from '../middlewares/errorHandler';
 import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
-import { sanitizeAddressData, isValidZipCode } from '../../utils/sanitizer';
+import { sanitizeAddressData } from '../../utils/sanitizer';
+import { isValidZipCode } from '../../utils/validators';
 
 /**
  * Interface para dados de endereço

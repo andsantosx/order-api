@@ -53,3 +53,31 @@ export const imageUrlSchema = z
 export const imageUrlsArraySchema = z
   .array(imageUrlSchema)
   .min(1, 'Pelo menos uma imagem é obrigatória');
+
+import { VALIDATION } from '../constants';
+
+/**
+ * Validates Brazilian Zip Code format
+ */
+export const isValidZipCode = (zipCode: string): boolean => {
+  return VALIDATION.ZIPCODE_REGEX.test(zipCode);
+};
+
+/**
+ * Validates CPF format (basic format check)
+ */
+export const isValidCPF = (cpf: string): boolean => {
+  return VALIDATION.CPF_REGEX.test(cpf);
+};
+
+/**
+ * Validates if a string is a valid HTTP(S) URL
+ */
+export const isValidHttpUrl = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};

@@ -11,7 +11,8 @@ import { FindOptionsWhere } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { log } from '../../config/logger';
 import { executeInTransaction } from '../../utils/transaction';
-import { sanitizeAddressData, isValidZipCode } from '../../utils/sanitizer';
+import { sanitizeAddressData } from '../../utils/sanitizer';
+import { isValidZipCode } from '../../utils/validators';
 import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 
 /**

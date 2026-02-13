@@ -178,28 +178,4 @@ export function sanitizeCategoryData(data: { name?: string; description?: string
   return sanitized;
 }
 
-/**
- * Valida formato de CEP brasileiro
- */
-export function isValidZipCode(zipCode: string): boolean {
-  return VALIDATION.ZIPCODE_REGEX.test(zipCode);
-}
-
-/**
- * Valida formato de CPF
- */
-export function isValidCPF(cpf: string): boolean {
-  return VALIDATION.CPF_REGEX.test(cpf);
-}
-
-/**
- * Valida se uma string é uma URL HTTP(S) válida
- */
-export function isValidHttpUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
+// Funções de validação booleanas movidas para validators.ts
