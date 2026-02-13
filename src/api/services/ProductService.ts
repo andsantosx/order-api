@@ -133,11 +133,6 @@ export class ProductService {
     }
 
     if (!sortBy || sortBy === 'newest') {
-      // "Mais Recentes" -> Filter last 30 days AND sort by newest
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      qb.andWhere('product.created_at >= :thirtyDaysAgo', { thirtyDaysAgo });
       qb.orderBy('product.created_at', 'DESC');
     }
 
@@ -490,6 +485,7 @@ export class ProductService {
           productImageRepo.create({
             url,
             position: index,
+            product, // Vincula explicitamente ao produto
           }),
         );
 
@@ -523,6 +519,7 @@ export class ProductService {
           const size = foundSizes.find((s) => s.id === item.sizeId)!;
           return productSizeRepo.create({
             size: size,
+            product, // Vincula explicitamente ao produto
           });
         });
 
