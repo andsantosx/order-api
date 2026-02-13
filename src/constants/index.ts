@@ -138,17 +138,6 @@ export const VALIDATION = {
   MAX_NAME_LENGTH: 255,
   MAX_DESCRIPTION_LENGTH: 2000,
   MAX_ADDRESS_LENGTH: 255,
-
-  /** Domínios permitidos para URLs de imagens */
-  ALLOWED_IMAGE_DOMAINS: [
-    'cloudinary.com',
-    'unsplash.com',
-    'imgur.com',
-    'cdn.shopify.com',
-    'images.pexels.com',
-    'i.postimg.cc',
-    'postimg.cc',
-  ],
 } as const;
 
 /**
