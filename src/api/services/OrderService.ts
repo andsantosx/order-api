@@ -13,6 +13,9 @@ import { log } from '../../config/logger';
 import { executeInTransaction } from '../../utils/transaction';
 import { sanitizeAddressData } from '../../utils/sanitizer';
 import { isValidZipCode } from '../../utils/validators';
+import { ContactMessage } from '../entities/ContactMessage';
+import { Brand } from '../entities/Brand';
+import { ProductSize } from '../entities/ProductSize';
 import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 
 /**
@@ -53,6 +56,7 @@ export class OrderService {
   private shippingAddressRepository = AppDataSource.getRepository(ShippingAddress);
   private userRepository = AppDataSource.getRepository(User);
   private sizeRepository = AppDataSource.getRepository(Size);
+  private productSizeRepository = AppDataSource.getRepository(ProductSize);
 
   /**
    * Retorna pedidos filtrados por usuário e/ou status com paginação
@@ -319,18 +323,36 @@ export class OrderService {
         );
       }
 
-      // Busca o nome do tamanho pelo ID
+      // Busca o tamanho pelo ID ou pelo Nome
+      let size: Size | null = null;
       const sizeId = parseInt(item.size, 10);
-      if (isNaN(sizeId)) {
-        throw new AppError(`Tamanho inválido: ${item.size}`, HTTP_STATUS.BAD_REQUEST);
+
+      if (!isNaN(sizeId)) {
+        size = await this.sizeRepository.findOneBy({ id: sizeId });
       }
 
-      const size = await this.sizeRepository.findOne({
-        where: { id: sizeId },
-      });
+      // Se não encontrou por ID ou se item.size não for número, tenta por nome (ex: "M", "G")
+      if (!size) {
+        size = await this.sizeRepository.findOneBy({ name: item.size });
+      }
 
       if (!size) {
-        throw new AppError(`Tamanho com ID ${item.size} não encontrado`, HTTP_STATUS.NOT_FOUND);
+        throw new AppError(`Tamanho "${item.size}" não encontrado`, HTTP_STATUS.NOT_FOUND);
+      }
+
+      // Verifica se o tamanho está disponível para este produto
+      const productSize = await this.productSizeRepository.findOne({
+        where: {
+          product: { id: product.id },
+          size: { id: size.id },
+        },
+      });
+
+      if (!productSize) {
+        throw new AppError(
+          `O tamanho "${size.name}" não está disponível para o produto "${product.name}"`,
+          HTTP_STATUS.BAD_REQUEST,
+        );
       }
 
       subtotal += product.price_cents * item.quantity;
