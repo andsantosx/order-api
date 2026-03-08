@@ -13,6 +13,14 @@
 - **Datas**: ISO 8601 UTC (`YYYY-MM-DDTHH:mm:ss.sssZ`)
 - **Moeda**: Valores monetários trafegados como **inteiros** em **centavos** (ex: R$ 10,00 -> `1000`).
 
+### Principais Conjuntos de Rotas
+A API compreende os seguintes conjuntos principais de rotas REST, todas prefixadas com `/api`:
+- `/auth`, `/profile` - Autenticação e Perfis
+- `/categories`, `/brands`, `/sizes`, `/products`, `/images` - Catálogo de Produtos
+- `/orders`, `/payments` - Processo de Carrinho/Pedidos e Pagamento
+- `/contact` - Mensagens de Contato
+- `/admin`, `/admin/stats` - Área Administrativa e Estatísticas (requer token admin)
+
 ### Status Codes
 | Código | Significado | Uso |
 |:---:|---|---|

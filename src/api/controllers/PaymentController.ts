@@ -44,7 +44,7 @@ export class PaymentController {
    * Valida a assinatura do webhook do Mercado Pago
    * NOTA: Em produção valida-se o hash HMAC-SHA256 usando o MP_WEBHOOK_SECRET
    */
-  private isValidSignature(signature: string, requestId: string, query: WebhookQuery): boolean {
+  private isValidSignature(_signature: string, _requestId: string, _query: WebhookQuery): boolean {
     // Se não estivermos em produção ou se a env não estiver definida, podemos pular (CUIDADO)
     if (process.env.NODE_ENV !== 'production') return true;
 

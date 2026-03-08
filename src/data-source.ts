@@ -39,8 +39,6 @@ export const AppDataSource = new DataSource({
     ContactMessage,
     Brand,
   ],
-  migrations: [
-    env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts',
-  ],
+  migrations: [env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts'],
   subscribers: [],
 });

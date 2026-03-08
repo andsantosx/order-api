@@ -13,8 +13,6 @@ import { log } from '../../config/logger';
 import { executeInTransaction } from '../../utils/transaction';
 import { sanitizeAddressData } from '../../utils/sanitizer';
 import { isValidZipCode } from '../../utils/validators';
-import { ContactMessage } from '../entities/ContactMessage';
-import { Brand } from '../entities/Brand';
 import { ProductSize } from '../entities/ProductSize';
 import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 
