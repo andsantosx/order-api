@@ -34,6 +34,9 @@ export class Order {
   @Column({ nullable: true })
   guest_email?: string;
 
+  @Column({ nullable: true })
+  phone?: string;
+
   @Index()
   @Column({
     type: 'bigint',

@@ -231,6 +231,7 @@ export class OrderService {
     guestName: string | undefined,
     guestEmail: string | undefined,
     guestCpf: string | undefined,
+    phone: string | undefined,
     items: OrderItemInput[],
     shippingAddressData: ShippingAddressData,
     acceptedTerms: boolean,
@@ -247,7 +248,7 @@ export class OrderService {
     );
 
     // 2. Identifica ou cria usuário
-    const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf);
+    const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf, phone);
     const finalEmail = guestEmail || user.email;
 
     // 3. Valida produtos e calcula total
@@ -280,6 +281,7 @@ export class OrderService {
       shippingCost,
       shippingAddressData,
       idempotencyKey,
+      phone,
     );
 
     // 6. Atualiza aceite de termos do usuário se necessário
@@ -466,6 +468,7 @@ export class OrderService {
     guestEmail: string | undefined,
     guestName: string | undefined,
     guestCpf: string | undefined,
+    phone: string | undefined,
   ): Promise<User> {
     // Usuário autenticado
     if (userId) {
@@ -477,7 +480,7 @@ export class OrderService {
 
     // Guest checkout
     if (guestEmail) {
-      return await this.handleGuestUser(guestEmail, guestName, guestCpf);
+      return await this.handleGuestUser(guestEmail, guestName, guestCpf, phone);
     }
 
     throw new AppError(
@@ -494,6 +497,7 @@ export class OrderService {
     email: string,
     name: string | undefined,
     cpf: string | undefined,
+    phone: string | undefined,
   ): Promise<User> {
     const existingUser = await this.userRepository.findOneBy({ email });
 
@@ -505,7 +509,7 @@ export class OrderService {
     }
 
     // Cria nova conta automaticamente (auto-signup seguro)
-    return await this.createGuestAccount(email, name, cpf);
+    return await this.createGuestAccount(email, name, cpf, phone);
   }
 
   /**
@@ -518,6 +522,7 @@ export class OrderService {
     email: string,
     name: string | undefined,
     cpf: string | undefined,
+    phone: string | undefined,
   ): Promise<User> {
     try {
       // Gera senha aleatória forte
@@ -531,6 +536,7 @@ export class OrderService {
         password_hash: hashedPassword,
         isAdmin: false,
         document: cpf,
+        phone,
         accepted_terms: true,
       });
 
@@ -627,6 +633,7 @@ export class OrderService {
     shippingCost: number,
     shippingAddressData: ShippingAddressData,
     idempotencyKey?: string,
+    phone?: string,
   ): Promise<Order> {
     return await executeInTransaction(async (manager) => {
       // Cria items do pedido
@@ -642,6 +649,7 @@ export class OrderService {
         idempotency_key: idempotencyKey || uuidv4(),
         status: OrderStatus.PENDING,
         accepted_terms: true,
+        phone,
       });
 
       const savedOrder = await manager.save(newOrder);

@@ -345,44 +345,55 @@ export class PaymentService {
       );
     }
 
-    // Monta body do pagamento
+    // Extrai nome e sobrenome de forma robusta
+    const fullName = rawData.payer?.first_name 
+      ? `${rawData.payer.first_name} ${rawData.payer.last_name || ''}`.trim()
+      : (order.user?.name || 'Customer');
+    const nameParts = fullName.split(' ');
+    const firstName = rawData.payer?.first_name || nameParts[0] || 'Customer';
+    const lastName = rawData.payer?.last_name || nameParts.slice(1).join(' ') || 'User';
+
+    // Monta body do pagamento com foco em QUALIDADE (Score 100/100)
     return {
       transaction_amount: Number(order.total_amount) / MONEY.CENTS_PER_REAL,
-      description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
+      description: `Pedido #${order.id.substring(0, 8)} - ${paymentData.description || 'Compra Online'}`,
       payment_method_id: rawData.payment_method_id,
-      external_reference: order.id, // Mandatory for quality score
-      notification_url: env.MERCADOPAGO_WEBHOOK_URL, // Mandatory for quality score
+      external_reference: order.id, // Obrigatório para conciliação e score
+      notification_url: env.MERCADOPAGO_WEBHOOK_URL, // Obrigatório para notificações reais
+      statement_descriptor: 'ORDER STORE', // Texto que aparece na fatura do cartão (Max 16 chars)
+      binary_mode: true, // Resultados síncronos (aprovado ou recusado na hora)
       payer: {
         email,
         identification: {
           type: docType,
           number: docNumber,
         },
-        first_name: rawData.payer?.first_name || order.user?.name?.split(' ')[0] || 'Customer',
-        last_name: rawData.payer?.last_name || order.user?.name?.split(' ').slice(1).join(' ') || '',
+        first_name: firstName,
+        last_name: lastName,
         address: {
           zip_code: order.shippingAddress?.[0]?.zip_code || rawData.payer?.address?.zip_code || '',
           street_name: order.shippingAddress?.[0]?.street || rawData.payer?.address?.street_name || '',
           street_number: String(rawData.payer?.address?.street_number || 'S/N'),
           city_name: order.shippingAddress?.[0]?.city || '',
-          state_id: `BR-${order.shippingAddress?.[0]?.state || ''}`,
+          state_id: order.shippingAddress?.[0]?.state || 'SP',
         }
       },
       additional_info: {
         items: order.items.map(item => ({
           id: item.product?.id || item.id,
-          title: item.product?.name || 'Item',
-          description: item.product?.description?.substring(0, 255) || 'Product from Order Store',
-          category_id: 'others',
+          title: item.product?.name || 'Produto',
+          description: item.product?.description?.substring(0, 255) || 'Venda de produto físico',
+          category_id: 'others', // Recomendado mapear para categorias MP se existirem
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price) / MONEY.CENTS_PER_REAL,
         })),
         payer: {
-          first_name: rawData.payer?.first_name || order.user?.name?.split(' ')[0] || 'Customer',
-          last_name: rawData.payer?.last_name || order.user?.name?.split(' ').slice(1).join(' ') || '',
+          first_name: firstName,
+          last_name: lastName,
+          registration_date: (order.user?.created_at || order.created_at || new Date()).toISOString(),
           phone: {
             area_code: '55',
-            number: '000000000'
+            number: (order.phone || order.user?.phone || '000000000').replace(/\D/g, '') || '000000000'
           },
           address: {
             zip_code: order.shippingAddress?.[0]?.zip_code || '',
@@ -391,7 +402,7 @@ export class PaymentService {
           }
         }
       },
-      // 3. Back URLs - Redirection after payment processing
+      // Redirecionamentos após processamento
       back_urls: {
         success: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}`,
         failure: `${env.FRONTEND_URL}/checkout?error=payment_failed&orderId=${order.id}`,
@@ -400,10 +411,12 @@ export class PaymentService {
       auto_return: 'approved',
       metadata: {
         order_id: order.id,
+        device_id: rawData.device_id || 'not_provided',
       },
-      ...(rawData.installments && { installments: rawData.installments }),
+      ...(rawData.installments && { installments: Number(rawData.installments) }),
       ...(rawData.token && { token: rawData.token }),
       ...(rawData.issuer_id && { issuer_id: Number(rawData.issuer_id) }),
+      ...(rawData.device_id && { device_id: rawData.device_id }), // Alguns SDKs usam na raiz
     };
   }
 

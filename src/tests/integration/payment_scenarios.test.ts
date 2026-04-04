@@ -53,6 +53,7 @@ describe('Payment Scenarios Integration', () => {
         email,
         password_hash: 'manual_override',
         document: TEST_DOC_MP,
+        phone: '11999991111',
         accepted_terms: true,
       }));
       userId = user.id;

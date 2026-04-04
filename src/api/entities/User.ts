@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
 import { Order } from './Order';
 import { Wishlist } from './Wishlist';
 
@@ -22,8 +22,14 @@ export class User {
   @Column({ nullable: true, unique: true })
   document!: string;
 
+  @Column({ nullable: true })
+  phone?: string;
+
   @Column({ default: false })
   accepted_terms!: boolean;
+
+  @CreateDateColumn()
+  created_at!: Date;
 
   @OneToMany(() => Order, (order) => order.user)
   orders!: Order[];

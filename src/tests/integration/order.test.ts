@@ -61,6 +61,7 @@ describe('Order Integration', () => {
         zipCode: '12345-678',
         country: 'Country',
       },
+      phone: '11999998888',
       acceptedTerms: true,
     };
 
@@ -97,6 +98,7 @@ describe('Order Integration', () => {
         zipCode: '12345-678',
         country: 'Country',
       },
+      phone: '11999998888',
       acceptedTerms: true,
     };
 
@@ -130,6 +132,7 @@ describe('Order Integration', () => {
         zipCode: '12345-678',
         country: 'Country',
       },
+      phone: '11999997777',
       acceptedTerms: true,
     };
 

@@ -59,7 +59,11 @@ export interface PaymentRequestData {
   issuer_id?: number;
   metadata?: {
     order_id: string;
+    device_id?: string;
   };
+  device_id?: string; // Root device identification
+  statement_descriptor?: string; // Text on customer credit card statement
+  binary_mode?: boolean; // Instant results
   // Campo usado pelo frontend que pode conter dados adicionais
   formData?: any;
 }

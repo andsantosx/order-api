@@ -74,18 +74,21 @@ export async function seedDatabase(dataSource: DataSource) {
         email: 'admin@admin.com',
         password: 'admin123',
         isAdmin: true,
+        phone: '11999997777',
       },
       {
         name: 'John Doe',
         email: 'john@example.com',
         password: 'password123',
         isAdmin: false,
+        phone: '11999998880',
       },
       {
         name: 'Jane Doe',
         email: 'jane@example.com',
         password: 'password123',
         isAdmin: false,
+        phone: '11999998881',
       },
     ];
 
@@ -99,6 +102,7 @@ export async function seedDatabase(dataSource: DataSource) {
             email: userData.email,
             password_hash: hashedPassword,
             isAdmin: userData.isAdmin,
+            phone: (userData as any).phone,
           }),
         );
         log.info(`Created User: ${userData.email}`);
