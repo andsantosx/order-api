@@ -42,7 +42,7 @@ export class OrderController {
    * Espera receber: guestEmail, items e shippingAddress.
    */
   async create(req: Request, res: Response, _next: NextFunction) {
-    const { guestName, guestEmail, guestCpf, items, shippingAddress } = req.body;
+    const { guestName, guestEmail, guestCpf, items, shippingAddress, acceptedTerms } = req.body;
     const userId = req.user?.userId;
     const order = await this.orderService.create(
       userId,
@@ -51,6 +51,7 @@ export class OrderController {
       guestCpf,
       items,
       shippingAddress,
+      acceptedTerms,
     );
     res.status(201).json(order);
   }

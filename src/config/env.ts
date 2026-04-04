@@ -34,6 +34,9 @@ const envSchema = z.object({
   MERCADOPAGO_PUBLIC_KEY: z.string().min(1, 'Mercado Pago Public Key é obrigatório'),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().min(1, 'Mercado Pago Webhook Secret é obrigatório'),
 
+  // ReCAPTCHA (v2 Invisible)
+  RECAPTCHA_SECRET_KEY: z.string().min(1, 'reCAPTCHA Secret Key é obrigatória'),
+
   // Rate Limiting (opcional)
   RATE_LIMIT_GENERAL_WINDOW: z
     .string()

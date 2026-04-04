@@ -22,6 +22,9 @@ export class User {
   @Column({ nullable: true, unique: true })
   document!: string;
 
+  @Column({ default: false })
+  accepted_terms!: boolean;
+
   @OneToMany(() => Order, (order) => order.user)
   orders!: Order[];
 

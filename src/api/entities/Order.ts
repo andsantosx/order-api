@@ -73,6 +73,9 @@ export class Order {
   @CreateDateColumn()
   created_at!: Date;
 
+  @Column({ default: false })
+  accepted_terms!: boolean;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 

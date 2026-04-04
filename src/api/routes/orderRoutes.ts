@@ -4,6 +4,7 @@ import { validate } from '../middlewares/validate';
 import { createOrderSchema, updateStatusSchema } from '../schemas/orderSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
 import { optionalAuthMiddleware } from '../middlewares/optionalAuthMiddleware';
+import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 import { orderLimiter } from '../../config/rateLimits';
 
 const router = Router();
@@ -16,6 +17,7 @@ router.get('/:id', authMiddleware, orderController.getOne.bind(orderController))
 router.post(
   '/',
   orderLimiter,
+  recaptchaMiddleware,
   optionalAuthMiddleware,
   validate(createOrderSchema),
   orderController.create.bind(orderController),

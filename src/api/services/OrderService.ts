@@ -197,9 +197,10 @@ export class OrderService {
     guestCpf: string | undefined,
     items: OrderItemInput[],
     shippingAddressData: ShippingAddressData,
+    acceptedTerms: boolean,
   ) {
     // 1. Validações iniciais
-    this.validateOrderInput(userId, guestEmail, shippingAddressData, items);
+    this.validateOrderInput(userId, guestEmail, shippingAddressData, items, acceptedTerms);
 
     // 2. Identifica ou cria usuário
     const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf);
@@ -230,6 +231,12 @@ export class OrderService {
       shippingAddressData,
     );
 
+    // 6. Atualiza aceite de termos do usuário se necessário
+    if (acceptedTerms && !user.accepted_terms) {
+      user.accepted_terms = true;
+      await this.userRepository.save(user);
+    }
+
     log.info('Pedido criado com sucesso', {
       orderId: order.id,
       userId: user.id,
@@ -254,7 +261,13 @@ export class OrderService {
     guestEmail: string | undefined,
     shippingAddress: ShippingAddressData,
     items: OrderItemInput[],
+    acceptedTerms: boolean,
   ): void {
+    // Valida aceite dos termos
+    if (!acceptedTerms) {
+      throw new AppError(ERROR_MESSAGES.TERMS_NOT_ACCEPTED, HTTP_STATUS.BAD_REQUEST);
+    }
+
     // Valida CEP
     if (!shippingAddress.zipCode) {
       throw new AppError(ERROR_MESSAGES.ZIPCODE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
@@ -463,6 +476,7 @@ export class OrderService {
         password_hash: hashedPassword,
         isAdmin: false,
         document: cpf,
+        accepted_terms: true,
       });
 
       const savedUser = await this.userRepository.save(newUser);
@@ -563,6 +577,7 @@ export class OrderService {
         currency: MONEY.DEFAULT_CURRENCY,
         idempotency_key: uuidv4(),
         status: OrderStatus.PENDING,
+        accepted_terms: true,
       });
 
       const savedOrder = await manager.save(newOrder);

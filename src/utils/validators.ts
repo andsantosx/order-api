@@ -60,7 +60,7 @@ import { VALIDATION } from '../constants';
  * Validates Brazilian Zip Code format
  */
 export const isValidZipCode = (zipCode: string): boolean => {
-  return VALIDATION.ZIPCODE_REGEX.test(zipCode);
+  return VALIDATION.ZIP_CODE_REGEX.test(zipCode);
 };
 
 /**

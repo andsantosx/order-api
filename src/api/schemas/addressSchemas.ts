@@ -13,8 +13,8 @@ export const createAddressSchema = z.object({
         `Rua deve ter no mínimo ${VALIDATION.MIN_STREET_LENGTH} caracteres`,
       )
       .max(
-        VALIDATION.MAX_ADDRESS_LENGTH,
-        `Rua deve ter no máximo ${VALIDATION.MAX_ADDRESS_LENGTH} caracteres`,
+        VALIDATION.MAX_STREET_LENGTH,
+        `Rua deve ter no máximo ${VALIDATION.MAX_STREET_LENGTH} caracteres`,
       ),
     city: z
       .string()
@@ -23,8 +23,8 @@ export const createAddressSchema = z.object({
         `Cidade deve ter no mínimo ${VALIDATION.MIN_CITY_LENGTH} caracteres`,
       )
       .max(
-        VALIDATION.MAX_ADDRESS_LENGTH,
-        `Cidade deve ter no máximo ${VALIDATION.MAX_ADDRESS_LENGTH} caracteres`,
+        VALIDATION.MAX_CITY_LENGTH,
+        `Cidade deve ter no máximo ${VALIDATION.MAX_CITY_LENGTH} caracteres`,
       ),
     state: z
       .string()
@@ -39,10 +39,7 @@ export const createAddressSchema = z.object({
     country: z
       .string()
       .min(2, 'País deve ter no mínimo 2 caracteres')
-      .max(
-        VALIDATION.MAX_ADDRESS_LENGTH,
-        `País deve ter no máximo ${VALIDATION.MAX_ADDRESS_LENGTH} caracteres`,
-      )
+      .max(60, 'País deve ter no máximo 60 caracteres')
       .default('Brasil'),
   }),
 });

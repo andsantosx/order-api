@@ -3,6 +3,7 @@ import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middlewares/validate';
 import { registerSchema, loginSchema, updateProfileSchema } from '../schemas/userSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 import { authLimiter } from '../../config/rateLimits';
 
 const router = Router();
@@ -12,12 +13,14 @@ const authController = new AuthController();
 router.post(
   '/register',
   authLimiter,
+  recaptchaMiddleware,
   validate(registerSchema),
   authController.register.bind(authController),
 );
 router.post(
   '/login',
   authLimiter,
+  recaptchaMiddleware,
   validate(loginSchema),
   authController.login.bind(authController),
 );

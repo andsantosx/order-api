@@ -103,39 +103,54 @@ export const PAGINATION = {
  * Configurações de Validação
  */
 export const VALIDATION = {
-  // CPF
-  CPF_LENGTH: 11,
-  CPF_REGEX: /^\d{11}$/,
-
-  // Email
+  // Usuário
+  NAME_MIN_LENGTH: 3,
+  NAME_MAX_LENGTH: 100,
   EMAIL_MAX_LENGTH: 255,
-
-  // Password
   PASSWORD_MIN_LENGTH: 6,
   PASSWORD_MAX_LENGTH: 100,
 
-  // Product
+  // CPF
+  CPF_LENGTH: 11,
+  CPF_REGEX: /^\d{11}$/,
+  CPF_FORMATTED_REGEX: /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
+
+  // Telefone (Formato Brasileiro)
+  PHONE_MIN_LENGTH: 10, // (99) 9999-9999
+  PHONE_MAX_LENGTH: 11, // (99) 99999-9999
+  PHONE_REGEX: /^\d{10,11}$/,
+
+  // Produto
   PRODUCT_NAME_MIN_LENGTH: 3,
   PRODUCT_NAME_MAX_LENGTH: 255,
-  PRODUCT_DESCRIPTION_MAX_LENGTH: 2000,
+  PRODUCT_DESCRIPTION_MAX_LENGTH: 1000,
   PRODUCT_PRICE_MIN: 0,
   PRODUCT_PRICE_MAX: 1000000000, // R$ 10 milhões em centavos
 
-  // Address
+  // Endereço
   ZIP_CODE_REGEX: /^\d{5}-?\d{3}$/,
-  ZIPCODE_REGEX: /^\d{5}-?\d{3}$/, // Alias deprecated, usar ZIP_CODE_REGEX
   MIN_STREET_LENGTH: 5,
+  MAX_STREET_LENGTH: 255,
   MIN_CITY_LENGTH: 2,
+  MAX_CITY_LENGTH: 100,
   STATE_LENGTH: 2,
+  MAX_ADDRESS_COMPLEMENT_LENGTH: 100,
+  MAX_ADDRESS_NUMBER_LENGTH: 20,
 
-  // Order
+  // Contato
+  SUBJECT_MIN_LENGTH: 3,
+  SUBJECT_MAX_LENGTH: 100,
+  MESSAGE_MIN_LENGTH: 10,
+  MESSAGE_MAX_LENGTH: 2000,
+
+  // Pedido
   MIN_ORDER_ITEMS: 1,
   MAX_ORDER_ITEMS: 50,
   MIN_QUANTITY: 1,
   MAX_QUANTITY: 100,
 
   // Generic (backward compatibility)
-  MAX_NAME_LENGTH: 255,
+  MAX_NAME_LENGTH: 255, // Mantido por retrocompatibilidade se necessário
   MAX_DESCRIPTION_LENGTH: 2000,
   MAX_ADDRESS_LENGTH: 255,
 } as const;
@@ -227,6 +242,7 @@ export const ERROR_MESSAGES = {
   INVALID_INPUT: 'Dados de entrada inválidos',
   INVALID_ZIPCODE: 'CEP inválido',
   INVALID_CPF: 'CPF inválido',
+  TERMS_NOT_ACCEPTED: 'Você deve aceitar os termos e condições para continuar.',
 
   // Genérico
   INTERNAL_ERROR: 'Erro interno do servidor',

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { VALIDATION, SECURITY } from '../../constants';
+import { isValidCPF, normalizePhone } from '../../utils/validation';
 
 /**
  * Schema para registro de novo usuário
@@ -8,10 +9,11 @@ export const registerSchema = z.object({
   body: z.object({
     name: z
       .string()
-      .min(3, 'Nome deve ter no mínimo 3 caracteres')
+      .trim()
+      .min(VALIDATION.NAME_MIN_LENGTH, `Nome deve ter no mínimo ${VALIDATION.NAME_MIN_LENGTH} caracteres`)
       .max(
-        VALIDATION.MAX_NAME_LENGTH,
-        `Nome deve ter no máximo ${VALIDATION.MAX_NAME_LENGTH} caracteres`,
+        VALIDATION.NAME_MAX_LENGTH,
+        `Nome deve ter no máximo ${VALIDATION.NAME_MAX_LENGTH} caracteres`,
       ),
     email: z
       .string()
@@ -31,8 +33,13 @@ export const registerSchema = z.object({
       ),
     document: z
       .string()
-      .regex(VALIDATION.CPF_REGEX, 'CPF deve conter apenas 11 dígitos')
+      .transform((val) => val.replace(/\D/g, ''))
+      .refine((val) => val.length === 11, 'CPF deve conter exatamente 11 dígitos')
+      .refine((val) => isValidCPF(val), 'CPF inválido')
       .optional(),
+    acceptedTerms: z
+      .boolean()
+      .refine((val) => val === true, 'Você deve aceitar os termos de privacidade para continuar'),
   }),
 });
 

@@ -21,10 +21,9 @@ export class Product {
   id!: string;
 
   @Index()
-  @Column()
+  @Column({ length: 255 })
   name!: string;
 
-  @Index()
   @Column({
     type: 'bigint',
     comment: 'Preço em centavos',

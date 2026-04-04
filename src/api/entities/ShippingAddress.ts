@@ -10,18 +10,18 @@ export class ShippingAddress {
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 
-  @Column()
+  @Column({ length: 255 })
   street!: string;
 
-  @Column()
+  @Column({ length: 100 })
   city!: string;
 
-  @Column()
+  @Column({ length: 2 })
   state!: string;
 
-  @Column()
+  @Column({ length: 10 })
   zip_code!: string;
 
-  @Column()
+  @Column({ length: 60, default: 'Brasil' })
   country!: string;
 }

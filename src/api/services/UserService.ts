@@ -21,13 +21,24 @@ export class UserService {
    * @param name - Nome do usuário
    * @param email - Email do usuário (será normalizado)
    * @param password - Senha em texto plano (será hasheada)
+   * @param acceptedTerms - Flag de aceite dos termos
    * @returns Dados do usuário criado (sem senha)
-   * @throws {AppError} 400 - Se o email já estiver em uso
+   * @throws {AppError} 400 - Se o email já estiver em uso ou termos não aceitos
    *
    * @example
-   * const user = await userService.register('João Silva', 'joao@example.com', 'senha123');
+   * const user = await userService.register('João Silva', 'joao@example.com', 'senha123', true);
    */
-  async register(name: string, email: string, password: string): Promise<UserResponse> {
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    acceptedTerms: boolean,
+  ): Promise<UserResponse> {
+    // Verifica aceite dos termos
+    if (!acceptedTerms) {
+      throw new AppError(ERROR_MESSAGES.TERMS_NOT_ACCEPTED, HTTP_STATUS.BAD_REQUEST);
+    }
+
     // Sanitiza os dados de entrada para prevenir XSS
     const sanitized = sanitizeUserData({ name, email });
 
@@ -45,6 +56,7 @@ export class UserService {
       email: sanitized.email,
       password_hash: passwordHash,
       isAdmin: false, // Usuários normais não são admin por padrão
+      accepted_terms: true,
     });
 
     await this.userRepository.save(user);
@@ -168,6 +180,7 @@ export class UserService {
       email: user.email,
       isAdmin: user.isAdmin,
       document: user.document,
+      acceptedTerms: user.accepted_terms,
     };
   }
 }

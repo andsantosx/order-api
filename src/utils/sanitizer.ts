@@ -123,19 +123,16 @@ export function sanitizeAddressData(data: {
   if (data.street !== undefined) {
     sanitized.street = truncate(
       normalizeSpaces(stripHtml(data.street)),
-      VALIDATION.MAX_ADDRESS_LENGTH,
+      VALIDATION.MAX_STREET_LENGTH,
     );
   }
 
   if (data.city !== undefined) {
-    sanitized.city = truncate(normalizeSpaces(stripHtml(data.city)), VALIDATION.MAX_ADDRESS_LENGTH);
+    sanitized.city = truncate(normalizeSpaces(stripHtml(data.city)), VALIDATION.MAX_CITY_LENGTH);
   }
 
   if (data.state !== undefined) {
-    sanitized.state = truncate(
-      normalizeSpaces(stripHtml(data.state)),
-      VALIDATION.MAX_ADDRESS_LENGTH,
-    );
+    sanitized.state = truncate(normalizeSpaces(stripHtml(data.state)), VALIDATION.STATE_LENGTH);
   }
 
   if (data.zipCode !== undefined) {
@@ -143,10 +140,7 @@ export function sanitizeAddressData(data: {
   }
 
   if (data.country !== undefined) {
-    sanitized.country = truncate(
-      normalizeSpaces(stripHtml(data.country)),
-      VALIDATION.MAX_ADDRESS_LENGTH,
-    );
+    sanitized.country = truncate(normalizeSpaces(stripHtml(data.country)), 60);
   }
 
   return sanitized;

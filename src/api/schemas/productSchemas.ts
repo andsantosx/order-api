@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import { VALIDATION } from '../../constants';
 import { imageUrlSchema } from '../../utils/validators';
 
 export const createProductSchema = z.object({
   body: z.object({
-    name: z.string().min(1, 'Nome é obrigatório'),
+    name: z
+      .string()
+      .min(VALIDATION.PRODUCT_NAME_MIN_LENGTH, 'Nome é obrigatório')
+      .max(VALIDATION.PRODUCT_NAME_MAX_LENGTH, `Nome deve ter no máximo ${VALIDATION.PRODUCT_NAME_MAX_LENGTH} caracteres`),
     price_cents: z.number().int().positive('Preço deve ser um número positivo'),
-    description: z.string().optional(),
+    description: z.string().max(VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH, `Descrição deve ter no máximo ${VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`).optional(),
     currency: z.string().length(3, 'Moeda deve ter 3 caracteres (ex: BRL)'),
     categoryId: z.number().int().positive('ID da categoria inválido'),
     brandId: z.number().int().positive('ID da marca inválido').optional(),
@@ -16,8 +20,8 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = z.object({
   body: z.object({
-    name: z.string().min(1).optional(),
-    description: z.string().optional(),
+    name: z.string().min(1).max(VALIDATION.PRODUCT_NAME_MAX_LENGTH).optional(),
+    description: z.string().max(VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH).optional(),
     price_cents: z.number().int().positive().optional(),
     currency: z.string().length(3).optional(),
     categoryId: z.number().int().positive().optional(),

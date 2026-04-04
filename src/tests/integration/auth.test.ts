@@ -18,6 +18,7 @@ describe('Auth Integration', () => {
     password: 'password123',
     confirmPassword: 'password123', // Assuming validation requires this
     document: '12345678901', // Example valid document
+    acceptedTerms: true,
   };
 
   it('should register a new user', async () => {

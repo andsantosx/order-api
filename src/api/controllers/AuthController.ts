@@ -9,8 +9,8 @@ export class AuthController {
    * Espera receber name, email e password no corpo da requisição.
    */
   async register(req: Request, res: Response, _next: NextFunction) {
-    const { name, email, password } = req.body;
-    const user = await this.userService.register(name || 'Cliente', email, password);
+    const { name, email, password, acceptedTerms } = req.body;
+    const user = await this.userService.register(name || 'Cliente', email, password, acceptedTerms);
     res.status(201).json(user);
   }
 
