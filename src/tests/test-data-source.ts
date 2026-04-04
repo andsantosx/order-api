@@ -12,6 +12,7 @@ import { UserAddress } from '../api/entities/UserAddress';
 import { Wishlist } from '../api/entities/Wishlist';
 import { ContactMessage } from '../api/entities/ContactMessage';
 import { Brand } from '../api/entities/Brand';
+import { AdminAuditLog } from '../api/entities/AdminAuditLog';
 
 export const TestDataSource = new DataSource({
   type: 'postgres',
@@ -35,6 +36,7 @@ export const TestDataSource = new DataSource({
     Wishlist,
     ContactMessage,
     Brand,
+    AdminAuditLog,
   ],
   synchronize: true,
   dropSchema: true,

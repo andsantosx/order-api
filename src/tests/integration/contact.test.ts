@@ -15,9 +15,7 @@ describe('Contact Integration', () => {
     connection = TestDataSource;
   });
 
-  afterAll(async () => {
-    await connection.destroy();
-  });
+  // Relies on global setup.ts for teardown
 
   it('should create contact message with valid phone', async () => {
     const response = await request(app).post('/api/contact').send({

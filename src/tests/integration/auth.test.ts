@@ -17,7 +17,8 @@ describe('Auth Integration', () => {
     email: 'test@example.com',
     password: 'Password123!',
     confirmPassword: 'Password123!', // Assuming validation requires this
-    document: '12345678901', // Example valid document
+    document: '12345678909', // Valid mock format CPF used in tests
+    phone: '11999999999',
     acceptedTerms: true,
   };
 

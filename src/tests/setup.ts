@@ -1,6 +1,8 @@
 import { TestDataSource } from './test-data-source';
 import { DataSource } from 'typeorm';
 
+jest.setTimeout(60000); // 60 seconds for remote DB setup operations
+
 beforeAll(async () => {
   // 1. Create database if it doesn't exist
   // We connect to 'postgres' database first to run the CREATE DATABASE command

@@ -30,7 +30,7 @@ describe('Order Integration', () => {
 
     // Fetch seeded data
     // Find by name since slug is not a column in Product entity
-    const productByNam = await connection.getRepository(Product).findOne({
+    const productByNam = await connection.getRepository('Product').findOne({
       where: { name: 'Nike Air Force 1' },
     });
 
@@ -40,7 +40,7 @@ describe('Order Integration', () => {
 
     // Find a size that this product has
     // The seed adds '38', '39', '40', '41', '42' to Nike Air Force 1
-    const size = await connection.getRepository(Size).findOneBy({ name: '38' });
+    const size = await connection.getRepository('Size').findOneBy({ name: '38' });
     if (!size) throw new Error('Seeded size not found');
     sizeId = size.id;
   });
@@ -113,7 +113,7 @@ describe('Order Integration', () => {
   it('should update user accepted_terms status on order creation', async () => {
     // 1. Check current status of a user (jane@example.com is seeded with accepted_terms=false by default)
     const user = await connection
-      .getRepository(Product)
+      .getRepository('User')
       .query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
     // Note: query returns array. If migration ran, accepted_terms is false.
 
@@ -145,7 +145,7 @@ describe('Order Integration', () => {
 
     // 2. Verify status in DB
     const updatedUser = await connection
-      .getRepository(Product)
+      .getRepository('User')
       .query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
     expect(updatedUser[0].accepted_terms).toBe(true);
   });
