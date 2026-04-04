@@ -51,7 +51,7 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
 
     if (!data.success) {
       const errorCodes = data['error-codes'] || [];
-      log.warn(`Falha na validação do reCAPTCHA v2: ${JSON.stringify(errorCodes)} | IP: ${req.ip}`);
+      log.warn(`Falha na validação do reCAPTCHA v2. Resposta Completa: ${JSON.stringify(data)} | IP: ${req.ip}`);
 
       res.status(400).json({
         success: false,
