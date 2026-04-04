@@ -10,7 +10,10 @@ export const registerSchema = z.object({
     name: z
       .string()
       .trim()
-      .min(VALIDATION.NAME_MIN_LENGTH, `Nome deve ter no mínimo ${VALIDATION.NAME_MIN_LENGTH} caracteres`)
+      .min(
+        VALIDATION.NAME_MIN_LENGTH,
+        `Nome deve ter no mínimo ${VALIDATION.NAME_MIN_LENGTH} caracteres`,
+      )
       .max(
         VALIDATION.NAME_MAX_LENGTH,
         `Nome deve ter no máximo ${VALIDATION.NAME_MAX_LENGTH} caracteres`,

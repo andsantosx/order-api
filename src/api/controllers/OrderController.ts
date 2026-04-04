@@ -33,7 +33,9 @@ export class OrderController {
    */
   async getOne(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
-    const order = await this.orderService.getOne(id as string);
+    const userId = req.user?.userId;
+    const isAdmin = req.user?.isAdmin || false;
+    const order = await this.orderService.getOne(id as string, userId, isAdmin);
     res.json(order);
   }
 
@@ -42,7 +44,15 @@ export class OrderController {
    * Espera receber: guestEmail, items e shippingAddress.
    */
   async create(req: Request, res: Response, _next: NextFunction) {
-    const { guestName, guestEmail, guestCpf, items, shippingAddress, acceptedTerms } = req.body;
+    const {
+      guestName,
+      guestEmail,
+      guestCpf,
+      items,
+      shippingAddress,
+      acceptedTerms,
+      idempotencyKey,
+    } = req.body;
     const userId = req.user?.userId;
     const order = await this.orderService.create(
       userId,
@@ -52,6 +62,7 @@ export class OrderController {
       items,
       shippingAddress,
       acceptedTerms,
+      idempotencyKey,
     );
     res.status(201).json(order);
   }
@@ -62,7 +73,8 @@ export class OrderController {
   async updateStatus(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
     const { status } = req.body;
-    const order = await this.orderService.updateStatus(id as string, status);
+    const isAdmin = req.user?.isAdmin || false;
+    const order = await this.orderService.updateStatus(id as string, status, isAdmin);
     res.json(order);
   }
 

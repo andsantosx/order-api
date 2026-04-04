@@ -64,13 +64,6 @@ export const isValidZipCode = (zipCode: string): boolean => {
 };
 
 /**
- * Validates CPF format (basic format check)
- */
-export const isValidCPF = (cpf: string): boolean => {
-  return VALIDATION.CPF_REGEX.test(cpf);
-};
-
-/**
  * Validates if a string is a valid HTTP(S) URL
  */
 export const isValidHttpUrl = (url: string): boolean => {

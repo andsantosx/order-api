@@ -11,6 +11,7 @@ import {
 import { User } from './User';
 import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
+import { Money } from '../domain/value-objects/Money';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -81,4 +82,39 @@ export class Order {
 
   @OneToMany(() => ShippingAddress, (address) => address.order, { cascade: true })
   shippingAddress!: ShippingAddress[];
+
+  /**
+   * Verifica se a transição para um novo status é permitida.
+   * Centraliza a lógica da Máquina de Estados do pedido.
+   */
+  canTransitionTo(newStatus: OrderStatus): boolean {
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELED],
+      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.REFUNDED, OrderStatus.CANCELED],
+      [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
+      [OrderStatus.CANCELED]: [], // Terminal
+      [OrderStatus.REFUNDED]: [], // Terminal
+    };
+
+    return validTransitions[this.status].includes(newStatus);
+  }
+
+  /**
+   * Sanitiza a saída do pedido para evitar vazamento de chaves internas.
+   */
+  toJSON() {
+    const { idempotency_key, payment_id, ...order } = this;
+    return {
+      ...order,
+      payment_id: payment_id ? `****${payment_id.slice(-4)}` : undefined,
+    };
+  }
+
+  /**
+   * Domain Getter - Retorna o objeto Money
+   */
+  get money(): Money {
+    return new Money(this.total_amount);
+  }
 }

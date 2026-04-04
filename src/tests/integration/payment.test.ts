@@ -28,6 +28,7 @@ describe('Payment Integration', () => {
       password: 'password123',
       confirmPassword: 'password123',
       document: '12345678901',
+      acceptedTerms: true,
     });
     const loginRes = await request(app).post('/api/auth/login').send({
       email: 'pay@example.com',
@@ -65,10 +66,11 @@ describe('Payment Integration', () => {
         shippingAddress: {
           street: 'S',
           city: 'C',
-          state: 'S',
+          state: 'ST',
           zipCode: '12345-000',
-          country: 'B',
+          country: 'BR',
         },
+        acceptedTerms: true,
       });
     orderId = orderRes.body.id;
   });

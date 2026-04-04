@@ -1,9 +1,4 @@
 /**
- * Tipos concretos para integração com Mercado Pago
- * Baseados na API real do Mercado Pago
- */
-
-/**
  * Dados do pagador
  */
 export interface PayerData {
@@ -14,6 +9,29 @@ export interface PayerData {
     type: string;
     number: string;
   };
+  address?: {
+    zip_code?: string;
+    street_name?: string;
+    street_number?: string;
+    city_name?: string;
+    state_id?: string;
+  };
+  phone?: {
+    area_code?: string;
+    number?: string;
+  };
+}
+
+/**
+ * Item da compra
+ */
+export interface PaymentItem {
+  id: string;
+  title: string;
+  description?: string;
+  category_id?: string;
+  quantity: number;
+  unit_price: number;
 }
 
 /**
@@ -23,7 +41,19 @@ export interface PaymentRequestData {
   transaction_amount: number;
   description: string;
   payment_method_id: string;
+  external_reference?: string;
+  notification_url?: string;
   payer: PayerData;
+  additional_info?: {
+    items: PaymentItem[];
+    payer?: Partial<PayerData>;
+  };
+  back_urls?: {
+    success: string;
+    failure: string;
+    pending: string;
+  };
+  auto_return?: 'approved' | 'all';
   installments?: number;
   token?: string;
   issuer_id?: number;
@@ -31,7 +61,7 @@ export interface PaymentRequestData {
     order_id: string;
   };
   // Campo usado pelo frontend que pode conter dados adicionais
-  formData?: PaymentRequestData;
+  formData?: any;
 }
 
 /**
@@ -43,7 +73,7 @@ export interface MercadoPagoError extends Error {
 }
 
 /**
- * Query parameters do webhook (Express ParsedQs compatible)
+ * Query parameters do webhook
  */
 export interface WebhookQuery {
   id?: string;

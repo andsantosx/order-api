@@ -3,6 +3,8 @@ import { BrandController } from '../controllers/BrandController';
 import { validate } from '../middlewares/validate';
 import { createBrandSchema, updateBrandSchema } from '../schemas/brandSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { adminMiddleware } from '../middlewares/adminMiddleware';
+import { auditMiddleware } from '../middlewares/auditMiddleware';
 
 const router = Router();
 const brandController = new BrandController();
@@ -16,15 +18,25 @@ router.get('/slug/:slug', brandController.getBySlug.bind(brandController));
 router.post(
   '/',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
   validate(createBrandSchema),
   brandController.create.bind(brandController),
 );
 router.put(
   '/:id',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
   validate(updateBrandSchema),
   brandController.update.bind(brandController),
 );
-router.delete('/:id', authMiddleware, brandController.delete.bind(brandController));
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
+  brandController.delete.bind(brandController),
+);
 
 export default router;

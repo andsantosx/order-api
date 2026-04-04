@@ -13,6 +13,7 @@ import { log } from '../../config/logger';
 import { executeInTransaction } from '../../utils/transaction';
 import { sanitizeAddressData } from '../../utils/sanitizer';
 import { isValidZipCode } from '../../utils/validators';
+import { CPF } from '../domain/value-objects/CPF';
 import { ProductSize } from '../entities/ProductSize';
 import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 
@@ -127,20 +128,27 @@ export class OrderService {
   }
 
   /**
-   * Busca um pedido pelo ID
+   * Busca um pedido específico
    *
    * @param id - ID do pedido
-   * @returns Pedido com todas as relações
-   * @throws {AppError} 404 - Se o pedido não for encontrado
+   * @param userId - ID do usuário solicitante (opcional)
+   * @param isAdmin - Se o solicitante é admin (opcional)
+   * @throws {AppError} 403 - Se o usuário não for dono nem admin
    */
-  async getOne(id: string) {
+  async getOne(id: string, userId?: string, isAdmin: boolean = false) {
     const order = await this.orderRepository.findOne({
       where: { id },
-      relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
+      relations: ['user', 'items', 'items.product', 'shippingAddress'],
     });
 
     if (!order) {
       throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Se no contexto de um usuário logado, verifica se é o dono ou admin
+    // Pedidos de guests (sem user_id) só podem ser vistos por admins ou via token de convidado (TODO)
+    if (userId && !isAdmin && order.user?.id !== userId) {
+      throw new AppError(ERROR_MESSAGES.ORDER_UNAUTHORIZED, HTTP_STATUS.FORBIDDEN);
     }
 
     log.info('Pedido consultado', { orderId: id });
@@ -155,17 +163,45 @@ export class OrderService {
    * @returns Pedido atualizado
    * @throws {AppError} 404 - Se o pedido não for encontrado
    */
-  async updateStatus(id: string, status: OrderStatus) {
+  /**
+   * Atualiza o status de um pedido
+   *
+   * @param id - ID do pedido
+   * @param status - Novo status
+   * @param requesterIsAdmin - Se quem está solicitando é admin
+   * @returns Pedido atualizado
+   * @throws {AppError} 404 - Se o pedido não for encontrado
+   * @throws {AppError} 400 - Transição inválida
+   * @throws {AppError} 403 - Não autorizado
+   */
+  async updateStatus(id: string, status: OrderStatus, requesterIsAdmin: boolean = false) {
     const order = await this.orderRepository.findOneBy({ id });
 
     if (!order) {
       throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
+    // Apenas admins podem atualizar status manualmente
+    // (Exceto processos internos ou automáticos que passem admin=true)
+    if (!requesterIsAdmin) {
+      throw new AppError(
+        'Apenas administradores podem alterar o status do pedido',
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
+    // Valida Máquina de Estados (Domain Layer)
+    if (!order.canTransitionTo(status)) {
+      throw new AppError(
+        `Transição de status inválida: Não é possível mudar de ${order.status} para ${status}`,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     order.status = status;
     await this.orderRepository.save(order);
 
-    log.info('Status do pedido atualizado', { orderId: id, newStatus: status });
+    log.info('Status do pedido atualizado pelo admin', { orderId: id, newStatus: status });
     return order;
   }
 
@@ -198,9 +234,17 @@ export class OrderService {
     items: OrderItemInput[],
     shippingAddressData: ShippingAddressData,
     acceptedTerms: boolean,
+    idempotencyKey?: string,
   ) {
     // 1. Validações iniciais
-    this.validateOrderInput(userId, guestEmail, shippingAddressData, items, acceptedTerms);
+    this.validateOrderInput(
+      userId,
+      guestEmail,
+      guestCpf,
+      shippingAddressData,
+      items,
+      acceptedTerms,
+    );
 
     // 2. Identifica ou cria usuário
     const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf);
@@ -211,10 +255,16 @@ export class OrderService {
       await this.validateAndCalculateOrder(items);
 
     // 4. Verifica duplicação (idempotência)
-    const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount);
+    const existingOrder = await this.checkIdempotency(
+      user.id,
+      finalEmail,
+      totalAmount,
+      idempotencyKey,
+    );
     if (existingOrder) {
       log.info('Pedido duplicado detectado - retornando pedido existente', {
         orderId: existingOrder.id,
+        idempotencyKey,
       });
       return this.getOne(existingOrder.id);
     }
@@ -229,6 +279,7 @@ export class OrderService {
       totalAmount,
       shippingCost,
       shippingAddressData,
+      idempotencyKey,
     );
 
     // 6. Atualiza aceite de termos do usuário se necessário
@@ -259,6 +310,7 @@ export class OrderService {
   private validateOrderInput(
     userId: string | undefined,
     guestEmail: string | undefined,
+    guestCpf: string | undefined,
     shippingAddress: ShippingAddressData,
     items: OrderItemInput[],
     acceptedTerms: boolean,
@@ -266,6 +318,11 @@ export class OrderService {
     // Valida aceite dos termos
     if (!acceptedTerms) {
       throw new AppError(ERROR_MESSAGES.TERMS_NOT_ACCEPTED, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Valida CPF se fornecido
+    if (guestCpf) {
+      new CPF(guestCpf); // O construtor valida e lança AppError se inválido
     }
 
     // Valida CEP
@@ -441,15 +498,13 @@ export class OrderService {
     const existingUser = await this.userRepository.findOneBy({ email });
 
     if (existingUser) {
-      // Atualiza CPF se fornecido e não existir
-      if (cpf && !existingUser.document) {
-        existingUser.document = cpf;
-        await this.userRepository.save(existingUser);
-      }
-      return existingUser;
+      throw new AppError(
+        'Este e-mail já está cadastrado. Por favor, faça login para continuar ou use outro e-mail.',
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
-    // Cria nova conta automaticamente
+    // Cria nova conta automaticamente (auto-signup seguro)
     return await this.createGuestAccount(email, name, cpf);
   }
 
@@ -519,7 +574,15 @@ export class OrderService {
     userId: string,
     email: string | undefined,
     totalAmount: number,
+    idempotencyKey?: string,
   ): Promise<Order | null> {
+    // 1. Se o cliente enviou uma chave, ela é soberana
+    if (idempotencyKey) {
+      const order = await this.orderRepository.findOneBy({ idempotency_key: idempotencyKey });
+      if (order) return order;
+    }
+
+    // 2. Fallback: Verificação heurística de duplicata recente (proteção extra)
     const threshold = new Date(Date.now() - ORDER.IDEMPOTENCY_WINDOW_SECONDS * 1000);
 
     const queryBuilder = this.orderRepository
@@ -563,6 +626,7 @@ export class OrderService {
     totalAmount: number,
     shippingCost: number,
     shippingAddressData: ShippingAddressData,
+    idempotencyKey?: string,
   ): Promise<Order> {
     return await executeInTransaction(async (manager) => {
       // Cria items do pedido
@@ -575,7 +639,7 @@ export class OrderService {
         items: orderItems,
         total_amount: totalAmount,
         currency: MONEY.DEFAULT_CURRENCY,
-        idempotency_key: uuidv4(),
+        idempotency_key: idempotencyKey || uuidv4(),
         status: OrderStatus.PENDING,
         accepted_terms: true,
       });

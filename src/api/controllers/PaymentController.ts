@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/PaymentService';
-import { WebhookQuery } from '../../types/payment';
+import { WebhookQuery, WebhookBody } from '../../types/payment';
 import { log } from '../../config/logger';
 
 export class PaymentController {
   private paymentService = new PaymentService();
 
+  /**
+   * Processa um novo pagamento
+   */
   async processPayment(req: Request, res: Response, next: NextFunction) {
     try {
       const { orderId, ...paymentData } = req.body;
@@ -16,44 +19,40 @@ export class PaymentController {
     }
   }
 
+  /**
+   * Trata notificações de webhook do Mercado Pago
+   * Delegando a validação de assinatura e processamento ao Service
+   */
   async handleWebhook(req: Request, res: Response, _next: NextFunction) {
     try {
-      const signature = (req.headers['x-signature'] as string) || '';
-      const requestId = (req.headers['x-request-id'] as string) || '';
+      const xSignature = req.headers['x-signature'] as string;
+      const xRequestId = req.headers['x-request-id'] as string;
+      
+      const query = req.query as unknown as WebhookQuery;
+      const body = req.body as WebhookBody;
 
-      // Validação de assinatura
-      if (!this.isValidSignature(signature, requestId, req.query as WebhookQuery)) {
-        log.warn('Webhook com assinatura inválida recebido', { signature, requestId });
-        // Retornamos 200/403 dependendo da estratégia, aqui 403 para negar
-        return res.status(403).send('Invalid signature');
-      }
+      log.info('Requisição de webhook recebida', { 
+        topic: query.topic || query.type || body.type,
+        hasSignature: !!xSignature 
+      });
 
-      const query = req.query;
-      const body = req.body;
+      // O Service agora cuida da verificação HMAC e processamento
+      await this.paymentService.receiveWebhook(
+        query, 
+        body, 
+        xSignature, 
+        xRequestId
+      );
 
-      await this.paymentService.receiveWebhook(query as WebhookQuery, body);
-
+      // Mercado Pago exige resposta 200/201 para não reenviar
       return res.status(200).send('OK');
     } catch (error) {
-      log.error('Webhook Error:', { error });
+      log.error('Erro no controller de webhook:', { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      // Mesmo com erro interno, retornamos 200 para o MP parar de tentar se for erro de lógica
+      // Se for erro crítico, o ideal é logar e monitorar
       return res.status(200).send('OK');
     }
-  }
-
-  /**
-   * Valida a assinatura do webhook do Mercado Pago
-   * NOTA: Em produção valida-se o hash HMAC-SHA256 usando o MP_WEBHOOK_SECRET
-   */
-  private isValidSignature(_signature: string, _requestId: string, _query: WebhookQuery): boolean {
-    // Se não estivermos em produção ou se a env não estiver definida, podemos pular (CUIDADO)
-    if (process.env.NODE_ENV !== 'production') return true;
-
-    // TODO: Implementar validação real com crypto.createHmac
-    // const secret = process.env.MP_WEBHOOK_SECRET;
-    // ... lógica de hash ...
-
-    // Por enquanto retorna true para não quebrar o fluxo dev,
-    // mas a estrutura está pronta para a lógica real.
-    return true;
   }
 }

@@ -14,6 +14,7 @@ import { Brand } from './Brand';
 import { ProductImage } from './ProductImage';
 import { ProductSize } from './ProductSize';
 import { Wishlist } from './Wishlist';
+import { Money } from '../domain/value-objects/Money';
 
 @Entity('products')
 export class Product {
@@ -63,4 +64,11 @@ export class Product {
   @Index()
   @CreateDateColumn()
   created_at!: Date;
+
+  /**
+   * Domain Getter - Retorna o objeto Money para manipulação segura
+   */
+  get money(): Money {
+    return new Money(this.price_cents);
+  }
 }

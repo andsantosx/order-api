@@ -7,9 +7,18 @@ export const createProductSchema = z.object({
     name: z
       .string()
       .min(VALIDATION.PRODUCT_NAME_MIN_LENGTH, 'Nome é obrigatório')
-      .max(VALIDATION.PRODUCT_NAME_MAX_LENGTH, `Nome deve ter no máximo ${VALIDATION.PRODUCT_NAME_MAX_LENGTH} caracteres`),
+      .max(
+        VALIDATION.PRODUCT_NAME_MAX_LENGTH,
+        `Nome deve ter no máximo ${VALIDATION.PRODUCT_NAME_MAX_LENGTH} caracteres`,
+      ),
     price_cents: z.number().int().positive('Preço deve ser um número positivo'),
-    description: z.string().max(VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH, `Descrição deve ter no máximo ${VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`).optional(),
+    description: z
+      .string()
+      .max(
+        VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH,
+        `Descrição deve ter no máximo ${VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`,
+      )
+      .optional(),
     currency: z.string().length(3, 'Moeda deve ter 3 caracteres (ex: BRL)'),
     categoryId: z.number().int().positive('ID da categoria inválido'),
     brandId: z.number().int().positive('ID da marca inválido').optional(),

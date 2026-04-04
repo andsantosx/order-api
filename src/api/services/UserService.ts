@@ -7,6 +7,8 @@ import { env } from '../../config/env';
 import { UserResponse } from '../../types';
 import { sanitizeUserData } from '../../utils/sanitizer';
 import { SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { CPF } from '../domain/value-objects/CPF';
+import { Password as PasswordVO } from '../domain/value-objects/Password';
 
 /**
  * Service responsável pela lógica de negócio relacionada a usuários
@@ -33,10 +35,19 @@ export class UserService {
     email: string,
     password: string,
     acceptedTerms: boolean,
+    document?: string,
   ): Promise<UserResponse> {
     // Verifica aceite dos termos
     if (!acceptedTerms) {
       throw new AppError(ERROR_MESSAGES.TERMS_NOT_ACCEPTED, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Valida complexidade da senha via Value Object (Domain Layer)
+    new PasswordVO(password);
+
+    // Valida CPF se fornecido
+    if (document) {
+      new CPF(document); // O construtor valida e lança AppError se inválido
     }
 
     // Sanitiza os dados de entrada para prevenir XSS
@@ -56,6 +67,7 @@ export class UserService {
       email: sanitized.email,
       password_hash: passwordHash,
       isAdmin: false, // Usuários normais não são admin por padrão
+      document: document || undefined,
       accepted_terms: true,
     });
 
@@ -80,8 +92,16 @@ export class UserService {
     // Normaliza o email para busca
     const sanitized = sanitizeUserData({ email });
 
-    const user = await this.userRepository.findOneBy({ email: sanitized.email });
+    // Busca usuário explicitando a seleção do hash da senha (que é oculta por padrão)
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password_hash')
+      .where('user.email = :email', { email: sanitized.email })
+      .getOne();
+
     if (!user) {
+      // Artificial delay to prevent brute-force
+      await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
       // Mensagem genérica para não revelar se o email existe
       throw new AppError(ERROR_MESSAGES.INVALID_CREDENTIALS, HTTP_STATUS.UNAUTHORIZED);
     }
@@ -89,6 +109,8 @@ export class UserService {
     // Verifica se a senha é válida
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
+      // Artificial delay to prevent brute-force
+      await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
       throw new AppError(ERROR_MESSAGES.INVALID_CREDENTIALS, HTTP_STATUS.UNAUTHORIZED);
     }
 
@@ -132,11 +154,16 @@ export class UserService {
    */
   async updateProfile(
     userId: string,
-    data: { name?: string; email?: string; password?: string },
+    data: { name?: string; email?: string; password?: string; document?: string },
   ): Promise<UserResponse> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
       throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Valida CPF se fornecido
+    if (data.document) {
+      new CPF(data.document); // O construtor valida e lança AppError se inválido
     }
 
     // Sanitiza os dados de entrada
@@ -158,7 +185,21 @@ export class UserService {
 
     // Atualiza senha se fornecida
     if (data.password) {
+      new PasswordVO(data.password);
       user.password_hash = await bcrypt.hash(data.password, SECURITY.BCRYPT_SALT_ROUNDS);
+    }
+
+    // Atualiza documento se fornecido
+    if (data.document) {
+      // Verifica se já existe outro usuário com este CPF
+      const existingUser = await this.userRepository.findOneBy({ document: data.document });
+      if (existingUser && existingUser.id !== userId) {
+        throw new AppError(
+          'Este CPF já está sendo utilizado por outra conta.',
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      user.document = data.document;
     }
 
     await this.userRepository.save(user);
@@ -174,12 +215,18 @@ export class UserService {
    * @returns Dados do usuário sem informações sensíveis
    */
   private getSanitizedUserOutput(user: User): UserResponse {
+    let maskedDocument = user.document;
+    if (maskedDocument && maskedDocument.length >= 11) {
+      const doc = maskedDocument.replace(/\D/g, '');
+      maskedDocument = `***.***.***-${doc.slice(-2)}`;
+    }
+
     return {
       id: user.id,
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
-      document: user.document,
+      document: maskedDocument,
       acceptedTerms: user.accepted_terms,
     };
   }

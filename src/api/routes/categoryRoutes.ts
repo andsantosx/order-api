@@ -3,6 +3,8 @@ import { CategoryController } from '../controllers/CategoryController';
 import { validate } from '../middlewares/validate';
 import { createCategorySchema, updateCategorySchema } from '../schemas/categorySchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { adminMiddleware } from '../middlewares/adminMiddleware';
+import { auditMiddleware } from '../middlewares/auditMiddleware';
 
 const router = Router();
 const categoryController = new CategoryController();
@@ -16,15 +18,25 @@ router.get('/slug/:slug', categoryController.getBySlug.bind(categoryController))
 router.post(
   '/',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
   validate(createCategorySchema),
   categoryController.create.bind(categoryController),
 );
 router.put(
   '/:id',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
   validate(updateCategorySchema),
   categoryController.update.bind(categoryController),
 );
-router.delete('/:id', authMiddleware, categoryController.delete.bind(categoryController));
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
+  categoryController.delete.bind(categoryController),
+);
 
 export default router;

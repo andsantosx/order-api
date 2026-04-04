@@ -3,6 +3,8 @@ import { OrderController } from '../controllers/OrderController';
 import { validate } from '../middlewares/validate';
 import { createOrderSchema, updateStatusSchema } from '../schemas/orderSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { adminMiddleware } from '../middlewares/adminMiddleware';
+import { auditMiddleware } from '../middlewares/auditMiddleware';
 import { optionalAuthMiddleware } from '../middlewares/optionalAuthMiddleware';
 import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 import { orderLimiter } from '../../config/rateLimits';
@@ -25,10 +27,18 @@ router.post(
 router.put(
   '/:id/status',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
   validate(updateStatusSchema),
   orderController.updateStatus.bind(orderController),
 );
-router.post('/:id/refund', authMiddleware, orderController.refund.bind(orderController));
+router.post(
+  '/:id/refund',
+  authMiddleware,
+  adminMiddleware,
+  auditMiddleware,
+  orderController.refund.bind(orderController),
+);
 router.post('/:id/cancel', authMiddleware, orderController.cancel.bind(orderController));
 
 export default router;

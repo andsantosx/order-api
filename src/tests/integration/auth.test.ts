@@ -15,8 +15,8 @@ describe('Auth Integration', () => {
   const testUser = {
     name: 'Test User',
     email: 'test@example.com',
-    password: 'password123',
-    confirmPassword: 'password123', // Assuming validation requires this
+    password: 'Password123!',
+    confirmPassword: 'Password123!', // Assuming validation requires this
     document: '12345678901', // Example valid document
     acceptedTerms: true,
   };
@@ -24,6 +24,7 @@ describe('Auth Integration', () => {
   it('should register a new user', async () => {
     const response = await request(app).post('/api/auth/register').send(testUser);
 
+    if (response.status !== 201) console.error('Register Error:', response.body);
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('id');
     expect(response.body.email).toBe(testUser.email);
@@ -36,6 +37,7 @@ describe('Auth Integration', () => {
       password: testUser.password,
     });
 
+    if (response.status !== 200) console.error('Login Error:', response.body);
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
     expect(response.body).toHaveProperty('user');

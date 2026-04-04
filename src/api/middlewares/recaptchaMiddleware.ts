@@ -4,12 +4,12 @@ import { log } from '../../config/logger';
 
 /**
  * Middleware para validar o Google reCAPTCHA v2 (Invisível)
- * 
+ *
  * O token deve ser enviado no cabeçalho 'x-recaptcha-token' ou no corpo da requisição como 'recaptchaToken'.
  */
 export const recaptchaMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-  // Ignorar validação em ambiente de teste se necessário (opcional)
-  if (env.NODE_ENV === 'test') {
+  // Ignorar validação em ambiente de teste
+  if (process.env.NODE_ENV === 'test' || env.NODE_ENV === 'test') {
     return next();
   }
 
@@ -51,7 +51,9 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
 
     if (!data.success) {
       const errorCodes = data['error-codes'] || [];
-      log.warn(`Falha na validação do reCAPTCHA v2. Resposta Completa: ${JSON.stringify(data)} | IP: ${req.ip}`);
+      log.warn(
+        `Falha na validação do reCAPTCHA v2. Resposta Completa: ${JSON.stringify(data)} | IP: ${req.ip}`,
+      );
 
       res.status(400).json({
         success: false,
@@ -72,7 +74,9 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
     if (error.name === 'AbortError') {
       log.error('Timeout ao verificar reCAPTCHA com a API do Google.');
     } else {
-      log.error(`Erro ao verificar reCAPTCHA v2: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      log.error(
+        `Erro ao verificar reCAPTCHA v2: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+      );
     }
 
     res.status(500).json({

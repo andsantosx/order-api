@@ -14,6 +14,7 @@ import { UserAddress } from './api/entities/UserAddress';
 import { Wishlist } from './api/entities/Wishlist';
 import { ContactMessage } from './api/entities/ContactMessage';
 import { Brand } from './api/entities/Brand';
+import { AdminAuditLog } from './api/entities/AdminAuditLog';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -38,6 +39,7 @@ export const AppDataSource = new DataSource({
     Wishlist,
     ContactMessage,
     Brand,
+    AdminAuditLog,
   ],
   migrations: [env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts'],
   subscribers: [],

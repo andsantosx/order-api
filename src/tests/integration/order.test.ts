@@ -70,7 +70,7 @@ describe('Order Integration', () => {
       .send(orderData);
 
     if (response.status !== 201) {
-      // console.log('Order Creation Failed:', response.body);
+       console.log('Order Creation Failed:', JSON.stringify(response.body, null, 2));
     }
 
     expect(response.status).toBe(201);
@@ -110,9 +110,11 @@ describe('Order Integration', () => {
 
   it('should update user accepted_terms status on order creation', async () => {
     // 1. Check current status of a user (jane@example.com is seeded with accepted_terms=false by default)
-    const user = await connection.getRepository(Product).query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
+    const user = await connection
+      .getRepository(Product)
+      .query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
     // Note: query returns array. If migration ran, accepted_terms is false.
-    
+
     const loginRes = await request(app).post('/api/auth/login').send({
       email: 'jane@example.com',
       password: 'password123',
@@ -121,7 +123,13 @@ describe('Order Integration', () => {
 
     const orderData = {
       items: [{ productId: productId, quantity: 1, size: sizeId }],
-      shippingAddress: { street: 'Jane St', city: 'City', state: 'ST', zipCode: '12345-678', country: 'Country' },
+      shippingAddress: {
+        street: 'Jane St',
+        city: 'City',
+        state: 'ST',
+        zipCode: '12345-678',
+        country: 'Country',
+      },
       acceptedTerms: true,
     };
 
@@ -131,9 +139,11 @@ describe('Order Integration', () => {
       .send(orderData);
 
     expect(response.status).toBe(201);
-    
+
     // 2. Verify status in DB
-    const updatedUser = await connection.getRepository(Product).query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
+    const updatedUser = await connection
+      .getRepository(Product)
+      .query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
     expect(updatedUser[0].accepted_terms).toBe(true);
   });
 });

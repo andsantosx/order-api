@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/ProductController';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { adminMiddleware } from '../middlewares/adminMiddleware';
+import { auditMiddleware } from '../middlewares/auditMiddleware';
 import { validate } from '../middlewares/validate';
 import { createProductSchema, updateProductSchema } from '../schemas/productSchemas';
 
@@ -16,15 +18,25 @@ router.get('/:id', productController.getOne.bind(productController));
 router.post(
   '/',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware('CREATE_PRODUCT'),
   validate(createProductSchema),
   productController.create.bind(productController),
 );
 router.put(
   '/:id',
   authMiddleware,
+  adminMiddleware,
+  auditMiddleware('UPDATE_PRODUCT'),
   validate(updateProductSchema),
   productController.update.bind(productController),
 );
-router.delete('/:id', authMiddleware, productController.delete.bind(productController));
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminMiddleware,
+  auditMiddleware('DELETE_PRODUCT'),
+  productController.delete.bind(productController),
+);
 
 export default router;

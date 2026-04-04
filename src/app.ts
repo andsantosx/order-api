@@ -13,6 +13,7 @@ import categoryRoutes from './api/routes/categoryRoutes';
 import sizeRoutes from './api/routes/sizeRoutes';
 import imageRoutes from './api/routes/imageRoutes';
 import { errorHandler } from './api/middlewares/errorHandler';
+import { sanitizationMiddleware } from './api/middlewares/sanitizationMiddleware';
 import adminRoutes from './api/routes/adminRoutes';
 import profileRoutes from './api/routes/profileRoutes';
 import contactRoutes from './api/routes/contactRoutes';
@@ -22,6 +23,7 @@ import { log } from './config/logger';
 import { requestLogger } from './api/middlewares/requestLogger';
 import { generalLimiter } from './config/rateLimits';
 import { env } from './config/env';
+import shippingRoutes from './api/routes/shippingRoutes';
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -48,12 +50,22 @@ app.use(
   }),
 );
 
-// Security headers
+// Security headers - Strict configurations
 app.use(
   helmet({
-    hidePoweredBy: true,
+    contentSecurityPolicy: true,
+    dnsPrefetchControl: { allow: false },
+    frameguard: { action: 'deny' },
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+    ieNoOpen: true,
+    noSniff: true,
+    referrerPolicy: { policy: 'same-origin' },
+    xssFilter: true,
   }),
 );
+
+// Global data sanitization
+app.use(sanitizationMiddleware);
 
 // General rate limiting (Apenas para as rotas /api)
 app.use('/api', generalLimiter);
@@ -135,6 +147,7 @@ app.use('/api/admin/stats', statsRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/shipping', shippingRoutes);
 
 // ==========================================
 // 5. Tratamento de Erros e 404

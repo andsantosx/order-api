@@ -37,5 +37,6 @@ export const TestDataSource = new DataSource({
     Brand,
   ],
   synchronize: true,
+  dropSchema: true,
   logging: false,
 });

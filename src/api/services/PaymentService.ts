@@ -1,4 +1,5 @@
 import { AppDataSource } from '../../data-source';
+import crypto from 'crypto';
 import { Order, OrderStatus } from '../entities/Order';
 import { User } from '../entities/User';
 import { AppError } from '../middlewares/errorHandler';
@@ -10,8 +11,10 @@ import {
   WebhookQuery,
   WebhookBody,
 } from '../../types/payment';
+import { domainEvents } from '../domain/events/DomainEvents';
 import { log } from '../../config/logger';
 import { MONEY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { env } from '../../config/env';
 
 /**
  * Service responsável pela lógica de negócio de pagamentos
@@ -65,7 +68,7 @@ export class PaymentService {
     // Busca pedido
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['user'],
+      relations: ['user', 'items', 'items.product', 'shippingAddress'],
     });
 
     if (!order) {
@@ -254,10 +257,24 @@ export class PaymentService {
    *
    * @param query - Query parameters do webhook
    * @param body - Body do webhook
+   * @param signatureHeader - Valor do header x-signature
+   * @param requestIdHeader - Valor do header x-request-id
    * @returns Status HTTP para responder ao Mercado Pago
    */
-  async receiveWebhook(query: WebhookQuery, body: WebhookBody) {
+  async receiveWebhook(query: WebhookQuery, body: WebhookBody, signatureHeader?: string, requestIdHeader?: string) {
     try {
+      // Validação de assinatura (HMAC-SHA256)
+      if (signatureHeader && requestIdHeader) {
+        const isSignatureValid = this.verifySignature(signatureHeader, requestIdHeader, query.id || body.data?.id);
+        if (!isSignatureValid) {
+          log.warn('Assinatura de webhook inválida!', { signatureHeader, requestIdHeader });
+          // Em desenvolvimento, podemos apenas logar, mas em produção devemos bloquear
+          if (env.NODE_ENV === 'production') {
+            throw new AppError('Assinatura inválida', HTTP_STATUS.UNAUTHORIZED);
+          }
+        }
+      }
+
       // Extrai payment ID de múltiplas possíveis localizações
       const paymentId = this.extractPaymentIdFromWebhook(query, body);
       const webhookType = query.type || query.topic || body?.type || 'unknown';
@@ -333,15 +350,54 @@ export class PaymentService {
       transaction_amount: Number(order.total_amount) / MONEY.CENTS_PER_REAL,
       description: `Order ${order.id} - ${paymentData.description || 'Purchase'}`,
       payment_method_id: rawData.payment_method_id,
+      external_reference: order.id, // Mandatory for quality score
+      notification_url: env.MERCADOPAGO_WEBHOOK_URL, // Mandatory for quality score
       payer: {
         email,
         identification: {
           type: docType,
           number: docNumber,
         },
-        first_name: rawData.payer?.first_name || '',
-        last_name: rawData.payer?.last_name || '',
+        first_name: rawData.payer?.first_name || order.user?.name?.split(' ')[0] || 'Customer',
+        last_name: rawData.payer?.last_name || order.user?.name?.split(' ').slice(1).join(' ') || '',
+        address: {
+          zip_code: order.shippingAddress?.[0]?.zip_code || rawData.payer?.address?.zip_code || '',
+          street_name: order.shippingAddress?.[0]?.street || rawData.payer?.address?.street_name || '',
+          street_number: String(rawData.payer?.address?.street_number || 'S/N'),
+          city_name: order.shippingAddress?.[0]?.city || '',
+          state_id: `BR-${order.shippingAddress?.[0]?.state || ''}`,
+        }
       },
+      additional_info: {
+        items: order.items.map(item => ({
+          id: item.product?.id || item.id,
+          title: item.product?.name || 'Item',
+          description: item.product?.description?.substring(0, 255) || 'Product from Order Store',
+          category_id: 'others',
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price) / MONEY.CENTS_PER_REAL,
+        })),
+        payer: {
+          first_name: rawData.payer?.first_name || order.user?.name?.split(' ')[0] || 'Customer',
+          last_name: rawData.payer?.last_name || order.user?.name?.split(' ').slice(1).join(' ') || '',
+          phone: {
+            area_code: '55',
+            number: '000000000'
+          },
+          address: {
+            zip_code: order.shippingAddress?.[0]?.zip_code || '',
+            street_name: order.shippingAddress?.[0]?.street || '',
+            street_number: 'S/N'
+          }
+        }
+      },
+      // 3. Back URLs - Redirection after payment processing
+      back_urls: {
+        success: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}`,
+        failure: `${env.FRONTEND_URL}/checkout?error=payment_failed&orderId=${order.id}`,
+        pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
+      },
+      auto_return: 'approved',
       metadata: {
         order_id: order.id,
       },
@@ -365,6 +421,16 @@ export class PaymentService {
     if (status === 'approved') {
       order.status = OrderStatus.PAID;
       await this.orderRepository.save(order);
+      
+      // Notifica o sistema que o pagamento foi aprovado (Domain Event)
+      if (order.user?.id) {
+        domainEvents.dispatch('PAYMENT_APPROVED', {
+          userId: order.user.id,
+          orderId: order.id,
+          status: order.status,
+        });
+      }
+
       log.info('Pedido atualizado para PAID', {
         orderId: order.id,
         paymentId: order.payment_id,
@@ -452,7 +518,10 @@ export class PaymentService {
       return;
     }
 
-    const order = await this.orderRepository.findOneBy({ id: orderId });
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['user']
+    });
     if (!order) {
       log.warn('Pedido não encontrado para webhook', { orderId });
       return;
@@ -460,18 +529,43 @@ export class PaymentService {
 
     const status = paymentInfo.status as string;
 
-    // Atualiza status do pedido com base no pagamento
+    // Atualiza status do pedido baseando-se no pagamento AND na máquina de estados
     if (status === 'approved' && order.status !== OrderStatus.PAID) {
-      order.status = OrderStatus.PAID;
-      await this.orderRepository.save(order);
-      log.info('Pedido atualizado para PAID via webhook', { orderId });
+      if (order.canTransitionTo(OrderStatus.PAID)) {
+        order.status = OrderStatus.PAID;
+        await this.orderRepository.save(order);
+
+        // Notifica o sistema que o pagamento foi aprovado (Domain Event) via Webhook
+        const userId = order.user?.id;
+        if (userId) {
+          domainEvents.dispatch('PAYMENT_APPROVED', {
+            userId,
+            orderId: order.id,
+            status: order.status,
+          });
+        }
+
+        log.info('Pedido atualizado para PAID via webhook', { orderId });
+      } else {
+        log.warn('Tentativa de transição para PAID bloqueada pela máquina de estados', {
+          orderId,
+          currentStatus: order.status,
+        });
+      }
       return;
     }
 
     if (status === 'refunded' && order.status !== OrderStatus.REFUNDED) {
-      order.status = OrderStatus.REFUNDED;
-      await this.orderRepository.save(order);
-      log.info('Pedido atualizado para REFUNDED via webhook', { orderId });
+      if (order.canTransitionTo(OrderStatus.REFUNDED)) {
+        order.status = OrderStatus.REFUNDED;
+        await this.orderRepository.save(order);
+        log.info('Pedido atualizado para REFUNDED via webhook', { orderId });
+      } else {
+        log.warn('Tentativa de transição para REFUNDED bloqueada pela máquina de estados', {
+          orderId,
+          currentStatus: order.status,
+        });
+      }
       return;
     }
 
@@ -481,5 +575,42 @@ export class PaymentService {
       paymentStatus: status,
       currentOrderStatus: order.status,
     });
+  }
+
+  /**
+   * Verifica a assinatura HMAC-SHA256 enviada pelo Mercado Pago
+   * 
+   * Documentação oficial: 
+   * https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/additional-content/your-integrations/notifications/webhooks#signature-verification
+   */
+  private verifySignature(xSignature: string, xRequestId: string, dataId?: string): boolean {
+    try {
+      if (!dataId) return false;
+
+      const parts = xSignature.split(',');
+      let ts = '';
+      let hash = '';
+
+      parts.forEach(part => {
+        const [key, value] = part.split('=');
+        if (key === 'ts') ts = value;
+        if (key === 'v1') hash = value;
+      });
+
+      if (!ts || !hash) return false;
+
+      // O formato para o HMAC é: id:[data_id];request-id:[x-request-id];ts:[ts];
+      const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+      
+      const hmac = crypto
+        .createHmac('sha256', env.MERCADOPAGO_WEBHOOK_SECRET)
+        .update(manifest)
+        .digest('hex');
+
+      return hmac === hash;
+    } catch (error) {
+      log.error('Erro ao verificar assinatura HMAC', { error });
+      return false;
+    }
   }
 }

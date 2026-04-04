@@ -13,7 +13,7 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column()
+  @Column({ select: false })
   password_hash!: string;
 
   @Column({ default: false })
@@ -30,4 +30,20 @@ export class User {
 
   @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
   wishlist!: Wishlist[];
+
+  /**
+   * Método toJSON para sanitizar a saída automática da API.
+   * Mascara dados sensíveis antes de enviar ao frontend.
+   */
+  toJSON() {
+    const { password_hash, ...user } = this;
+
+    // Máscara de CPF: mantém apenas os últimos 3 dígitos visíveis
+    if (user.document && user.document.length >= 11) {
+      const doc = user.document.replace(/\D/g, '');
+      user.document = `***.***.***-${doc.slice(-2)}`;
+    }
+
+    return user;
+  }
 }
