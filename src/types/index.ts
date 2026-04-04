@@ -126,15 +126,3 @@ export interface UserResponse {
   acceptedTerms: boolean;
 }
 
-/**
- * Declara extensões ao namespace Express para TypeScript
- */
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      /** Dados do usuário autenticado (disponível após authMiddleware) */
-      user?: JwtPayload;
-    }
-  }
-}
