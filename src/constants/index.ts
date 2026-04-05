@@ -62,7 +62,7 @@ export const ORDER = {
  */
 export const SHIPPING = {
   /** Valor fixo de frete em centavos (R$ 15,00) */
-  FIXED_SHIPPING_COST_CENTS: 1500,
+  FIXED_SHIPPING_COST_CENTS: 0,
 
   /** Valor mínimo para frete grátis em centavos (R$ 200,00) */
   FREE_SHIPPING_THRESHOLD_CENTS: 0,
