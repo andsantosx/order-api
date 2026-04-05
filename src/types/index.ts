@@ -125,4 +125,3 @@ export interface UserResponse {
   document?: string;
   acceptedTerms: boolean;
 }
-

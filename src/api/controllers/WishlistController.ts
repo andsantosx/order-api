@@ -11,7 +11,7 @@ export class WishlistController {
     const formatted = wishlist.map((item) => ({
       id: item.id,
       product: item.product,
-      added_at: item.added_at,
+      addedAt: item.addedAt,
     }));
     res.json(formatted);
   }

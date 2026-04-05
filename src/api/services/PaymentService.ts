@@ -7,9 +7,13 @@ import { Payment, PaymentRefund } from 'mercadopago';
 import { client } from '../../config/mercadopago';
 import {
   PaymentRequestData,
-  MercadoPagoError,
+  PaymentItem,
   WebhookQuery,
   WebhookBody,
+  PaymentRequestBody,
+  PaymentFormData,
+  PayerData,
+  MercadoPagoError,
 } from '../../types/payment';
 import { domainEvents } from '../domain/events/DomainEvents';
 import { log } from '../../config/logger';
@@ -34,38 +38,14 @@ export class PaymentService {
 
   /**
    * Processa um pagamento via Mercado Pago
-   *
-   * Fluxo:
-   * 1. Valida pedido
-   * 2. Prepara dados do pagamento (converte centavos → reais)
-   * 3. Envia para Mercado Pago
-   * 4. Atualiza status do pedido conforme resposta
-   *
-   * @param orderId - ID do pedido
-   * @param paymentData - Dados do pagamento (payer, payment_method_id, etc)
-   * @returns Resultado do pagamento do Mercado Pago
-   * @throws {AppError} 400 - Dados inválidos
-   * @throws {AppError} 404 - Pedido não encontrado
-   * @throws {AppError} 500 - Erro ao processar pagamento
-   *
-   * @example
-   * const result = await paymentService.processPayment(orderId, {
-   *     payment_method_id: 'pix',
-   *     payer: {
-   *         email: 'user@example.com',
-   *         identification: { type: 'CPF', number: '12345678900' },
-   *         first_name: 'João',
-   *         last_name: 'Silva'
-   *     }
-   * });
+   * Concentra a orquestração do fluxo de pagamento (Clean Architecture)
    */
   async processPayment(orderId: string, paymentData: PaymentRequestData) {
-    // Valida input
     if (!orderId) {
       throw new AppError('Order ID é obrigatório', HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Busca pedido
+    // Busca pedido com as relações necessárias
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ['user', 'items', 'items.product', 'shippingAddress'],
@@ -78,7 +58,7 @@ export class PaymentService {
     try {
       const payment = new Payment(client);
 
-      // Prepara body do pagamento
+      // Orquestra a preparação do payload (Separação de Preocupações)
       const paymentBody = this.preparePaymentBody(order, paymentData);
 
       log.info('Processando pagamento com Mercado Pago', {
@@ -87,8 +67,13 @@ export class PaymentService {
         paymentMethod: paymentBody.payment_method_id,
       });
 
-      // Envia para Mercado Pago
-      const result = await payment.create({ body: paymentBody });
+      // Cria pagamento no Mercado Pago com Idempotência (Segurança)
+      const result = await payment.create({
+        body: paymentBody,
+        requestOptions: {
+          idempotencyKey: order.idempotencyKey || order.id,
+        },
+      });
 
       log.info('Pagamento processado com sucesso', {
         orderId: order.id,
@@ -96,27 +81,17 @@ export class PaymentService {
         status: result.status,
       });
 
-      // Atualiza pedido com dados do pagamento
+      // Atualiza pedido com dados do pagamento (Responsabilidade delegada)
       await this.updateOrderWithPaymentResult(order, result as unknown as Record<string, unknown>);
 
       return result;
-    } catch (error) {
-      return this.handlePaymentError(error, orderId);
+    } catch (_error) {
+      return this.handlePaymentError(_error, orderId);
     }
   }
 
   /**
    * Processa reembolso de um pedido
-   *
-   * Requisitos:
-   * - Pedido deve estar pago
-   * - Deve ter payment_id do Mercado Pago
-   *
-   * @param orderId - ID do pedido a reembolsar
-   * @returns Resultado do reembolso
-   * @throws {AppError} 400 - Pedido não está pago ou sem payment_id
-   * @throws {AppError} 404 - Pedido não encontrado
-   * @throws {AppError} 500 - Erro ao processar reembolso
    */
   async refundPayment(orderId: string) {
     const order = await this.orderRepository.findOneBy({ id: orderId });
@@ -125,7 +100,7 @@ export class PaymentService {
       throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    if (!order.payment_id) {
+    if (!order.paymentId) {
       throw new AppError('Pedido não possui ID de pagamento associado', HTTP_STATUS.BAD_REQUEST);
     }
 
@@ -137,13 +112,8 @@ export class PaymentService {
     }
 
     try {
-      log.info('Iniciando reembolso', {
-        orderId: order.id,
-        paymentId: order.payment_id,
-      });
-
       const refundClient = new PaymentRefund(client);
-      const result = await refundClient.create({ payment_id: order.payment_id });
+      const result = await refundClient.create({ payment_id: order.paymentId });
 
       if (result.status !== 'approved' && result.status !== 'refunded' && result.status !== null) {
         throw new AppError(
@@ -152,16 +122,10 @@ export class PaymentService {
         );
       }
 
-      // Reembolso aprovado
       order.status = OrderStatus.REFUNDED;
       await this.orderRepository.save(order);
 
-      log.info('Reembolso processado com sucesso', {
-        orderId,
-        refundId: result.id,
-        paymentId: order.payment_id,
-      });
-
+      log.info('Reembolso processado com sucesso', { orderId, refundId: result.id });
       return {
         success: true,
         message: 'Reembolso processado com sucesso',
@@ -170,24 +134,14 @@ export class PaymentService {
     } catch (error) {
       log.error('Erro ao processar reembolso', {
         orderId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Unknown',
       });
       throw new AppError(ERROR_MESSAGES.REFUND_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
-   * Cancela um pedido e tenta cancelar/reembolsar o pagamento
-   *
-   * Regras de autorização:
-   * - Usuário regular: só pode cancelar seus próprios pedidos pendentes
-   * - Admin: pode cancelar qualquer pedido em qualquer status
-   *
-   * @param orderId - ID do pedido
-   * @param userId - ID do usuário solicitante
-   * @param isAdmin - Se o usuário é admin
-   * @throws {AppError} 403 - Não autorizado
-   * @throws {AppError} 404 - Pedido não encontrado
+   * Cancela um pedido e tenta cancelar no Mercado Pago
    */
   async cancelOrder(orderId: string, userId: string, isAdmin: boolean = false) {
     const order = await this.orderRepository.findOne({
@@ -199,242 +153,244 @@ export class PaymentService {
       throw new AppError(ERROR_MESSAGES.ORDER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    // Verifica autorização
     if (!isAdmin && order.user?.id !== userId) {
       throw new AppError(ERROR_MESSAGES.ORDER_UNAUTHORIZED, HTTP_STATUS.FORBIDDEN);
     }
 
-    // Usuário regular só pode cancelar pedidos pendentes
     if (!isAdmin && order.status !== OrderStatus.PENDING) {
       throw new AppError('Apenas pedidos pendentes podem ser cancelados', HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Se tem payment_id, tenta cancelar/reembolsar no Mercado Pago
-    if (order.payment_id) {
+    if (order.paymentId) {
       try {
         const payment = new Payment(client);
-        await payment.cancel({ id: Number(order.payment_id) });
-
-        log.info('Pagamento cancelado no Mercado Pago', {
-          orderId: order.id,
-          paymentId: order.payment_id,
-        });
+        await payment.cancel({ id: Number(order.paymentId) });
       } catch (error) {
-        log.warn(
-          'Falha ao cancelar pagamento no Mercado Pago - prosseguindo com cancelamento local',
-          {
-            orderId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          },
-        );
+        log.warn('Falha no cancelamento externo - prosseguindo local', { orderId });
       }
     }
 
-    // Atualiza status do pedido
-    order.status = OrderStatus.CANCELED;
+    order.status = OrderStatus.CANCELLED;
     await this.orderRepository.save(order);
-
-    log.info('Pedido cancelado', {
-      orderId: order.id,
-      userId,
-      isAdmin,
-    });
 
     return { success: true, message: 'Pedido cancelado com sucesso' };
   }
 
   /**
-   * Processa webhooks (IPNs) do Mercado Pago
-   *
-   * Mercado Pago envia notificações quando o status de um pagamento muda.
-   * Este método:
-   * 1. Extrai o ID do pagamento do webhook
-   * 2. Consulta status atualizado do pagamento
-   * 3. Atualiza o pedido correspondente
-   *
-   * **Importante**: Webhooks podem vir em formatos diferentes (query params ou body).
-   * Este método suporta ambos.
-   *
-   * @param query - Query parameters do webhook
-   * @param body - Body do webhook
-   * @param signatureHeader - Valor do header x-signature
-   * @param requestIdHeader - Valor do header x-request-id
-   * @returns Status HTTP para responder ao Mercado Pago
+   * Processa notificações de Webhook (Segurança)
    */
-  async receiveWebhook(query: WebhookQuery, body: WebhookBody, signatureHeader?: string, requestIdHeader?: string) {
+  async receiveWebhook(
+    query: WebhookQuery,
+    body: WebhookBody,
+    signatureHeader?: string,
+    requestIdHeader?: string,
+  ) {
     try {
-      // Validação de assinatura (HMAC-SHA256)
-      if (signatureHeader && requestIdHeader) {
-        const isSignatureValid = this.verifySignature(signatureHeader, requestIdHeader, query.id || body.data?.id);
-        if (!isSignatureValid) {
-          log.warn('Assinatura de webhook inválida!', { signatureHeader, requestIdHeader });
-          // Em desenvolvimento, podemos apenas logar, mas em produção devemos bloquear
-          if (env.NODE_ENV === 'production') {
-            throw new AppError('Assinatura inválida', HTTP_STATUS.UNAUTHORIZED);
-          }
+      const paymentId = query.id || body.data?.id || body.id;
+
+      if (signatureHeader && requestIdHeader && paymentId) {
+        const isValid = this.verifySignature(signatureHeader, requestIdHeader, paymentId);
+        if (!isValid && env.NODE_ENV === 'production') {
+          throw new AppError('Assinatura de webhook inválida', HTTP_STATUS.UNAUTHORIZED);
         }
       }
 
-      // Extrai payment ID de múltiplas possíveis localizações
-      const paymentId = this.extractPaymentIdFromWebhook(query, body);
-      const webhookType = query.type || query.topic || body?.type || 'unknown';
+      if (!paymentId) return 200;
 
-      log.info('Webhook recebido do Mercado Pago', {
-        type: webhookType,
-        paymentId,
-      });
-
-      if (!paymentId) {
-        log.warn('Webhook sem payment ID - ignorando', { query, body });
-        return 200; // Retorna 200 para evitar retentativas
-      }
-
-      // Busca informações atualizadas do pagamento
       const payment = new Payment(client);
       const paymentInfo = await payment.get({ id: Number(paymentId) });
 
-      log.info('Status do pagamento consultado', {
-        paymentId,
-        status: paymentInfo.status,
-        statusDetail: paymentInfo.status_detail,
-      });
-
-      // Atualiza pedido baseado no status do pagamento
       await this.processPaymentStatusUpdate(paymentInfo as unknown as Record<string, unknown>);
 
       return 200;
-    } catch (error) {
-      log.error('Erro ao processar webhook', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        query,
-        body,
-      });
+    } catch (error: unknown) {
+      log.error('Erro no webhook', { error: error instanceof Error ? error.message : 'Unknown' });
       return 500;
     }
-  }
+}
 
   /* ==========================================
-   * MÉTODOS PRIVADOS - HELPERS
+   * HELPERS DE MAPEAMENTO E NEGÓCIO (Clean Code)
    * ========================================== */
 
-  /**
-   * Prepara body do pagamento para envio ao Mercado Pago
-   * Normaliza dados e converte valores monetários
-   */
-  private preparePaymentBody(order: Order, paymentData: PaymentRequestData): PaymentRequestData {
-    // Normaliza dados (handle formData wrapper do frontend)
-    const rawData = paymentData.formData || paymentData;
+  private preparePaymentBody(order: Order, paymentData: PaymentRequestData): PaymentRequestBody {
+    const rawData: PaymentFormData = paymentData.formData || (paymentData as unknown as PaymentFormData);
+    const email = rawData.payer?.email || order.user?.email || order.guestEmail;
 
-    // Valida e extrai email
-    const email =
-      rawData.payer?.email || paymentData.payer?.email || order.user?.email || order.guest_email;
+    if (!email) throw new AppError('Email obrigatório', HTTP_STATUS.BAD_REQUEST);
 
-    if (!email) {
-      throw new AppError('Email do pagador é obrigatório', HTTP_STATUS.BAD_REQUEST);
-    }
-
-    // Valida documento
     const docType = rawData.payer?.identification?.type || 'CPF';
-    const docNumber =
-      rawData.payer?.identification?.number || paymentData.payer?.identification?.number;
+    const docNumber = rawData.payer?.identification?.number;
+    if (!docNumber) throw new AppError('Documento obrigatório', HTTP_STATUS.BAD_REQUEST);
 
-    if (!docNumber) {
-      throw new AppError(
-        'Número de identificação do pagador é obrigatório',
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
+    const payer = this.mapPayer(order, rawData, email, docType, docNumber);
+    const items = this.mapItems(order);
 
-    // Extrai nome e sobrenome de forma robusta
-    const fullName = rawData.payer?.first_name 
-      ? `${rawData.payer.first_name} ${rawData.payer.last_name || ''}`.trim()
-      : (order.user?.name || 'Customer');
-    const nameParts = fullName.split(' ');
-    const firstName = rawData.payer?.first_name || nameParts[0] || 'Customer';
-    const lastName = rawData.payer?.last_name || nameParts.slice(1).join(' ') || 'User';
-
-    // Monta body do pagamento com foco em QUALIDADE (Score 100/100)
     return {
-      transaction_amount: Number(order.total_amount) / MONEY.CENTS_PER_REAL,
-      description: `Pedido #${order.id.substring(0, 8)} - ${paymentData.description || 'Compra Online'}`,
-      payment_method_id: rawData.payment_method_id,
-      external_reference: order.id, // Obrigatório para conciliação e score
-      notification_url: env.MERCADOPAGO_WEBHOOK_URL, // Obrigatório para notificações reais
-      statement_descriptor: 'ORDER STORE', // Texto que aparece na fatura do cartão (Max 16 chars)
-      binary_mode: true, // Resultados síncronos (aprovado ou recusado na hora)
+      transaction_amount: Number(order.totalAmount) / MONEY.CENTS_PER_REAL,
+      description: `Pedido #${order.id.substring(0, 8)}`,
+      payment_method_id: rawData.paymentMethodId,
+      external_reference: order.id,
+      notification_url: env.MERCADOPAGO_WEBHOOK_URL,
+      statement_descriptor: 'ORDER STORE',
+      binary_mode: true,
       payer: {
-        email,
-        identification: {
-          type: docType,
-          number: docNumber,
+        email: payer.email,
+        first_name: payer.firstName,
+        last_name: payer.lastName,
+        identification: payer.identification,
+        phone: {
+          area_code: payer.phone?.areaCode || '55',
+          number: payer.phone?.number || '000000000',
         },
-        first_name: firstName,
-        address: order.shippingAddress && order.shippingAddress.length > 0 ? {
-          zip_code: order.shippingAddress[0].zip_code,
-          street_name: order.shippingAddress[0].street,
-          street_number: "S/N",
-          neighborhood: order.shippingAddress[0].city,
-          city: order.shippingAddress[0].city,
-          federal_unit: order.shippingAddress[0].state
-        } : undefined       },
+        address: payer.address ? {
+          zip_code: payer.address.zipCode || '',
+          street_name: payer.address.streetName || '',
+          street_number: payer.address.streetNumber || 'S/N',
+        } : undefined,
+      },
       additional_info: {
-        items: order.items.map(item => ({
-          id: item.product?.id || item.id,
-          title: item.product?.name || 'Produto',
-          description: item.product?.description?.substring(0, 255) || 'Venda de produto físico',
-          category_id: 'others', // Recomendado mapear para categorias MP se existirem
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price) / MONEY.CENTS_PER_REAL,
+        items: items.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          category_id: item.categoryId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
         })),
         payer: {
-          first_name: firstName,
-          last_name: lastName,
-          registration_date: (order.user?.created_at || order.created_at || new Date()).toISOString(),
-          phone: {
-            area_code: '55',
-            number: (order.phone || order.user?.phone || '000000000').replace(/\D/g, '') || '000000000'
-          },
-          address: {
-            zip_code: order.shippingAddress?.[0]?.zip_code || '',
-            street_name: order.shippingAddress?.[0]?.street || '',
-            street_number: 'S/N'
-          }
-        }
+          first_name: payer.firstName,
+          last_name: payer.lastName,
+          registration_date: (order.user?.createdAt || new Date()).toISOString(),
+          phone: payer.phone
+            ? {
+                area_code: payer.phone.areaCode || '55',
+                number: payer.phone.number || '000000000',
+              }
+            : undefined,
+          address: payer.address
+            ? {
+                zip_code: payer.address.zipCode || '',
+                street_name: payer.address.streetName || '',
+                street_number: payer.address.streetNumber || 'S/N',
+              }
+            : undefined,
+        },
       },
-      // Redirecionamentos após processamento
       back_urls: {
         success: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}`,
         failure: `${env.FRONTEND_URL}/checkout?error=payment_failed&orderId=${order.id}`,
         pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
       },
       auto_return: 'approved',
-      metadata: {
-        order_id: order.id,
-        device_id: rawData.device_id || 'not_provided',
-      },
-      ...(rawData.installments && { installments: Number(rawData.installments) }),
-      ...(rawData.token && { token: rawData.token }),
-      ...(rawData.issuer_id && { issuer_id: Number(rawData.issuer_id) }),
-      ...(rawData.device_id && { device_id: rawData.device_id }), // Alguns SDKs usam na raiz
+      metadata: { order_id: order.id, device_id: rawData.deviceId || 'not_provided' },
+      installments: rawData.installments ? Number(rawData.installments) : undefined,
+      token: rawData.token,
+      issuer_id: rawData.issuerId ? Number(rawData.issuerId) : undefined,
     };
   }
 
+  private mapPayer(
+    order: Order,
+    rawData: PaymentFormData,
+    email: string,
+    docType: string,
+    docNumber: string,
+  ): PayerData {
+    const fullName = rawData.payer?.firstName
+      ? `${rawData.payer.firstName} ${rawData.payer.lastName || ''}`.trim()
+      : order.user?.name || 'Customer';
+
+    const parts = fullName.split(' ');
+    const firstName = rawData.payer?.firstName || parts[0] || 'Customer';
+    const lastName = rawData.payer?.lastName || parts.slice(1).join(' ') || 'User';
+
+    const rawPhone = (order.phone || order.user?.phone || '000000000').replace(/\D/g, '');
+    const area = rawPhone.length >= 10 ? rawPhone.substring(0, 2) : '55';
+    const number = rawPhone.length >= 10 ? rawPhone.substring(2) : rawPhone;
+
+    return {
+      email,
+      identification: { type: docType, number: docNumber },
+      firstName: firstName,
+      lastName: lastName,
+      phone: { areaCode: area, number: number },
+      address: order.shippingAddress?.[0]
+        ? {
+            zipCode: order.shippingAddress[0].zipCode,
+            streetName: order.shippingAddress[0].street,
+            streetNumber: 'S/N',
+          }
+        : undefined,
+    };
+  }
+
+  private mapItems(order: Order): PaymentItem[] {
+    return order.items.map(item => ({
+      id: item.product?.id || item.id,
+      title: item.product?.name || 'Produto',
+      description: item.product?.description?.substring(0, 255) || 'Físico',
+      categoryId: this.mapCategory(item.product?.category?.name),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+    }));
+  }
+
   /**
-   * Atualiza pedido com resultado do pagamento
+   * Mapeia categorias internas para categorias padrão do Mercado Pago (Score 100/100)
    */
+  private mapCategory(categoryName?: string): string {
+    if (!categoryName) return 'others';
+    
+    const cat = categoryName.toLowerCase();
+    if (cat.includes('eletron') || cat.includes('tech')) return 'electronics';
+    if (cat.includes('roupa') || cat.includes('vestu')) return 'fashion';
+    if (cat.includes('comida') || cat.includes('bebi')) return 'food';
+    if (cat.includes('brinquedo')) return 'toys';
+    if (cat.includes('saude') || cat.includes('beleza')) return 'health';
+    if (cat.includes('livro')) return 'books';
+    
+    return 'others';
+  }
+
   private async updateOrderWithPaymentResult(
     order: Order,
-    paymentResult: Record<string, unknown>,
+    result: Record<string, unknown>,
   ): Promise<void> {
-    order.payment_id = String(paymentResult.id);
-    const status = paymentResult.status as string;
+    order.paymentId = String(result.id);
+    const status = result.status as string;
 
-    // Aprovado
-    if (status === 'approved') {
+    if (status === 'approved') order.status = OrderStatus.PAID;
+    else if (status === 'pending') order.status = OrderStatus.PENDING;
+    else if (['rejected', 'cancelled'].includes(status)) order.status = OrderStatus.CANCELLED;
+
+    await this.orderRepository.save(order);
+
+    if (status === 'approved' && order.user?.id) {
+      domainEvents.dispatch('PAYMENT_APPROVED', {
+        userId: order.user.id,
+        orderId: order.id,
+        status: order.status,
+      });
+    }
+  }
+
+  private async processPaymentStatusUpdate(paymentInfo: Record<string, unknown>): Promise<void> {
+    const orderId = (paymentInfo.metadata as Record<string, unknown>)?.order_id as string;
+    if (!orderId) return;
+
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['user'],
+    });
+    if (!order) return;
+
+    const status = paymentInfo.status as string;
+    let changed = false;
+
+    if (status === 'approved' && order.canTransitionTo(OrderStatus.PAID)) {
       order.status = OrderStatus.PAID;
-      await this.orderRepository.save(order);
-      
-      // Notifica o sistema que o pagamento foi aprovado (Domain Event)
+      changed = true;
       if (order.user?.id) {
         domainEvents.dispatch('PAYMENT_APPROVED', {
           userId: order.user.id,
@@ -442,186 +398,42 @@ export class PaymentService {
           status: order.status,
         });
       }
-
-      log.info('Pedido atualizado para PAID', {
-        orderId: order.id,
-        paymentId: order.payment_id,
-      });
-      return;
+    } else if (status === 'refunded' && order.canTransitionTo(OrderStatus.REFUNDED)) {
+      order.status = OrderStatus.REFUNDED;
+      changed = true;
     }
 
-    // Pendente
-    if (status === 'pending') {
-      order.status = OrderStatus.PENDING;
-      await this.orderRepository.save(order);
-      log.info('Pedido mantido como PENDING', {
-        orderId: order.id,
-        paymentId: order.payment_id,
-      });
-      return;
-    }
-
-    // Rejeitado ou cancelado
-    if (status === 'rejected' || status === 'cancelled') {
-      order.status = OrderStatus.CANCELED;
-      await this.orderRepository.save(order);
-      log.info('Pedido marcado como CANCELED', {
-        orderId: order.id,
-        paymentId: order.payment_id,
-        reason: status,
-      });
-      return;
-    }
-
-    // Status desconhecido - apenas salva payment_id
-    await this.orderRepository.save(order);
-    log.warn('Status de pagamento desconhecido', {
-      orderId: order.id,
-      paymentId: order.payment_id,
-      status,
-    });
+    if (changed) await this.orderRepository.save(order);
   }
 
-  /**
-   * Trata erros do Mercado Pago
-   * Loga detalhes e lança AppError apropriado
-   *
-   * @throws {AppError} sempre - nunca retorna normalmente
-   */
   private handlePaymentError(error: unknown, orderId: string): never {
     const mpError = error as MercadoPagoError;
-
-    log.error('Erro ao processar pagamento', {
+    log.error('Erro Mercado Pago', {
       orderId,
-      message: mpError.message,
-      status: mpError.status,
-      cause: mpError.cause,
+      error: mpError?.message || 'Unknown',
+      cause: mpError?.cause,
     });
-
-    // Loga detalhes técnicos se disponíveis
-    if (mpError.cause) {
-      log.error('Detalhes do erro do Mercado Pago', {
-        orderId,
-        cause:
-          typeof mpError.cause === 'object' ? JSON.stringify(mpError.cause) : String(mpError.cause),
-      });
-    }
-
     throw new AppError(ERROR_MESSAGES.PAYMENT_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
-  /**
-   * Extrai payment ID de webhook
-   * Suporta múltiplos formatos enviados pelo Mercado Pago
-   */
-  private extractPaymentIdFromWebhook(query: WebhookQuery, body: WebhookBody): string | undefined {
-    return query.id || query['data.id'] || body?.data?.id || body?.id;
-  }
-
-  /**
-   * Processa atualização de status de pagamento via webhook
-   * Atualiza o pedido correspondente no banco
-   */
-  private async processPaymentStatusUpdate(paymentInfo: Record<string, unknown>): Promise<void> {
-    const orderId = (paymentInfo.metadata as Record<string, unknown>)?.order_id as string;
-
-    if (!orderId) {
-      log.warn('Webhook sem order_id no metadata', { paymentInfo });
-      return;
-    }
-
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-      relations: ['user']
-    });
-    if (!order) {
-      log.warn('Pedido não encontrado para webhook', { orderId });
-      return;
-    }
-
-    const status = paymentInfo.status as string;
-
-    // Atualiza status do pedido baseando-se no pagamento AND na máquina de estados
-    if (status === 'approved' && order.status !== OrderStatus.PAID) {
-      if (order.canTransitionTo(OrderStatus.PAID)) {
-        order.status = OrderStatus.PAID;
-        await this.orderRepository.save(order);
-
-        // Notifica o sistema que o pagamento foi aprovado (Domain Event) via Webhook
-        const userId = order.user?.id;
-        if (userId) {
-          domainEvents.dispatch('PAYMENT_APPROVED', {
-            userId,
-            orderId: order.id,
-            status: order.status,
-          });
-        }
-
-        log.info('Pedido atualizado para PAID via webhook', { orderId });
-      } else {
-        log.warn('Tentativa de transição para PAID bloqueada pela máquina de estados', {
-          orderId,
-          currentStatus: order.status,
-        });
-      }
-      return;
-    }
-
-    if (status === 'refunded' && order.status !== OrderStatus.REFUNDED) {
-      if (order.canTransitionTo(OrderStatus.REFUNDED)) {
-        order.status = OrderStatus.REFUNDED;
-        await this.orderRepository.save(order);
-        log.info('Pedido atualizado para REFUNDED via webhook', { orderId });
-      } else {
-        log.warn('Tentativa de transição para REFUNDED bloqueada pela máquina de estados', {
-          orderId,
-          currentStatus: order.status,
-        });
-      }
-      return;
-    }
-
-    // Status recebido mas sem alteração necessária
-    log.info('Status de pagamento recebido mas pedido não alterado', {
-      orderId,
-      paymentStatus: status,
-      currentOrderStatus: order.status,
-    });
-  }
-
-  /**
-   * Verifica a assinatura HMAC-SHA256 enviada pelo Mercado Pago
-   * 
-   * Documentação oficial: 
-   * https://www.mercadopago.com.br/developers/pt/docs/checkout-pro/additional-content/your-integrations/notifications/webhooks#signature-verification
-   */
-  private verifySignature(xSignature: string, xRequestId: string, dataId?: string): boolean {
+  private verifySignature(xSignature: string, xRequestId: string, dataId: string): boolean {
     try {
-      if (!dataId) return false;
-
       const parts = xSignature.split(',');
-      let ts = '';
-      let hash = '';
-
-      parts.forEach(part => {
-        const [key, value] = part.split('=');
-        if (key === 'ts') ts = value;
-        if (key === 'v1') hash = value;
+      let ts = '',
+        hash = '';
+      parts.forEach((p) => {
+        const [k, v] = p.split('=');
+        if (k === 'ts') ts = v;
+        if (k === 'v1') hash = v;
       });
-
       if (!ts || !hash) return false;
-
-      // O formato para o HMAC é: id:[data_id];request-id:[x-request-id];ts:[ts];
       const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-      
       const hmac = crypto
         .createHmac('sha256', env.MERCADOPAGO_WEBHOOK_SECRET)
         .update(manifest)
         .digest('hex');
-
       return hmac === hash;
-    } catch (error) {
-      log.error('Erro ao verificar assinatura HMAC', { error });
+    } catch {
       return false;
     }
   }

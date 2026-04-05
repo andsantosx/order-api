@@ -100,9 +100,10 @@ export async function seedDatabase(dataSource: DataSource) {
           userRepo.create({
             name: userData.name,
             email: userData.email,
-            password_hash: hashedPassword,
+            passwordHash: hashedPassword,
             isAdmin: userData.isAdmin,
-            phone: (userData as any).phone,
+            phone: userData.phone,
+            acceptedTerms: true,
           }),
         );
         log.info(`Created User: ${userData.email}`);
@@ -139,7 +140,7 @@ export async function seedDatabase(dataSource: DataSource) {
     const productsData = [
       {
         name: 'Nike Air Force 1',
-        price_cents: 89900,
+        priceCents: 89900,
         description: 'Clássico atemporal.',
         currency: 'BRL',
         categorySlug: 'sapatos',
@@ -149,7 +150,7 @@ export async function seedDatabase(dataSource: DataSource) {
       },
       {
         name: 'Adidas Superstar',
-        price_cents: 69990,
+        priceCents: 69990,
         description: 'O tênis da biqueira em concha.',
         currency: 'BRL',
         categorySlug: 'sapatos',
@@ -161,7 +162,7 @@ export async function seedDatabase(dataSource: DataSource) {
       },
       {
         name: 'Camiseta Basic Cotton',
-        price_cents: 7990,
+        priceCents: 7990,
         description: '100% Algodão.',
         currency: 'BRL',
         categorySlug: 'camisetas',
@@ -187,7 +188,7 @@ export async function seedDatabase(dataSource: DataSource) {
 
         const product = productRepo.create({
           name: prodData.name,
-          price_cents: prodData.price_cents,
+          priceCents: prodData.priceCents,
           description: prodData.description,
           currency: prodData.currency,
           category: category,

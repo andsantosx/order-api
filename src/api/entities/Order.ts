@@ -18,7 +18,7 @@ export enum OrderStatus {
   PAID = 'PAID',
   SHIPPED = 'SHIPPED',
   DELIVERED = 'DELIVERED',
-  CANCELED = 'CANCELED',
+  CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
 }
 
@@ -31,39 +31,40 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ nullable: true })
-  guest_email?: string;
+  @Column({ name: 'guest_email', nullable: true })
+  guestEmail?: string;
 
   @Column({ nullable: true })
   phone?: string;
 
   @Index()
   @Column({
+    name: 'total_amount',
     type: 'bigint',
     transformer: {
       to: (value: number) => value,
       from: (value: string) => parseInt(value, 10),
     },
   })
-  total_amount!: number;
+  totalAmount!: number;
 
   @Column({ length: 3 })
   currency!: string;
 
-  @Column({ type: 'uuid', unique: true })
-  idempotency_key!: string;
+  @Column({ name: 'idempotency_key', type: 'uuid', unique: true })
+  idempotencyKey!: string;
 
-  @Column({ nullable: true })
-  payment_id?: string; // Stores Mercado Pago Transaction ID
+  @Column({ name: 'payment_id', nullable: true })
+  paymentId?: string; // Stores Mercado Pago Transaction ID
 
-  @Column({ nullable: true })
-  payment_method?: string; // pix, credit_card, ticket, etc.
+  @Column({ name: 'payment_method', nullable: true })
+  paymentMethod?: string; // pix, credit_card, ticket, etc.
 
   @Column({ default: 1 })
   installments!: number;
 
-  @Column({ nullable: true })
-  card_last_four?: string;
+  @Column({ name: 'card_last_four', nullable: true })
+  cardLastFour?: string;
 
   @Index()
   @Column({
@@ -74,11 +75,11 @@ export class Order {
   status!: OrderStatus;
 
   @Index()
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 
-  @Column({ default: false })
-  accepted_terms!: boolean;
+  @Column({ name: 'accepted_terms', default: false })
+  acceptedTerms!: boolean;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
@@ -92,11 +93,11 @@ export class Order {
    */
   canTransitionTo(newStatus: OrderStatus): boolean {
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-      [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELED],
-      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.REFUNDED, OrderStatus.CANCELED],
+      [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
       [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
-      [OrderStatus.CANCELED]: [], // Terminal
+      [OrderStatus.CANCELLED]: [], // Terminal
       [OrderStatus.REFUNDED]: [], // Terminal
     };
 
@@ -107,10 +108,10 @@ export class Order {
    * Sanitiza a saída do pedido para evitar vazamento de chaves internas.
    */
   toJSON() {
-    const { idempotency_key, payment_id, ...order } = this;
+    const { idempotencyKey, paymentId, ...order } = this;
     return {
       ...order,
-      payment_id: payment_id ? `****${payment_id.slice(-4)}` : undefined,
+      paymentId: paymentId ? `****${paymentId.slice(-4)}` : undefined,
     };
   }
 
@@ -118,6 +119,6 @@ export class Order {
    * Domain Getter - Retorna o objeto Money
    */
   get money(): Money {
-    return new Money(this.total_amount);
+    return new Money(this.totalAmount);
   }
 }

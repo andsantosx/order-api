@@ -14,7 +14,7 @@ const PORT = env.PORT || 3000;
 AppDataSource.initialize()
   .then(async () => {
     log.info('Conexão com o banco de dados estabelecida com sucesso');
-    
+
     const server = app.listen(PORT, () => {
       log.info(`Server running on port ${PORT}`);
       log.info(`Environment: ${env.NODE_ENV}`);
@@ -26,7 +26,7 @@ AppDataSource.initialize()
     const socketService = SocketService.getInstance();
     socketService.init(server);
     SocketHandler.init();
-    
+
     // Aplica o middleware de autenticação no socket
     socketService.getIO().use(socketAuthMiddleware);
 

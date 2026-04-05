@@ -1,6 +1,10 @@
-import { Server as SocketServer } from 'socket.io';
+import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { log } from '../../config/logger';
+
+export interface CustomSocket extends Socket {
+  userId?: string;
+}
 
 export class SocketService {
   private static instance: SocketService;
@@ -25,8 +29,8 @@ export class SocketService {
 
     log.info('🔌 Socket.io initialized');
 
-    this.io.on('connection', (socket) => {
-      const userId = (socket as any).userId;
+    this.io.on('connection', (socket: CustomSocket) => {
+      const { userId } = socket;
       if (userId) {
         socket.join(`user:${userId}`);
         log.info(`👤 User connected to socket: ${userId}`);
@@ -48,7 +52,7 @@ export class SocketService {
   /**
    * Emite um evento para um usuário específico
    */
-  public emitToUser(userId: string, event: string, data: any): void {
+  public emitToUser(userId: string, event: string, data: unknown): void {
     if (this.io) {
       this.io.to(`user:${userId}`).emit(event, data);
       log.info(`📤 Event ${event} emitted to user ${userId}`);

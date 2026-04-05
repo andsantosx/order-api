@@ -2,14 +2,14 @@ import { domainEvents } from '../domain/events/DomainEvents';
 import { SocketService } from '../services/SocketService';
 import { log } from '../../config/logger';
 
+interface PaymentApprovedEventData {
+  userId: string;
+  orderId: string;
+  status: string;
+}
+
 /**
  * SocketHandler
- * 
- * Este handler atua como um Adaptador na Clean Architecture, 
- * ligando eventos de domínio a notificações de infraestrutura (WebSockets).
- * 
- * O PaymentService libera um evento, e este handler garante que
- * o usuário final seja notificado em tempo real.
  */
 export class SocketHandler {
   private static isInitialized = false;
@@ -22,14 +22,20 @@ export class SocketHandler {
     const socketService = SocketService.getInstance();
 
     // Ouvinte para pagamentos aprovados
-    domainEvents.subscribe('PAYMENT_APPROVED', (data: { userId: string; orderId: string; status: string }) => {
-      log.info(`[SocketHandler] Notifying user ${data.userId} about payment for order ${data.orderId}`);
-      
-      socketService.emitToUser(data.userId, 'PAYMENT_APPROVED', {
-        orderId: data.orderId,
-        status: data.status,
-      });
-    });
+    domainEvents.subscribe(
+      'PAYMENT_APPROVED',
+      (data: unknown) => {
+        const eventData = data as PaymentApprovedEventData;
+        log.info(
+          `[SocketHandler] Notifying user ${eventData.userId} about payment for order ${eventData.orderId}`,
+        );
+
+        socketService.emitToUser(eventData.userId, 'PAYMENT_APPROVED', {
+          orderId: eventData.orderId,
+          status: eventData.status,
+        });
+      },
+    );
 
     this.isInitialized = true;
   }

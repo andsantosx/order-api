@@ -6,7 +6,6 @@
 import { JwtPayload } from './index';
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       /** Dados do usuário autenticado (disponível após authMiddleware) */
@@ -15,4 +14,4 @@ declare global {
   }
 }
 
-export { };
+export {};

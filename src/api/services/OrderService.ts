@@ -103,7 +103,7 @@ export class OrderService {
     const [orders, total] = await this.orderRepository.findAndCount({
       where: Object.keys(whereCondition).length > 0 ? whereCondition : undefined,
       relations: ['user', 'items', 'items.product', 'items.product.images', 'shippingAddress'],
-      order: { created_at: 'DESC' },
+      order: { createdAt: 'DESC' },
       skip,
       take: limit,
     });
@@ -285,8 +285,8 @@ export class OrderService {
     );
 
     // 6. Atualiza aceite de termos do usuário se necessário
-    if (acceptedTerms && !user.accepted_terms) {
-      user.accepted_terms = true;
+    if (acceptedTerms && !user.acceptedTerms) {
+      user.acceptedTerms = true;
       await this.userRepository.save(user);
     }
 
@@ -425,7 +425,7 @@ export class OrderService {
         );
       }
 
-      subtotal += product.price_cents * item.quantity;
+      subtotal += product.priceCents * item.quantity;
       productsMap.set(item.productId, product);
       sizeNamesMap.set(item.size, size.name);
     }
@@ -533,11 +533,11 @@ export class OrderService {
       const newUser = this.userRepository.create({
         name: name || 'Cliente',
         email,
-        password_hash: hashedPassword,
+        passwordHash: hashedPassword,
         isAdmin: false,
         document: cpf,
         phone,
-        accepted_terms: true,
+        acceptedTerms: true,
       });
 
       const savedUser = await this.userRepository.save(newUser);
@@ -584,7 +584,7 @@ export class OrderService {
   ): Promise<Order | null> {
     // 1. Se o cliente enviou uma chave, ela é soberana
     if (idempotencyKey) {
-      const order = await this.orderRepository.findOneBy({ idempotency_key: idempotencyKey });
+      const order = await this.orderRepository.findOneBy({ idempotencyKey: idempotencyKey });
       if (order) return order;
     }
 
@@ -593,18 +593,18 @@ export class OrderService {
 
     const queryBuilder = this.orderRepository
       .createQueryBuilder('order')
-      .where('order.total_amount = :totalAmount', { totalAmount })
-      .andWhere('order.created_at >= :date', { date: threshold });
+      .where('order.totalAmount = :totalAmount', { totalAmount })
+      .andWhere('order.createdAt >= :date', { date: threshold });
 
     // Usuário autenticado: busca por userId
     if (userId) {
-      queryBuilder.andWhere('order.user_id = :userId', { userId });
+      queryBuilder.andWhere('order.user.id = :userId', { userId });
       return await queryBuilder.getOne();
     }
 
     // Guest: busca por email
     if (email) {
-      queryBuilder.andWhere('order.guest_email = :guestEmail', { guestEmail: email });
+      queryBuilder.andWhere('order.guestEmail = :guestEmail', { guestEmail: email });
       return await queryBuilder.getOne();
     }
 
@@ -642,13 +642,13 @@ export class OrderService {
       // Cria o pedido
       const newOrder = manager.create(Order, {
         user,
-        guest_email: finalEmail,
+        guestEmail: finalEmail,
         items: orderItems,
-        total_amount: totalAmount,
+        totalAmount: totalAmount,
         currency: MONEY.DEFAULT_CURRENCY,
-        idempotency_key: idempotencyKey || uuidv4(),
+        idempotencyKey: idempotencyKey || uuidv4(),
         status: OrderStatus.PENDING,
-        accepted_terms: true,
+        acceptedTerms: true,
         phone,
       });
 
@@ -661,7 +661,7 @@ export class OrderService {
         street: sanitizedAddress.street || shippingAddressData.street,
         city: sanitizedAddress.city || shippingAddressData.city,
         state: sanitizedAddress.state || shippingAddressData.state,
-        zip_code: sanitizedAddress.zipCode || shippingAddressData.zipCode,
+        zipCode: sanitizedAddress.zipCode || shippingAddressData.zipCode,
         country: sanitizedAddress.country || shippingAddressData.country,
       });
 
@@ -682,13 +682,13 @@ export class OrderService {
     return items.map((item) => {
       const product = productsMap.get(item.productId)!;
       const sizeName = sizeNamesMap.get(item.size)!;
-      const itemTotalPrice = product.price_cents * item.quantity;
+      const itemTotalPrice = product.priceCents * item.quantity;
 
       return this.orderItemRepository.create({
         product,
         quantity: item.quantity,
-        unit_price: product.price_cents,
-        total_price: itemTotalPrice,
+        unitPrice: product.priceCents,
+        totalPrice: itemTotalPrice,
         size: sizeName,
       });
     });

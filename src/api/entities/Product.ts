@@ -25,7 +25,9 @@ export class Product {
   @Column({ length: 255 })
   name!: string;
 
+  @Index()
   @Column({
+    name: 'price_cents',
     type: 'bigint',
     comment: 'Preço em centavos',
     transformer: {
@@ -33,7 +35,7 @@ export class Product {
       from: (value: string) => parseInt(value, 10),
     },
   })
-  price_cents!: number;
+  priceCents!: number;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
@@ -58,17 +60,17 @@ export class Product {
   @OneToMany(() => Wishlist, (wishlist) => wishlist.product)
   wishlist!: Wishlist[];
 
-  @DeleteDateColumn()
-  deleted_at?: Date;
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt?: Date;
 
   @Index()
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 
   /**
    * Domain Getter - Retorna o objeto Money para manipulação segura
    */
   get money(): Money {
-    return new Money(this.price_cents);
+    return new Money(this.priceCents);
   }
 }

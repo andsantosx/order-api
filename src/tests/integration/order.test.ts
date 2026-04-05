@@ -71,12 +71,12 @@ describe('Order Integration', () => {
       .send(orderData);
 
     if (response.status !== 201) {
-       console.log('Order Creation Failed:', JSON.stringify(response.body, null, 2));
+      console.log('Order Creation Failed:', JSON.stringify(response.body, null, 2));
     }
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('id');
-    expect(response.body.total_amount).toBeDefined(); // Should be calculated
+    expect(response.body.totalAmount).toBeDefined(); // Should be calculated
     expect(response.body.status).toBe('PENDING');
     // Verify that the size NAME is stored, not the ID
     expect(response.body.items[0].size).toBe('38');

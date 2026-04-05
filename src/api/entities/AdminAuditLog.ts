@@ -30,10 +30,10 @@ export class AdminAuditLog {
   resourceId?: string; // ID do recurso afetado (Pedido, Produto, etc)
 
   @Column({ type: 'json', nullable: true })
-  payload?: any; // Dados enviados no request (filtrados)
+  payload?: Record<string, unknown>; // Dados enviados no request (filtrados)
 
   @Column({ type: 'json', nullable: true })
-  prevValues?: any; // Valores anteriores (se aplicável e capturado)
+  prevValues?: Record<string, unknown>; // Valores anteriores (se aplicável e capturado)
 
   @Column()
   ip!: string;
@@ -41,6 +41,6 @@ export class AdminAuditLog {
   @Column()
   userAgent!: string;
 
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 }

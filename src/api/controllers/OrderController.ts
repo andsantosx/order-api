@@ -19,7 +19,7 @@ export class OrderController {
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
 
-      // Allow admins to filter by query user_id, otherwise they see all orders. 
+      // Allow admins to filter by query user_id, otherwise they see all orders.
       // Non-admins only ever see their own orders.
       const queryUserId = req.query.userId as string | undefined;
       const targetUserId = isAdmin ? queryUserId : userId;

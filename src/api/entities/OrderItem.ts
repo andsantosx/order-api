@@ -22,6 +22,7 @@ export class OrderItem {
   size?: string;
 
   @Column({
+    name: 'unit_price',
     type: 'bigint',
     comment: 'Preço unitário no momento da compra',
     transformer: {
@@ -29,9 +30,10 @@ export class OrderItem {
       from: (value: string) => parseInt(value, 10),
     },
   })
-  unit_price!: number;
+  unitPrice!: number;
 
   @Column({
+    name: 'total_price',
     type: 'bigint',
     comment: 'Preço total (quantidade * preço unitário)',
     transformer: {
@@ -39,5 +41,5 @@ export class OrderItem {
       from: (value: string) => parseInt(value, 10),
     },
   })
-  total_price!: number;
+  totalPrice!: number;
 }

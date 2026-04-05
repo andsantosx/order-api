@@ -2,13 +2,27 @@ import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
 import { log } from '../../config/logger';
 
+interface ViaCEPResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  ibge: string;
+  gia: string;
+  ddd: string;
+  siafi: string;
+  erro?: boolean;
+}
+
 /**
  * Service para operações de logística e frete
  */
 export class ShippingService {
   /**
    * Busca endereço por CEP utilizando a API oficial ViaCEP
-   * 
+   *
    * @param cep - CEP formatado ou apenas números (8 dígitos)
    * @returns Dados do endereço formatados
    */
@@ -21,14 +35,14 @@ export class ShippingService {
 
     try {
       log.info('Buscando CEP na API ViaCEP', { cep: cleanCep });
-      
+
       const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-      
+
       if (!response.ok) {
         throw new Error(`ViaCEP returned status ${response.status}`);
       }
 
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as ViaCEPResponse;
 
       if (data.erro) {
         throw new AppError('CEP não encontrado.', HTTP_STATUS.NOT_FOUND);
@@ -48,10 +62,10 @@ export class ShippingService {
         cep: cleanCep,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       throw new AppError(
         'Erro ao consultar serviço de CEP. Tente novamente mais tarde.',
-        HTTP_STATUS.INTERNAL_SERVER_ERROR
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
       );
     }
   }

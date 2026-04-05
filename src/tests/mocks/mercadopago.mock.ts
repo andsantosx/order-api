@@ -1,58 +1,79 @@
+import { PaymentRequestBody, PayerData, MercadoPagoPaymentResponse } from '../../types/payment';
+
 export class Payment {
+  private static lastCreatedPayment: unknown = null;
+
   constructor(_client: unknown) {}
+
+  static getLastCreatedPayment() {
+    return this.lastCreatedPayment;
+  }
 
   async create({
     body,
   }: {
-    body: {
-      description?: string;
-      payer?: unknown;
-      payment_method_id?: string;
-      transaction_amount?: number;
-      installments?: number;
-      metadata?: unknown;
-    };
-  }) {
-    const status = body.description?.includes('FAIL')
-      ? 'rejected'
-      : body.description?.includes('PENDING')
-        ? 'in_process'
-        : 'approved';
+    body: PaymentRequestBody;
+  }): Promise<MercadoPagoPaymentResponse> {
+    const isPix = body.payment_method_id === 'pix';
+    const isError = body.description?.includes('FAIL') || body.payment_method_id === 'rejected';
+    const isPending = body.description?.includes('PENDING') || isPix;
 
-    return {
-      id: Math.floor(Math.random() * 1000000000),
+    const status = isError ? 'rejected' : isPending ? 'pending' : 'approved';
+    const statusDetail = isError ? 'cc_rejected_high_risk' : isPending ? (isPix ? 'pending_waiting_transfer' : 'in_process') : 'accredited';
+
+    const result: MercadoPagoPaymentResponse = {
+      id: 123456789,
       status,
-      status_detail: status === 'approved' ? 'accredited' : 'cc_rejected_other_reason',
+      status_detail: statusDetail,
       date_approved: status === 'approved' ? new Date().toISOString() : null,
-      payer: body.payer,
+      payer: {
+        email: body.payer.email,
+        firstName: body.payer.first_name,
+        lastName: body.payer.last_name,
+        identification: body.payer.identification,
+        phone: body.payer.phone ? {
+          areaCode: body.payer.phone.area_code,
+          number: body.payer.phone.number,
+        } : undefined,
+        address: body.payer.address ? {
+          zipCode: body.payer.address.zip_code,
+          streetName: body.payer.address.street_name,
+          streetNumber: body.payer.address.street_number,
+        } : undefined,
+      },
       payment_method_id: body.payment_method_id,
       transaction_amount: body.transaction_amount,
       installments: body.installments,
-      start_date: new Date().toISOString(),
-      metadata: body.metadata,
+      metadata: body.metadata as Record<string, unknown>,
+      external_reference: body.external_reference,
+      ...(isPix && {
+        point_of_interaction: {
+          transaction_data: {
+            qr_code: '00020126330014BR.GOV.BCB.PIX0111testpixcode',
+            qr_code_base64: 'iVBORw0KGgoAAAANSUhEUgAA...',
+            ticket_url: 'https://www.mercadopago.com.br/payments/123456789/ticket',
+          },
+        },
+        date_of_expiration: new Date(Date.now() + 86400000).toISOString(),
+      }),
     };
+
+    Payment.lastCreatedPayment = result;
+    return result;
   }
 
-  async get({ id }: { id: number }) {
-    return {
+  async get({ id }: { id: number }): Promise<MercadoPagoPaymentResponse> {
+    // Retorna o último pagamento ou um padrão
+    const base = (Payment.lastCreatedPayment as MercadoPagoPaymentResponse) || {
       id,
       status: 'approved',
       status_detail: 'accredited',
-      collection_id: id,
-      collection_status: 'approved',
-      payment_type_id: 'credit_card',
-      merchant_order_id: '123456',
-      preference_id: 'pref_123',
-      site_id: 'MLB',
-      processing_mode: 'aggregator',
-      merchant_account_id: 'null',
-      metadata: {
-        order_id: '00000000-0000-0000-0000-000000000000',
-      },
+      metadata: { order_id: '00000000-0000-0000-0000-000000000000' },
     };
+    return { ...base, id } as MercadoPagoPaymentResponse;
   }
 
-  async cancel({ id }: { id: number }) {
+  async cancel({ id }: { id: number }): Promise<Partial<MercadoPagoPaymentResponse>> {
     return {
       id,
       status: 'cancelled',
@@ -66,7 +87,7 @@ export class PaymentRefund {
 
   async create({ payment_id }: { payment_id: number }) {
     return {
-      id: Math.floor(Math.random() * 1000000000),
+      id: 987654321,
       payment_id,
       status: 'approved',
       date_created: new Date().toISOString(),
@@ -74,4 +95,6 @@ export class PaymentRefund {
   }
 }
 
-export const MercadoPagoConfig = jest.fn();
+export const MercadoPagoConfig = jest.fn().mockImplementation(() => ({
+  options: { accessToken: 'test-token' }
+}));

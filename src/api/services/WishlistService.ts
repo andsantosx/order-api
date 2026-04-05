@@ -44,7 +44,7 @@ export class WishlistService {
     const wishlist = await this.wishlistRepository.find({
       where: { user: { id: userId } },
       relations: ['product', 'product.images', 'product.category', 'product.brand'],
-      order: { added_at: 'DESC' },
+      order: { addedAt: 'DESC' },
     });
 
     log.info('Wishlist consultada', { userId, itemCount: wishlist.length });

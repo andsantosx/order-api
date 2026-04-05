@@ -32,8 +32,14 @@ const envSchema = z.object({
   // Mercado Pago
   MERCADOPAGO_ACCESS_TOKEN: z.string().min(1, 'Mercado Pago Access Token é obrigatório'),
   MERCADOPAGO_PUBLIC_KEY: z.string().min(1, 'Mercado Pago Public Key é obrigatório'),
-  MERCADOPAGO_WEBHOOK_SECRET: z.string().min(1, 'Mercado Pago Webhook Secret é obrigatório').default('default_secret_for_tests'),
-  MERCADOPAGO_WEBHOOK_URL: z.string().url('Mercado Pago Webhook URL inválida').default('http://localhost:3000/webhook'),
+  MERCADOPAGO_WEBHOOK_SECRET: z
+    .string()
+    .min(1, 'Mercado Pago Webhook Secret é obrigatório')
+    .default('default_secret_for_tests'),
+  MERCADOPAGO_WEBHOOK_URL: z
+    .string()
+    .url('Mercado Pago Webhook URL inválida')
+    .default('http://localhost:3000/api/payments/webhook'),
 
   // ReCAPTCHA (v2 Invisible)
   RECAPTCHA_SECRET_KEY: z.string().min(1, 'reCAPTCHA Secret Key é obrigatória'),

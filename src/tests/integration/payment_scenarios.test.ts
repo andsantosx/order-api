@@ -33,8 +33,8 @@ describe('Payment Scenarios Integration', () => {
   let userId: string;
 
   // USER TEST DATA
-  const TEST_DOC_MP = '12345678909'; 
-  const TEST_DOC_FORMATTED = '123.456.789-09'; 
+  const TEST_DOC_MP = '12345678909';
+  const TEST_DOC_FORMATTED = '123.456.789-09';
 
   beforeAll(async () => {
     try {
@@ -48,32 +48,38 @@ describe('Payment Scenarios Integration', () => {
       await userRepo.delete({ email });
 
       // Using the user's test document in the system
-      const user = await userRepo.save(userRepo.create({
-        name: 'Payment Tester',
-        email,
-        password_hash: 'manual_override',
-        document: TEST_DOC_MP,
-        phone: '11999991111',
-        accepted_terms: true,
-      }));
+      const user = await userRepo.save(
+        userRepo.create({
+          name: 'Payment Tester',
+          email,
+          passwordHash: 'manual_override', // Alterado para camelCase
+          document: TEST_DOC_MP,
+          phone: '11999991111',
+          acceptedTerms: true, // Alterado para camelCase
+        }),
+      ) as User; // Cast explícito para Tipo único
       userId = user.id;
 
-      token = jwt.sign(
-        { userId: user.id, email: user.email, isAdmin: false },
-        env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
+      token = jwt.sign({ userId: user.id, email: user.email, isAdmin: false }, env.JWT_SECRET, {
+        expiresIn: '1h',
+      });
 
-      const brand = await connection.getRepository(Brand).save({ name: 'Brand Y', slug: 'brand-y', active: true });
-      const category = await connection.getRepository(Category).save({ name: 'Cat Y', slug: 'cat-y', active: true });
-      const size = await connection.getRepository(Size).save({ name: 'L', active: true, type: 'clothing' });
+      const brand = await connection
+        .getRepository(Brand)
+        .save({ name: 'Brand Y', slug: 'brand-y', active: true });
+      const category = await connection
+        .getRepository(Category)
+        .save({ name: 'Cat Y', slug: 'cat-y', active: true });
+      const size = await connection
+        .getRepository(Size)
+        .save({ name: 'L', active: true, type: 'clothing' });
       sizeId = size.id;
 
       const product = await connection.getRepository(Product).save({
         name: 'Payment Product',
         slug: 'payment-product',
         description: 'Desc',
-        price_cents: 2000,
+        priceCents: 2000, // Alterado para camelCase
         active: true,
         brand,
         category,
@@ -117,7 +123,7 @@ describe('Payment Scenarios Integration', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         orderId,
-        payment_method_id: 'master',
+        paymentMethodId: 'master', // Alterado para camelCase
         payer: {
           email: 'tester_it_final@example.com',
           identification: { type: 'CPF', number: TEST_DOC_MP },
@@ -132,7 +138,7 @@ describe('Payment Scenarios Integration', () => {
 
   it('S2: Guest Order and Payment with Provided Test Data', async () => {
     const guestEmail = 'guest_it_final@example.com';
-    
+
     const orderRes = await request(app)
       .post('/api/orders')
       .send({
@@ -157,7 +163,7 @@ describe('Payment Scenarios Integration', () => {
       .post('/api/payments/process')
       .send({
         orderId,
-        payment_method_id: 'pix',
+        paymentMethodId: 'pix', // Alterado para camelCase
         payer: {
           email: guestEmail,
           identification: { type: 'CPF', number: TEST_DOC_MP },
@@ -183,7 +189,7 @@ describe('Payment Scenarios Integration', () => {
     // - [x] Documentação e Configuração
     // - [x] Configuração das URLs de Redirect no Dashboard MP
     // - [x] Atualização do `.env` com tokens de teste do usuário
-    
+
     const res = await request(app)
       .post('/api/payments/webhook')
       .send({

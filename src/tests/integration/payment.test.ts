@@ -34,7 +34,7 @@ describe('Payment Integration', () => {
       email: 'pay@example.com',
       password: 'password123',
     });
-    token = loginRes.body.token;
+    token = (loginRes.body as { token: string }).token;
 
     // Setup Data
     const brand = await connection
@@ -50,7 +50,7 @@ describe('Payment Integration', () => {
       name: 'P',
       slug: 'p',
       description: 'D',
-      price_cents: 5000,
+      priceCents: 5000,
       active: true,
       brand,
       category,
@@ -72,7 +72,7 @@ describe('Payment Integration', () => {
         },
         acceptedTerms: true,
       });
-    orderId = orderRes.body.id;
+    orderId = (orderRes.body as { id: string }).id;
   });
 
   // Note: Actual payment processing involves external API (Mercado Pago).
@@ -83,7 +83,17 @@ describe('Payment Integration', () => {
     const response = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
-      .send({ orderId: '00000000-0000-0000-0000-000000000000' });
+      .send({ 
+        orderId: '00000000-0000-0000-0000-000000000000',
+        paymentMethodId: 'pix',
+        payer: {
+          email: 'test@example.com',
+          identification: {
+            type: 'CPF',
+            number: '12345678901'
+          }
+        }
+      });
 
     expect(response.status).toBe(404);
   });
@@ -96,9 +106,19 @@ describe('Payment Integration', () => {
     const response = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
-      .send({ orderId });
+      .send({ 
+        orderId,
+        paymentMethodId: 'pix',
+        payer: {
+          email: 'pay@example.com',
+          identification: {
+            type: 'CPF',
+            number: '12345678901'
+          }
+        }
+      });
 
-    // Without mocking MP, this might return 500 or 400.
+    // Without mocking MP, this might return 500 or 400 if credentials fail.
     // We assert that it's NOT 404, meaning the order was found.
     expect(response.status).not.toBe(404);
   });

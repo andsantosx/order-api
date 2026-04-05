@@ -37,6 +37,10 @@ export default [
         require: "readonly",
         fetch: "readonly",
         AbortSignal: "readonly",
+        AbortController: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        URLSearchParams: "readonly",
       },
       parser: typescriptParser,
       parserOptions: {

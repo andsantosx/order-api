@@ -60,7 +60,7 @@ export class ProductController {
   async create(req: Request, res: Response, _next: NextFunction) {
     const {
       name,
-      price_cents,
+      priceCents,
       description,
       currency,
       categoryId,
@@ -77,7 +77,7 @@ export class ProductController {
 
     const product = await this.productService.create(
       name,
-      price_cents,
+      priceCents,
       description,
       currency,
       categoryId,

@@ -27,15 +27,15 @@ export class UserAddress {
   @Column()
   state!: string;
 
-  @Column()
-  zip_code!: string;
+  @Column({ name: 'zip_code' })
+  zipCode!: string;
 
   @Column()
   country!: string;
 
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 
-  @UpdateDateColumn()
-  updated_at!: Date;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

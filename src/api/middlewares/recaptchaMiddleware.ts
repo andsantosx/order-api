@@ -2,6 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { env } from '../../config/env';
 import { log } from '../../config/logger';
 
+interface RecaptchaResponse {
+  success: boolean;
+  challenge_ts: string;
+  hostname: string;
+  'error-codes'?: string[];
+}
+
 /**
  * Middleware para validar o Google reCAPTCHA v2 (Invisível)
  *
@@ -47,7 +54,7 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
     });
 
     clearTimeout(timeoutId);
-    const data: any = await response.json();
+    const data = (await response.json()) as RecaptchaResponse;
 
     if (!data.success) {
       const errorCodes = data['error-codes'] || [];
@@ -70,8 +77,8 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
 
     // Sucesso na verificação
     next();
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       log.error('Timeout ao verificar reCAPTCHA com a API do Google.');
     } else {
       log.error(

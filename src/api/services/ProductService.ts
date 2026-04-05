@@ -106,7 +106,7 @@ export class ProductService {
       categories,
       brands,
       sizes,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       page = 1,
       limit = 20,
     } = filters;
@@ -125,15 +125,15 @@ export class ProductService {
       .take(limit);
 
     if (sortBy === 'price-low') {
-      qb.orderBy('product.price_cents', 'ASC');
+      qb.orderBy('product.priceCents', 'ASC');
     }
 
     if (sortBy === 'price-high') {
-      qb.orderBy('product.price_cents', 'DESC');
+      qb.orderBy('product.priceCents', 'DESC');
     }
 
     if (!sortBy || sortBy === 'newest') {
-      qb.orderBy('product.created_at', 'DESC');
+      qb.orderBy('product.createdAt', 'DESC');
     }
 
     if (categories && categories.length > 0) {
@@ -145,17 +145,11 @@ export class ProductService {
     }
 
     if (sizes && sizes.length > 0) {
-      // Filter products that have at least one of the selected sizes
-      // We use a subquery or join filter logic.
-      // Since we already joined productSizes and size, we can filter on size.name
-      // IMPORTANT: If we just filter, we might get duplicate product rows if multiple sizes match,
-      // but TypeORM handles hydration. However, strict filtering often requires checks.
-      // A safer way for "has one of these sizes" is:
       qb.andWhere(
         (qb) => {
           const subQuery = qb
             .subQuery()
-            .select('ps.product_id')
+            .select('ps.productId')
             .from(ProductSize, 'ps')
             .leftJoin('ps.size', 's')
             .where('s.name IN (:...sizes)')
@@ -172,12 +166,11 @@ export class ProductService {
     }
 
     if (minPrice !== undefined) {
-      // Assuming price is in cents for consistency
-      qb.andWhere('product.price_cents >= :minPrice', { minPrice });
+      qb.andWhere('product.priceCents >= :minPrice', { minPrice });
     }
 
     if (maxPrice !== undefined) {
-      qb.andWhere('product.price_cents <= :maxPrice', { maxPrice });
+      qb.andWhere('product.priceCents <= :maxPrice', { maxPrice });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -291,7 +284,7 @@ export class ProductService {
    */
   async create(
     name: string,
-    price_cents: number,
+    priceCents: number,
     description: string | undefined,
     currency: string,
     categoryId: number,
@@ -359,7 +352,7 @@ export class ProductService {
     // Prepara produto COM todas as relações
     const product = this.productRepository.create({
       name: safeName,
-      price_cents,
+      priceCents,
       description: safeDescription,
       currency,
       category,
@@ -374,7 +367,7 @@ export class ProductService {
     log.info('Novo produto criado', {
       productId: savedProduct.id,
       name: savedProduct.name,
-      price: price_cents / 100,
+      price: priceCents / 100,
     });
 
     return this.getOne(savedProduct.id);
@@ -402,7 +395,7 @@ export class ProductService {
     id: string,
     data: {
       name?: string;
-      price_cents?: number;
+      priceCents?: number;
       description?: string;
       currency?: string;
       categoryId?: number;
@@ -439,7 +432,7 @@ export class ProductService {
 
       // Atualiza campos básicos
       if (data.name !== undefined) product.name = sanitized.name!;
-      if (data.price_cents !== undefined) product.price_cents = data.price_cents;
+      if (data.priceCents !== undefined) product.priceCents = data.priceCents;
       if (data.description !== undefined) product.description = sanitized.description;
       if (data.currency !== undefined) product.currency = data.currency;
 

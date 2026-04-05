@@ -1,4 +1,4 @@
-import { Socket } from 'socket.io';
+import { CustomSocket } from '../services/SocketService';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { log } from '../../config/logger';
@@ -9,7 +9,7 @@ interface TokenPayload {
   exp: number;
 }
 
-export const socketAuthMiddleware = (socket: Socket, next: (err?: Error) => void) => {
+export const socketAuthMiddleware = (socket: CustomSocket, next: (err?: Error) => void) => {
   const token = socket.handshake.auth?.token;
 
   if (!token) {
@@ -22,11 +22,11 @@ export const socketAuthMiddleware = (socket: Socket, next: (err?: Error) => void
     const decoded = jwt.verify(token, secret) as TokenPayload;
 
     // Anexa o userId ao socket para uso posterior (join rooms, etc)
-    (socket as any).userId = decoded.userId;
+    socket.userId = decoded.userId;
     log.info(`✅ Socket authenticated: user ${decoded.userId}`);
     next();
-  } catch (error) {
-    log.error('❌ Socket authentication failed', { error: (error as Error).message });
+  } catch (error: unknown) {
+    log.error('❌ Socket authentication failed', { error: error instanceof Error ? error.message : 'Unknown' });
     next(new Error('Authentication error: Invalid token'));
   }
 };

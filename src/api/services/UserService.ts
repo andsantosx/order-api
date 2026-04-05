@@ -65,10 +65,10 @@ export class UserService {
     const user = this.userRepository.create({
       name: sanitized.name,
       email: sanitized.email,
-      password_hash: passwordHash,
+      passwordHash: passwordHash,
       isAdmin: false, // Usuários normais não são admin por padrão
       document: document || undefined,
-      accepted_terms: true,
+      acceptedTerms: true,
     });
 
     await this.userRepository.save(user);
@@ -95,7 +95,7 @@ export class UserService {
     // Busca usuário explicitando a seleção do hash da senha (que é oculta por padrão)
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .addSelect('user.password_hash')
+      .addSelect('user.passwordHash')
       .where('user.email = :email', { email: sanitized.email })
       .getOne();
 
@@ -107,7 +107,7 @@ export class UserService {
     }
 
     // Verifica se a senha é válida
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       // Artificial delay to prevent brute-force
       await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
@@ -186,7 +186,7 @@ export class UserService {
     // Atualiza senha se fornecida
     if (data.password) {
       new PasswordVO(data.password);
-      user.password_hash = await bcrypt.hash(data.password, SECURITY.BCRYPT_SALT_ROUNDS);
+      user.passwordHash = await bcrypt.hash(data.password, SECURITY.BCRYPT_SALT_ROUNDS);
     }
 
     // Atualiza documento se fornecido
@@ -227,7 +227,7 @@ export class UserService {
       email: user.email,
       isAdmin: user.isAdmin,
       document: maskedDocument,
-      acceptedTerms: user.accepted_terms,
+      acceptedTerms: user.acceptedTerms,
     };
   }
 }

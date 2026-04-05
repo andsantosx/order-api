@@ -113,11 +113,11 @@ export class AddressService {
       street: sanitized.street,
       city: sanitized.city,
       state: sanitized.state,
-      zip_code: sanitized.zipCode,
+      zipCode: sanitized.zipCode,
       country: sanitized.country,
     });
 
-    const saved = await this.addressRepository.save(address);
+    const saved = await this.addressRepository.save(address) as UserAddress;
 
     log.info('Novo endereço criado', {
       userId,

@@ -16,7 +16,7 @@ export class AdminService {
 
     const qbRevenue = this.orderRepository
       .createQueryBuilder('order')
-      .select('SUM(order.total_amount)', 'sum')
+      .select('SUM(order.totalAmount)', 'sum')
       .where('order.status IN (:...statuses)', {
         statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
       });
@@ -29,8 +29,8 @@ export class AdminService {
       // end needs to be end of day
       end.setHours(23, 59, 59, 999);
 
-      qbRevenue.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
-      qbOrders.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
+      qbRevenue.andWhere('order.createdAt BETWEEN :start AND :end', { start, end });
+      qbOrders.andWhere('order.createdAt BETWEEN :start AND :end', { start, end });
     }
 
     const revenueResult = await qbRevenue.getRawOne();
@@ -50,14 +50,14 @@ export class AdminService {
     const qbRecent = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.user', 'user')
-      .orderBy('order.created_at', 'DESC')
+      .orderBy('order.createdAt', 'DESC')
       .take(5)
       .select([
         'order.id',
-        'order.total_amount',
+        'order.totalAmount',
         'order.status',
-        'order.created_at',
-        'order.guest_email',
+        'order.createdAt',
+        'order.guestEmail',
         'user.id',
         'user.name',
         'user.email',
@@ -67,7 +67,7 @@ export class AdminService {
       const start = new Date(startDate);
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      qbRecent.andWhere('order.created_at BETWEEN :start AND :end', { start, end });
+      qbRecent.andWhere('order.createdAt BETWEEN :start AND :end', { start, end });
     }
 
     const recentOrders = await qbRecent.getMany();
@@ -75,10 +75,10 @@ export class AdminService {
     // Format recent orders for display
     const recentOrdersFormatted = recentOrders.map((order) => ({
       id: order.id,
-      customer: order.user?.name || order.guest_email || 'Guest',
-      total: order.total_amount,
+      customer: order.user?.name || order.guestEmail || 'Guest',
+      total: order.totalAmount,
       status: order.status,
-      date: order.created_at,
+      date: order.createdAt,
     }));
 
     return {

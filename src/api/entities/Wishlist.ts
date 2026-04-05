@@ -15,6 +15,6 @@ export class Wishlist {
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-  @CreateDateColumn()
-  added_at!: Date;
+  @CreateDateColumn({ name: 'added_at' })
+  addedAt!: Date;
 }

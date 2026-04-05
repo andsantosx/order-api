@@ -26,7 +26,7 @@ export class ContactService {
 
   async getAll() {
     return this.contactRepository.find({
-      order: { created_at: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 

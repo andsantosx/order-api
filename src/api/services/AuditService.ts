@@ -8,17 +8,17 @@ export interface AuditLogData {
   method: string;
   path: string;
   resourceId?: string;
-  payload?: any;
-  prevValues?: any;
+  payload?: unknown;
+  prevValues?: unknown;
   ip: string;
   userAgent: string;
 }
 
 /**
  * AuditService
- * 
+ *
  * Centraliza o registro de ações administrativas para fins de segurança e auditoria (Compliance).
- * 
+ *
  * Segue os princípios de Clean Architecture ao isolar o mecanismo de log.
  */
 export class AuditService {

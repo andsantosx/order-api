@@ -10,7 +10,7 @@ import { Request, Response, NextFunction } from 'express';
  * Este é um componente essencial de Defesa em Profundidade.
  */
 export const sanitizationMiddleware = (req: Request, _res: Response, next: NextFunction) => {
-  const sanitizeValue = (value: any): any => {
+  const sanitizeValue = (value: unknown): unknown => {
     if (typeof value === 'string') {
       // Remove tags HTML/XML (XSS Protection)
       // e padrões de script básicos
@@ -25,9 +25,10 @@ export const sanitizationMiddleware = (req: Request, _res: Response, next: NextF
     }
 
     if (typeof value === 'object' && value !== null) {
-      const sanitizedObj: any = {};
-      for (const key in value) {
-        sanitizedObj[key] = sanitizeValue(value[key]);
+      const sanitizedObj: Record<string, unknown> = {};
+      const obj = value as Record<string, unknown>;
+      for (const key in obj) {
+        sanitizedObj[key] = sanitizeValue(obj[key]);
       }
       return sanitizedObj;
     }

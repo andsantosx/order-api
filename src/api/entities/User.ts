@@ -13,8 +13,8 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column({ select: false })
-  password_hash!: string;
+  @Column({ name: 'password_hash', select: false })
+  passwordHash!: string;
 
   @Column({ default: false })
   isAdmin!: boolean;
@@ -25,11 +25,11 @@ export class User {
   @Column({ nullable: true })
   phone?: string;
 
-  @Column({ default: false })
-  accepted_terms!: boolean;
+  @Column({ name: 'accepted_terms', default: false })
+  acceptedTerms!: boolean;
 
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 
   @OneToMany(() => Order, (order) => order.user)
   orders!: Order[];
@@ -42,7 +42,7 @@ export class User {
    * Mascara dados sensíveis antes de enviar ao frontend.
    */
   toJSON() {
-    const { password_hash, ...user } = this;
+    const { passwordHash, ...user } = this;
 
     // Máscara de CPF: mantém apenas os últimos 3 dígitos visíveis
     if (user.document && user.document.length >= 11) {
