@@ -20,7 +20,7 @@ export const createOrderSchema = z.object({
       .email('Email inválido')
       .max(VALIDATION.EMAIL_MAX_LENGTH, 'Email muito longo')
       .optional(),
-    guestCpf: z.string().regex(VALIDATION.CPF_FORMATTED_REGEX, 'CPF inválido').optional(),
+    guestCpf: z.string().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/, 'CPF inválido').optional(),
     phone: z
       .string()
       .min(1, 'Telefone é obrigatório')

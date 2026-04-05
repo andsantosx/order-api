@@ -242,8 +242,10 @@ export class PaymentService {
 
     if (!email) throw new AppError('Email obrigatório', HTTP_STATUS.BAD_REQUEST);
 
-    const docType = rawData.payer?.identification?.type || 'CPF';
-    const docNumber = rawData.payer?.identification?.number;
+    const docType = (rawData.payer?.identification?.type || rawData.formData?.payer?.identification?.type || (paymentData as any).payer?.identification?.type || 'CPF').toUpperCase();
+    const rawDocNumber = rawData.payer?.identification?.number || rawData.formData?.payer?.identification?.number || (paymentData as any).payer?.identification?.number || order.user?.document || '';
+    const docNumber = rawDocNumber.replace(/\D/g, ''); // Ensure only digits for MP identification number
+
     if (!docNumber) throw new AppError('Documento obrigatório', HTTP_STATUS.BAD_REQUEST);
 
     const payer = this.mapPayer(order, rawData, email, docType, docNumber);
@@ -363,10 +365,10 @@ export class PaymentService {
   }
 
   private mapItems(order: Order): PaymentItem[] {
-    return order.items.map(item => ({
+    return (order.items || []).map(item => ({
       id: item.product?.id || item.id,
       title: item.product?.name || 'Produto',
-      description: item.product?.description?.substring(0, 255) || 'Físico',
+      description: (item.product?.description || item.product?.name || 'Físico').substring(0, 255),
       categoryId: this.mapCategory(item.product?.category?.name),
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),
@@ -452,7 +454,8 @@ export class PaymentService {
       message: mpError.message,
       cause: mpError.cause,
       status: mpError.status,
-      responseData: responseData // Logar o erro REAL do MP ajuda a diagnosticar o 400
+      responseData: responseData,
+      rawError: error // Mais detalhado para diagnóstico
     });
     throw new AppError(ERROR_MESSAGES.PAYMENT_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
