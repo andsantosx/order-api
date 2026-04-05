@@ -77,12 +77,24 @@ export class PaymentService {
         requestBody: sanitizedBody // Ajuda a ver o que estamos enviando de fato
       });
 
+      // Extrai o Device ID para análise de fraude (100/100 MP)
+      const rawData: any = { ...paymentData, ...(paymentData.formData || {}) };
+      const deviceId = rawData.deviceId || rawData.device_id || (paymentData as any).deviceId || (paymentData as any).device_id;
+      const customHeaders: Record<string, string> = {
+        'x-idempotency-key': order.idempotencyKey || order.id,
+      };
+
+      if (deviceId && deviceId !== 'not_provided') {
+        customHeaders['x-meli-session-id'] = deviceId;
+      }
+
       // Cria pagamento no Mercado Pago com Idempotência (Segurança)
       const result = await payment.create({
         body: paymentBody as any,
         requestOptions: {
           idempotencyKey: order.idempotencyKey || order.id,
-        },
+          customHeaders,
+        } as any,
       });
 
       log.info('Pagamento processado com sucesso', {
@@ -255,7 +267,6 @@ export class PaymentService {
       external_reference: order.id,
       notification_url: env.MERCADOPAGO_WEBHOOK_URL,
       statement_descriptor: 'ORDER STORE',
-      device_id: deviceId, // Fornecido no topo para algumas APIs de fraude
       binary_mode: true,
       payer: {
         email: payer.email,
