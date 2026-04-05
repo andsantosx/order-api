@@ -36,6 +36,7 @@ export class UserService {
     password: string,
     acceptedTerms: boolean,
     document?: string,
+    phone?: string,
   ): Promise<UserResponse> {
     // Verifica aceite dos termos
     if (!acceptedTerms) {
@@ -68,6 +69,7 @@ export class UserService {
       passwordHash: passwordHash,
       isAdmin: false, // Usuários normais não são admin por padrão
       document: document || undefined,
+      phone: phone || undefined,
       acceptedTerms: true,
     });
 
@@ -154,7 +156,7 @@ export class UserService {
    */
   async updateProfile(
     userId: string,
-    data: { name?: string; email?: string; password?: string; document?: string },
+    data: { name?: string; email?: string; password?: string; document?: string; phone?: string },
   ): Promise<UserResponse> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
@@ -202,6 +204,11 @@ export class UserService {
       user.document = data.document;
     }
 
+    // Atualiza telefone se fornecido
+    if (data.phone) {
+      user.phone = data.phone;
+    }
+
     await this.userRepository.save(user);
 
     return this.getSanitizedUserOutput(user);
@@ -227,6 +234,7 @@ export class UserService {
       email: user.email,
       isAdmin: user.isAdmin,
       document: maskedDocument,
+      phone: user.phone,
       acceptedTerms: user.acceptedTerms,
     };
   }

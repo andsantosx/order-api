@@ -40,6 +40,10 @@ export const registerSchema = z.object({
       .refine((val) => val.length === 11, 'CPF deve conter exatamente 11 dígitos')
       .refine((val) => isValidCPF(val), 'CPF inválido')
       .optional(),
+    phone: z
+      .string()
+      .transform((val) => val.replace(/\D/g, ''))
+      .refine((val) => val.length >= 10 && val.length <= 11, 'Telefone deve ter entre 10 e 11 dígitos (com DDD)'),
     acceptedTerms: z
       .boolean()
       .refine((val) => val === true, 'Você deve aceitar os termos de privacidade para continuar'),
@@ -86,6 +90,11 @@ export const updateProfileSchema = z.object({
           VALIDATION.PASSWORD_MAX_LENGTH,
           `Senha deve ter no máximo ${VALIDATION.PASSWORD_MAX_LENGTH} caracteres`,
         )
+        .optional(),
+      phone: z
+        .string()
+        .transform((val) => val.replace(/\D/g, ''))
+        .refine((val) => val.length >= 10 && val.length <= 11, 'Telefone deve ter entre 10 e 11 dígitos (com DDD)')
         .optional(),
     })
     .refine((data) => Object.keys(data).length > 0, {

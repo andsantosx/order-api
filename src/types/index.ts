@@ -123,5 +123,6 @@ export interface UserResponse {
   email: string;
   isAdmin: boolean;
   document?: string;
+  phone?: string;
   acceptedTerms: boolean;
 }
