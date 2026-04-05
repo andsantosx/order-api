@@ -320,13 +320,16 @@ export class PaymentService {
     docType: string,
     docNumber: string,
   ): PayerData {
-    const fullName = rawData.payer?.firstName
-      ? `${rawData.payer.firstName} ${rawData.payer.lastName || ''}`.trim()
+    const payerFirstName = rawData.payer?.firstName || rawData.payer?.first_name;
+    const payerLastName = rawData.payer?.lastName || rawData.payer?.last_name;
+
+    const fullName = payerFirstName
+      ? `${payerFirstName} ${payerLastName || ''}`.trim()
       : order.user?.name || 'Customer';
 
     const parts = fullName.split(' ');
-    const firstName = rawData.payer?.firstName || parts[0] || 'Customer';
-    const lastName = rawData.payer?.lastName || parts.slice(1).join(' ') || 'User';
+    const firstName = payerFirstName || parts[0] || 'Customer';
+    const lastName = payerLastName || parts.slice(1).join(' ') || 'User';
 
     const rawPhone = (order.phone || order.user?.phone || '000000000').replace(/\D/g, '');
     const area = rawPhone.length >= 10 ? rawPhone.substring(0, 2) : '55';

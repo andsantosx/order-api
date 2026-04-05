@@ -50,11 +50,15 @@ export interface MercadoPagoItem {
  * Dados completos de um pagamento
  */
 export interface PaymentRequestData {
-  transactionAmount: number;
+  transactionAmount?: number;
+  transaction_amount?: number;
   description: string;
-  paymentMethodId: string;
+  paymentMethodId?: string;
+  payment_method_id?: string;
   externalReference?: string;
+  external_reference?: string;
   notificationUrl?: string;
+  notification_url?: string;
   payer: PayerData;
   additionalInfo?: {
     items: PaymentItem[];
@@ -69,13 +73,18 @@ export interface PaymentRequestData {
   installments?: number;
   token?: string;
   issuerId?: number;
+  issuer_id?: number | string;
   metadata?: {
     orderId: string;
     deviceId?: string;
+    device_id?: string;
   };
   deviceId?: string; // Root device identification
+  device_id?: string;
   statementDescriptor?: string; // Text on customer credit card statement
+  statement_descriptor?: string;
   binaryMode?: boolean; // Instant results
+  binary_mode?: boolean;
   // Campo usado pelo frontend que pode conter dados adicionais
   formData?: PaymentFormData;
 }
@@ -84,15 +93,20 @@ export interface PaymentRequestData {
  * Dados que vem do Brick de Pagamento do Frontend
  */
 export interface PaymentFormData {
-  paymentMethodId: string;
+  paymentMethodId?: string;
+  payment_method_id?: string;
   token?: string;
   installments?: number;
   issuerId?: number;
+  issuer_id?: number | string;
   deviceId?: string;
+  device_id?: string;
   payer?: {
     email?: string;
     firstName?: string;
+    first_name?: string;
     lastName?: string;
+    last_name?: string;
     identification?: {
       type: string;
       number: string;
