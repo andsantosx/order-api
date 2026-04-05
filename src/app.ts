@@ -50,17 +50,23 @@ app.use(
   }),
 );
 
-// Security headers - Strict configurations
+// Security headers - Configured to allow Mercado Pago integration
 app.use(
   helmet({
-    contentSecurityPolicy: true,
-    dnsPrefetchControl: { allow: false },
-    frameguard: { action: 'deny' },
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": ["'self'", "'unsafe-inline'", "https://sdk.mercadopago.com", "https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/"],
+        "connect-src": ["'self'", "https://api.mercadopago.com", "https://*.mercadopago.com", "https://*.mercadolibre.com", "https://www.google-analytics.com"],
+        "frame-src": ["'self'", "https://*.mercadopago.com", "https://*.mercadolibre.com", "https://www.google.com/recaptcha/"],
+        "img-src": ["'self'", "data:", "https://*.mlstatic.com", "https://*.mercadopago.com"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+      },
+    },
+    dnsPrefetchControl: { allow: true },
+    frameguard: false, // Necessário para iframes do Mercado Pago (Seguro)
     hsts: { maxAge: 31536000, includeSubDomains: true },
-    ieNoOpen: true,
-    noSniff: true,
-    referrerPolicy: { policy: 'same-origin' },
-    xssFilter: true,
+    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
   }),
 );
 
