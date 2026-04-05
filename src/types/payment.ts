@@ -159,6 +159,7 @@ export interface PaymentRequestBody {
   installments?: number;
   token?: string;
   issuer_id?: number;
+  device_id?: string;
 }
 
 /**
