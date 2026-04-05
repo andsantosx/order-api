@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { log } from '../../config/logger';
 
 export const validate =
   (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
@@ -12,6 +13,10 @@ export const validate =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
+        log.warn('Zod Validation Error', { 
+           path: req.originalUrl,
+           issues: error.issues 
+        });
         return res.status(400).json({
           status: 'error',
           message: 'Validation failed',
