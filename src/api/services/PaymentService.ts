@@ -214,8 +214,9 @@ export class PaymentService {
    * ========================================== */
 
   private preparePaymentBody(order: Order, paymentData: PaymentRequestData): PaymentRequestBody {
-    const rawData: PaymentFormData = paymentData.formData || (paymentData as unknown as PaymentFormData);
-    const email = rawData.payer?.email || order.user?.email || order.guestEmail;
+    // Mescla os dados da raiz com os dados do formData para garantir que nada se perca
+    const rawData: any = { ...paymentData, ...(paymentData.formData || {}) };
+    const email = rawData.payer?.email || (rawData as any).email || order.user?.email || order.guestEmail;
 
     if (!email) throw new AppError('Email obrigatório', HTTP_STATUS.BAD_REQUEST);
 
@@ -229,7 +230,7 @@ export class PaymentService {
     return {
       transaction_amount: Number(order.totalAmount) / MONEY.CENTS_PER_REAL,
       description: `Pedido #${order.id.substring(0, 8)}`,
-      payment_method_id: rawData.paymentMethodId || (rawData as any).payment_method_id,
+      payment_method_id: rawData.paymentMethodId || rawData.payment_method_id || (paymentData as any).paymentMethodId || (paymentData as any).payment_method_id,
       external_reference: order.id,
       notification_url: env.MERCADOPAGO_WEBHOOK_URL,
       statement_descriptor: 'ORDER STORE',
@@ -283,10 +284,10 @@ export class PaymentService {
         pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
       },
       auto_return: 'approved',
-      metadata: { order_id: order.id, device_id: rawData.deviceId || (rawData as any).device_id || 'not_provided' },
-      installments: rawData.installments ? Number(rawData.installments) : (rawData as any).installments ? Number((rawData as any).installments) : undefined,
-      token: rawData.token || (rawData as any).token,
-      issuer_id: rawData.issuerId ? Number(rawData.issuerId) : (rawData as any).issuer_id ? Number((rawData as any).issuer_id) : undefined,
+      metadata: { order_id: order.id, device_id: rawData.deviceId || rawData.device_id || (paymentData as any).deviceId || (paymentData as any).device_id || 'not_provided' },
+      installments: rawData.installments ? Number(rawData.installments) : undefined,
+      token: rawData.token || (rawData as any).token || (paymentData as any).token,
+      issuer_id: rawData.issuerId || rawData.issuer_id ? Number(rawData.issuerId || rawData.issuer_id) : undefined,
     };
   }
 
@@ -406,12 +407,16 @@ export class PaymentService {
     if (changed) await this.orderRepository.save(order);
   }
 
-  private handlePaymentError(error: unknown, orderId: string): never {
+  private handlePaymentError(error: any, orderId: string) {
     const mpError = error as MercadoPagoError;
-    log.error('Erro Mercado Pago', {
+    const responseData = (error as any).response?.data;
+
+    log.error('Erro ao processar pagamento no Mercado Pago', {
       orderId,
-      error: mpError?.message || 'Unknown',
-      cause: mpError?.cause,
+      message: mpError.message,
+      cause: mpError.cause,
+      status: mpError.status,
+      responseData: responseData // Logar o erro REAL do MP ajuda a diagnosticar o 400
     });
     throw new AppError(ERROR_MESSAGES.PAYMENT_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
