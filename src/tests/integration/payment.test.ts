@@ -83,16 +83,16 @@ describe('Payment Integration', () => {
     const response = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
-      .send({ 
+      .send({
         orderId: '00000000-0000-0000-0000-000000000000',
         paymentMethodId: 'pix',
         payer: {
           email: 'test@example.com',
           identification: {
             type: 'CPF',
-            number: '12345678901'
-          }
-        }
+            number: '12345678901',
+          },
+        },
       });
 
     expect(response.status).toBe(404);
@@ -106,16 +106,16 @@ describe('Payment Integration', () => {
     const response = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
-      .send({ 
+      .send({
         orderId,
         paymentMethodId: 'pix',
         payer: {
           email: 'pay@example.com',
           identification: {
             type: 'CPF',
-            number: '12345678901'
-          }
-        }
+            number: '12345678901',
+          },
+        },
       });
 
     // Without mocking MP, this might return 500 or 400 if credentials fail.

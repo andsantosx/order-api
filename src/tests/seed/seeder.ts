@@ -6,6 +6,7 @@ import { Brand } from '../../api/entities/Brand';
 import { Product } from '../../api/entities/Product';
 import { ProductImage } from '../../api/entities/ProductImage';
 import { ProductSize } from '../../api/entities/ProductSize';
+import { Status } from '../../api/entities/Status';
 import bcrypt from 'bcryptjs';
 import { log } from '../../config/logger';
 
@@ -23,6 +24,29 @@ export async function seedDatabase(dataSource: DataSource) {
     const productRepo = dataSource.getRepository(Product);
     const imageRepo = dataSource.getRepository(ProductImage);
     const productSizeRepo = dataSource.getRepository(ProductSize);
+    const statusRepo = dataSource.getRepository(Status);
+
+    // 0. Seed Statuses (PREREQUISITE for orders/contacts)
+    const statuses = [
+      { id: 1, name: 'PENDING', label: 'Pendente', type: 'ORDER' },
+      { id: 2, name: 'PROCESSING', label: 'Processando', type: 'ORDER' },
+      { id: 3, name: 'PAID', label: 'Pago', type: 'ORDER' },
+      { id: 4, name: 'SHIPPED', label: 'Enviado', type: 'ORDER' },
+      { id: 5, name: 'DELIVERED', label: 'Entregue', type: 'ORDER' },
+      { id: 6, name: 'CANCELLED', label: 'Cancelado', type: 'ORDER' },
+      { id: 7, name: 'REFUNDED', label: 'Reembolsado', type: 'ORDER' },
+      { id: 101, name: 'PENDING', label: 'Novo', type: 'CONTACT' },
+      { id: 102, name: 'REPLIED', label: 'Respondido', type: 'CONTACT' },
+      { id: 103, name: 'CLOSED', label: 'Fechado', type: 'CONTACT' },
+    ];
+
+    for (const s of statuses) {
+      const exists = await statusRepo.findOneBy({ id: s.id });
+      if (!exists) {
+        await statusRepo.save(statusRepo.create(s));
+        log.info(`Created status: ${s.name} (${s.type})`);
+      }
+    }
 
     // 1. Seed Categories
     const categories = [

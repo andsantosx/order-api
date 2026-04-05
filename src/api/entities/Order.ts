@@ -13,14 +13,16 @@ import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
 import { Money } from '../domain/value-objects/Money';
 
+import { Status } from './Status';
+
 export enum OrderStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  PROCESSING = 'PROCESSING',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  REFUNDED = 'REFUNDED',
+  PENDING = 1,
+  PROCESSING = 2,
+  PAID = 3,
+  SHIPPED = 4,
+  DELIVERED = 5,
+  CANCELLED = 6,
+  REFUNDED = 7,
 }
 
 @Entity('orders')
@@ -68,12 +70,12 @@ export class Order {
   cardLastFour?: string;
 
   @Index()
-  @Column({
-    type: 'enum',
-    enum: OrderStatus,
-    default: OrderStatus.PENDING,
-  })
-  status!: OrderStatus;
+  @Column({ name: 'status_id' })
+  statusId!: number;
+
+  @ManyToOne(() => Status, (status) => status.orders)
+  @JoinColumn({ name: 'status_id' })
+  status!: Status;
 
   @Index()
   @CreateDateColumn({ name: 'created_at' })
@@ -92,8 +94,8 @@ export class Order {
    * Verifica se a transição para um novo status é permitida.
    * Centraliza a lógica da Máquina de Estados do pedido.
    */
-  canTransitionTo(newStatus: OrderStatus): boolean {
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+  canTransitionTo(newStatusId: number): boolean {
+    const validTransitions: Record<number, number[]> = {
       [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
       [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
       [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
@@ -103,7 +105,7 @@ export class Order {
       [OrderStatus.REFUNDED]: [], // Terminal
     };
 
-    return validTransitions[this.status].includes(newStatus);
+    return validTransitions[this.statusId]?.includes(newStatusId) ?? false;
   }
 
   /**

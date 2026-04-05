@@ -117,7 +117,7 @@ export class AddressService {
       country: sanitized.country,
     });
 
-    const saved = await this.addressRepository.save(address) as UserAddress;
+    const saved = (await this.addressRepository.save(address)) as UserAddress;
 
     log.info('Novo endereço criado', {
       userId,

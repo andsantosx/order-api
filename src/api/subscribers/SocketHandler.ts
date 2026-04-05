@@ -22,20 +22,17 @@ export class SocketHandler {
     const socketService = SocketService.getInstance();
 
     // Ouvinte para pagamentos aprovados
-    domainEvents.subscribe(
-      'PAYMENT_APPROVED',
-      (data: unknown) => {
-        const eventData = data as PaymentApprovedEventData;
-        log.info(
-          `[SocketHandler] Notifying user ${eventData.userId} about payment for order ${eventData.orderId}`,
-        );
+    domainEvents.subscribe('PAYMENT_APPROVED', (data: unknown) => {
+      const eventData = data as PaymentApprovedEventData;
+      log.info(
+        `[SocketHandler] Notifying user ${eventData.userId} about payment for order ${eventData.orderId}`,
+      );
 
-        socketService.emitToUser(eventData.userId, 'PAYMENT_APPROVED', {
-          orderId: eventData.orderId,
-          status: eventData.status,
-        });
-      },
-    );
+      socketService.emitToUser(eventData.userId, 'PAYMENT_APPROVED', {
+        orderId: eventData.orderId,
+        status: eventData.status,
+      });
+    });
 
     this.isInitialized = true;
   }

@@ -43,7 +43,10 @@ export const registerSchema = z.object({
     phone: z
       .string()
       .transform((val) => val.replace(/\D/g, ''))
-      .refine((val) => val.length >= 10 && val.length <= 11, 'Telefone deve ter entre 10 e 11 dígitos (com DDD)'),
+      .refine(
+        (val) => val.length >= 10 && val.length <= 11,
+        'Telefone deve ter entre 10 e 11 dígitos (com DDD)',
+      ),
     acceptedTerms: z
       .boolean()
       .refine((val) => val === true, 'Você deve aceitar os termos de privacidade para continuar'),
@@ -94,7 +97,10 @@ export const updateProfileSchema = z.object({
       phone: z
         .string()
         .transform((val) => val.replace(/\D/g, ''))
-        .refine((val) => val.length >= 10 && val.length <= 11, 'Telefone deve ter entre 10 e 11 dígitos (com DDD)')
+        .refine(
+          (val) => val.length >= 10 && val.length <= 11,
+          'Telefone deve ter entre 10 e 11 dígitos (com DDD)',
+        )
         .optional(),
     })
     .refine((data) => Object.keys(data).length > 0, {

@@ -1,5 +1,7 @@
 import { AppDataSource } from '../../data-source';
-import { ContactMessage } from '../entities/ContactMessage';
+import { ContactMessage, ContactMessageStatus } from '../entities/ContactMessage';
+import { AppError } from '../middlewares/errorHandler';
+import { HTTP_STATUS } from '../../constants';
 
 interface ContactMessageData {
   name: string;
@@ -19,18 +21,61 @@ export class ContactService {
       phone: data.phone,
       subject: data.subject,
       message: data.message,
+      statusId: ContactMessageStatus.PENDING,
     });
 
-    return this.contactRepository.save(contactMessage);
+    const saved = await this.contactRepository.save(contactMessage);
+    return this.getOne(saved.id);
   }
 
   async getAll() {
     return this.contactRepository.find({
+      relations: ['status'],
       order: { createdAt: 'DESC' },
     });
   }
 
   async getOne(id: string) {
-    return this.contactRepository.findOneBy({ id });
+    return this.contactRepository.findOne({
+      where: { id },
+      relations: ['status'],
+    });
+  }
+
+  /**
+   * Responde uma mensagem de contato e atualiza o status para REPLIED
+   */
+  async respondMessage(id: string, responseText: string) {
+    const message = await this.getOne(id);
+
+    if (!message) {
+      throw new AppError('Mensagem não encontrada', HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Reset relation to avoid precedence conflict with statusId during save
+    delete (message as any).status;
+    message.response = responseText;
+    message.statusId = ContactMessageStatus.REPLIED;
+
+    const saved = await this.contactRepository.save(message);
+    return this.getOne(saved.id);
+  }
+
+  /**
+   * Atualiza manualmente o status de uma mensagem
+   */
+  async updateStatus(id: string, statusId: number) {
+    const message = await this.getOne(id);
+
+    if (!message) {
+      throw new AppError('Mensagem não encontrada', HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Reset relation to avoid precedence conflict with statusId during save
+    (message as any).status = undefined;
+    message.statusId = statusId;
+
+    const saved = await this.contactRepository.save(message);
+    return this.getOne(saved.id);
   }
 }

@@ -26,7 +26,9 @@ export const socketAuthMiddleware = (socket: CustomSocket, next: (err?: Error) =
     log.info(`✅ Socket authenticated: user ${decoded.userId}`);
     next();
   } catch (error: unknown) {
-    log.error('❌ Socket authentication failed', { error: error instanceof Error ? error.message : 'Unknown' });
+    log.error('❌ Socket authentication failed', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
     next(new Error('Authentication error: Invalid token'));
   }
 };

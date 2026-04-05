@@ -58,17 +58,8 @@ export class ProductController {
    * Compatibility: supports sizeIds (array of numbers).
    */
   async create(req: Request, res: Response, _next: NextFunction) {
-    const {
-      name,
-      priceCents,
-      description,
-      currency,
-      categoryId,
-      brandId,
-      sizeIds,
-      sizes,
-      images,
-    } = req.body;
+    const { name, priceCents, description, currency, categoryId, brandId, sizeIds, sizes, images } =
+      req.body;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {

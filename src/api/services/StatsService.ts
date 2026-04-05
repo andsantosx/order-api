@@ -51,20 +51,20 @@ export class StatsService {
    */
   async getOverview() {
     try {
-      // Get counts grouped by status
+      // Get counts grouped by statusId
       const statusCounts = await this.orderRepository
         .createQueryBuilder('order')
-        .select('order.status', 'status')
+        .select('order.statusId', 'statusId')
         .addSelect('COUNT(order.id)', 'count')
-        .groupBy('order.status')
+        .groupBy('order.statusId')
         .getRawMany();
 
       const countsMap = statusCounts.reduce(
         (acc, curr) => {
-          acc[curr.status] = parseInt(curr.count, 10);
+          acc[curr.statusId] = parseInt(curr.count, 10);
           return acc;
         },
-        {} as Record<string, number>,
+        {} as Record<number, number>,
       );
 
       const totalOrders = (Object.values(countsMap) as number[]).reduce((a, b) => a + b, 0);
@@ -82,9 +82,9 @@ export class StatsService {
         this.getTotalRevenue(),
         this.orderRepository
           .createQueryBuilder('order')
-          .select('SUM(order.total_amount)', 'total')
-          .where('order.created_at >= :date', { date: thirtyDaysAgo })
-          .andWhere('order.status IN (:...statuses)', {
+          .select('SUM(order.totalAmount)', 'total')
+          .where('order.createdAt >= :date', { date: thirtyDaysAgo })
+          .andWhere('order.statusId IN (:...statuses)', {
             statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
           })
           .getRawOne(),
@@ -113,8 +113,8 @@ export class StatsService {
   private async getTotalRevenue(): Promise<number> {
     const result = await this.orderRepository
       .createQueryBuilder('order')
-      .select('SUM(order.total_amount)', 'total')
-      .where('order.status IN (:...statuses)', {
+      .select('SUM(order.totalAmount)', 'total')
+      .where('order.statusId IN (:...statuses)', {
         statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
       })
       .getRawOne();
@@ -188,7 +188,7 @@ export class StatsService {
         .addSelect('SUM(orderItem.quantity)', 'total_sold')
         .leftJoin('orderItem.product', 'product')
         .leftJoin('orderItem.order', 'order')
-        .where('order.status IN (:...statuses)', {
+        .where('order.statusId IN (:...statuses)', {
           statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
         })
         .groupBy('orderItem.product_id')
@@ -235,9 +235,9 @@ export class StatsService {
 
       const qb = this.orderRepository
         .createQueryBuilder('order')
-        .select('SUM(order.total_amount)', 'revenue')
+        .select('SUM(order.totalAmount)', 'revenue')
         .addSelect('COUNT(order.id)', 'orderCount')
-        .where('order.status IN (:...statuses)', {
+        .where('order.statusId IN (:...statuses)', {
           statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
         });
 
@@ -283,9 +283,12 @@ export class StatsService {
     try {
       const breakdown = await this.orderRepository
         .createQueryBuilder('order')
-        .select('order.status', 'status')
+        .leftJoinAndSelect('order.status', 'status')
+        .select('status.name', 'statusName')
+        .addSelect('status.label', 'label')
         .addSelect('COUNT(order.id)', 'count')
-        .groupBy('order.status')
+        .groupBy('status.name')
+        .addGroupBy('status.label')
         .getRawMany();
 
       log.info('Distribuição de status consultada', {
@@ -293,7 +296,8 @@ export class StatsService {
       });
 
       return breakdown.map((item) => ({
-        status: item.status,
+        status: item.statusName,
+        label: item.label,
         count: parseInt(item.count, 10),
       }));
     } catch (error) {

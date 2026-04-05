@@ -20,12 +20,18 @@ export const createOrderSchema = z.object({
       .email('Email inválido')
       .max(VALIDATION.EMAIL_MAX_LENGTH, 'Email muito longo')
       .optional(),
-    guestCpf: z.string().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/, 'CPF inválido').optional(),
+    guestCpf: z
+      .string()
+      .regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/, 'CPF inválido')
+      .optional(),
     phone: z
       .string()
       .min(1, 'Telefone é obrigatório')
       .transform((val) => val.replace(/\D/g, ''))
-      .refine((val) => val.length >= 10 && val.length <= 11, 'Telefone deve ter entre 10 e 11 dígitos com DDD'),
+      .refine(
+        (val) => val.length >= 10 && val.length <= 11,
+        'Telefone deve ter entre 10 e 11 dígitos com DDD',
+      ),
     acceptedTerms: z
       .boolean()
       .refine((val) => val === true, 'Você deve aceitar os termos de privacidade para continuar'),

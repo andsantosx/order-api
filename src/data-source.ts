@@ -13,6 +13,7 @@ import { ShippingAddress } from './api/entities/ShippingAddress';
 import { UserAddress } from './api/entities/UserAddress';
 import { Wishlist } from './api/entities/Wishlist';
 import { ContactMessage } from './api/entities/ContactMessage';
+import { Status } from './api/entities/Status';
 import { Brand } from './api/entities/Brand';
 import { AdminAuditLog } from './api/entities/AdminAuditLog';
 
@@ -38,6 +39,7 @@ export const AppDataSource = new DataSource({
     UserAddress,
     Wishlist,
     ContactMessage,
+    Status,
     Brand,
     AdminAuditLog,
   ],

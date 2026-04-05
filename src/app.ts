@@ -56,11 +56,28 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "script-src": ["'self'", "'unsafe-inline'", "https://sdk.mercadopago.com", "https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/"],
-        "connect-src": ["'self'", "https://api.mercadopago.com", "https://*.mercadopago.com", "https://*.mercadolibre.com", "https://www.google-analytics.com"],
-        "frame-src": ["'self'", "https://*.mercadopago.com", "https://*.mercadolibre.com", "https://www.google.com/recaptcha/"],
-        "img-src": ["'self'", "data:", "https://*.mlstatic.com", "https://*.mercadopago.com"],
-        "style-src": ["'self'", "'unsafe-inline'"],
+        'script-src': [
+          "'self'",
+          "'unsafe-inline'",
+          'https://sdk.mercadopago.com',
+          'https://www.google.com/recaptcha/',
+          'https://www.gstatic.com/recaptcha/',
+        ],
+        'connect-src': [
+          "'self'",
+          'https://api.mercadopago.com',
+          'https://*.mercadopago.com',
+          'https://*.mercadolibre.com',
+          'https://www.google-analytics.com',
+        ],
+        'frame-src': [
+          "'self'",
+          'https://*.mercadopago.com',
+          'https://*.mercadolibre.com',
+          'https://www.google.com/recaptcha/',
+        ],
+        'img-src': ["'self'", 'data:', 'https://*.mlstatic.com', 'https://*.mercadopago.com'],
+        'style-src': ["'self'", "'unsafe-inline'"],
       },
     },
     dnsPrefetchControl: { allow: true },
@@ -152,7 +169,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin/stats', statsRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/contact', contactRoutes);
+app.use('/api/contacts', contactRoutes);
 app.use('/api/shipping', shippingRoutes);
 
 // ==========================================

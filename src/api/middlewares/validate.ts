@@ -13,9 +13,9 @@ export const validate =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        log.warn('Zod Validation Error', { 
-           path: req.originalUrl,
-           issues: error.issues 
+        log.warn('Zod Validation Error', {
+          path: req.originalUrl,
+          issues: error.issues,
         });
         return res.status(400).json({
           status: 'error',

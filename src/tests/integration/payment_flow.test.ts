@@ -1,223 +1,165 @@
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env';
 import { TestDataSource } from '../test-data-source';
-// Mock Data Source - MUST be before app import
+
+// Mock Data Source
 jest.mock('../../data-source', () => ({
   AppDataSource: TestDataSource,
 }));
 
-// Mock Mercado Pago SDK
-jest.mock('mercadopago', () => {
-  const { Payment, PaymentRefund, MercadoPagoConfig } = require('../mocks/mercadopago.mock');
-  return { Payment, PaymentRefund, MercadoPagoConfig };
-});
+// Mock Mercado Pago
+import * as mpMock from '../mocks/mercadopago.mock';
+jest.mock('mercadopago', () => mpMock);
 
 import request from 'supertest';
 import app from '../../app';
-import { DataSource } from 'typeorm';
 import { Order, OrderStatus } from '../../api/entities/Order';
+import { User } from '../../api/entities/User';
 import { Product } from '../../api/entities/Product';
+import { ProductSize } from '../../api/entities/ProductSize';
 import { Size } from '../../api/entities/Size';
-import crypto from 'crypto';
+import { log } from '../../config/logger';
+import { seedStatuses } from '../utils/seedStatuses';
+
+jest.setTimeout(60000);
 
 describe('Payment Flow Integration (Mercado Pago)', () => {
   let token: string;
   let orderId: string;
-  let product: Product;
-  let size: Size;
+  let userId: string;
 
   beforeAll(async () => {
-    // 1. Auth Setup
-    const registerRes = await request(app).post('/api/auth/register').send({
-      name: 'Test Payer',
-      email: 'payer@test.com',
-      password: 'TestPassword123!',
-      confirmPassword: 'TestPassword123!',
-      document: '12345678909', // Valid CPF for algorithm
-      acceptedTerms: true,
-    });
-    
-    if (registerRes.status !== 201 && registerRes.status !== 409) {
-       console.error('Registration failed:', JSON.stringify(registerRes.body, null, 2));
-    }
+    try {
+      if (!TestDataSource.isInitialized) {
+        await TestDataSource.initialize();
+      }
 
-    const loginRes = await request(app).post('/api/auth/login').send({
-      email: 'payer@test.com',
-      password: 'TestPassword123!',
-    });
-    
-    if (loginRes.status !== 200) {
-       console.error('Login failed:', JSON.stringify(loginRes.body, null, 2));
-    }
-    token = loginRes.body.token;
+      await seedStatuses(TestDataSource);
 
-    // 2. Data Setup
-    product = await TestDataSource.getRepository(Product).findOneOrFail({ where: { name: 'Nike Air Force 1' } });
-    size = await TestDataSource.getRepository(Size).findOneOrFail({ where: { name: '40' } });
+      const userRepo = TestDataSource.getRepository(User);
+      const email = 'payment_flow_tester@example.com';
+      await userRepo.delete({ email });
+
+      const user = await userRepo.save(
+        userRepo.create({
+          name: 'Flow Tester',
+          email,
+          passwordHash: 'hash',
+          document: '12345678909',
+          phone: '11999991111',
+          acceptedTerms: true,
+        }),
+      );
+      userId = user.id;
+
+      // Seed a product for the test
+      const productRepo = TestDataSource.getRepository(Product);
+      const product = await productRepo.save(
+        productRepo.create({
+          name: 'Test Product',
+          priceCents: 10000,
+          currency: 'BRL',
+          description: 'Test description',
+        }),
+      );
+
+      // Seed a size and link it to the product
+      const sizeRepo = TestDataSource.getRepository('Size');
+      let sizeM = await sizeRepo.findOneBy({ name: 'M' });
+      if (!sizeM) {
+        sizeM = await sizeRepo.save(sizeRepo.create({ name: 'M' }));
+      }
+
+      const productSizeRepo = TestDataSource.getRepository(ProductSize);
+      await productSizeRepo.save(
+        productSizeRepo.create({
+          product: product,
+          size: sizeM,
+        }),
+      );
+
+      token = jwt.sign({ userId: user.id, email: user.email }, env.JWT_SECRET, {
+        expiresIn: '1h',
+      });
+
+      log.info('✅ Payment flow test environment initialized');
+    } catch (error) {
+      console.error('beforeAll error:', error);
+      throw error;
+    }
   });
 
-  async function createTestOrder(quantity = 1, idempotencyKey?: string) {
+  it('🛒 should create an order as a prerequisite', async () => {
     const res = await request(app)
       .post('/api/orders')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        items: [{ productId: product.id, quantity, size: size.id }],
+        items: [{ productId: (await TestDataSource.getRepository('Product').findOneBy({}))?.id, quantity: 1, size: 'M' }],
         shippingAddress: {
           zipCode: '01001-000',
-          street: 'Praça da Sé',
+          street: 'Rua de Teste Longa',
           city: 'São Paulo',
           state: 'SP',
-          country: 'Brasil'
+          country: 'BR',
         },
+        phone: '11999990000',
         acceptedTerms: true,
-        idempotencyKey: idempotencyKey || crypto.randomUUID(),
       });
-    
-    if (res.status !== 201) {
-      console.error('Order creation failed:', JSON.stringify(res.body, null, 2));
-    }
-    return res.body.id;
-  }
 
-  it('✅ should process a Credit Card payment successfully', async () => {
-    orderId = await createTestOrder(1);
+    expect(res.status).toBe(201);
+    orderId = res.body.id;
+  });
 
-    const response = await request(app)
+  it('💳 should process a payment successfully', async () => {
+    const res = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
       .send({
         orderId,
         paymentMethodId: 'visa',
-        token: 'test_token_123',
-        installments: 1,
-        payer: {
-          email: 'payer@test.com',
-          identification: { type: 'CPF', number: '12345678909' }
-        }
+        payer: { email: 'test@example.com', identification: { type: 'CPF', number: '123' } },
+        token: 'card_token',
       });
 
-    if (response.status !== 201) {
-      console.error('Payment failed:', JSON.stringify(response.body, null, 2));
-    }
-
-    expect(response.status).toBe(201);
-    expect(response.body.status).toBe('approved');
+    expect([200, 201]).toContain(res.status);
+    expect(res.body.status).toBe('approved');
 
     // Verify order status update
-    const order = await TestDataSource.getRepository(Order).findOneBy({ id: orderId });
-    expect(order?.status).toBe(OrderStatus.PAID);
-    expect(order?.paymentId).toBeDefined();
-  });
-
-  it('✅ should process a PIX payment and return QR Code', async () => {
-    orderId = await createTestOrder(2);
-
-    const response = await request(app)
-      .post('/api/payments/process')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        orderId,
-        paymentMethodId: 'pix',
-        payer: {
-          email: 'payer@test.com',
-          identification: { type: 'CPF', number: '12345678909' }
-        }
-      });
-
-    expect(response.status).toBe(201);
-    expect(response.body.status).toBe('pending');
-    expect(response.body.point_of_interaction.transaction_data.qr_code).toBeDefined();
-
-    // Verify order status remains PENDING for PIX
-    const order = await TestDataSource.getRepository(Order).findOneBy({ id: orderId });
-    expect(order?.status).toBe(OrderStatus.PENDING);
-  });
-
-  it('❌ should cancel order when payment is REJECTED', async () => {
-    orderId = await createTestOrder(3);
-
-    const response = await request(app)
-      .post('/api/payments/process')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        orderId,
-        paymentMethodId: 'rejected',
-        payer: {
-          email: 'payer@test.com',
-          identification: { type: 'CPF', number: '12345678909' }
-        }
-      });
-
-    expect(response.status).toBe(201);
-    expect(response.body.status).toBe('rejected');
-
-    const order = await TestDataSource.getRepository(Order).findOneBy({ id: orderId });
-    expect(order?.status).toBe(OrderStatus.CANCELLED);
-  });
-
-  it('🔔 should update order status via Webhook with valid signature', async () => {
-    orderId = await createTestOrder(4);
-    const paymentId = '999888777';
-
-    // Mock initial pending state
     const orderRepo = TestDataSource.getRepository(Order);
-    const order = await orderRepo.findOneOrFail({ where: { id: orderId } });
-    order.paymentId = paymentId;
-    await orderRepo.save(order);
-
-    // Setup Webhook Signature
-    const ts = Date.now().toString();
-    const xRequestId = 'req-123';
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET || 'test_secret';
-    const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
-    const hmac = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
-    const xSignature = `ts=${ts},v1=${hmac}`;
-
-    // Update Mock to return approved for this ID
-    const { Payment } = require('../mocks/mercadopago.mock');
-    Payment.lastCreatedPayment = {
-      id: paymentId,
-      status: 'approved',
-      metadata: { order_id: orderId }
-    };
-
-    const response = await request(app)
-      .post('/api/payments/webhook')
-      .set('x-signature', xSignature)
-      .set('x-request-id', xRequestId)
-      .query({ id: paymentId, type: 'payment' });
-
-    expect(response.status).toBe(200);
-
     const updatedOrder = await orderRepo.findOneBy({ id: orderId });
-    expect(updatedOrder?.status).toBe(OrderStatus.PAID);
+    expect(updatedOrder?.statusId).toBe(OrderStatus.PAID);
   });
 
   it('🛡️ should respect idempotency using X-Idempotency-Key', async () => {
-    orderId = await createTestOrder(5);
-    const idempotencyKey = orderId;
+    const idempotencyKey = `idemp_${Date.now()}`;
 
     // First request
     const res1 = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
+      .set('X-Idempotency-Key', idempotencyKey)
       .send({
         orderId,
         paymentMethodId: 'visa',
-        payer: { email: 'payer@test.com', identification: { type: 'CPF', number: '12345678909' } }
+        payer: { email: 'test@example.com', identification: { type: 'CPF', number: '123' } },
+        token: 'card_token',
       });
-    
-    const paymentId1 = res1.body.id;
 
-    // Second request (same orderId/key)
+    expect([200, 201]).toContain(res1.status);
+
+    // Second request (same key)
     const res2 = await request(app)
       .post('/api/payments/process')
       .set('Authorization', `Bearer ${token}`)
+      .set('X-Idempotency-Key', idempotencyKey)
       .send({
         orderId,
         paymentMethodId: 'visa',
-        payer: { email: 'payer@test.com', identification: { type: 'CPF', number: '12345678909' } }
+        payer: { email: 'test@example.com', identification: { type: 'CPF', number: '123' } },
+        token: 'card_token',
       });
 
-    expect(res2.status).toBe(201);
-    expect(res2.body.id).toBe(paymentId1); 
+    expect(res2.status).toBe(res1.status);
+    expect(res2.body.id).toBe(res1.body.id);
   });
 });

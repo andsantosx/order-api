@@ -12,35 +12,36 @@ export class PaymentController {
   }
 
   /**
-   * Endpoint central de processamento de pagamentos
+   * Processamento de pagamento via Checkout Transparente (Mercado Pago)
    */
-  public process = async (req: Request, res: Response, next: NextFunction) => {
+  async processPayment(req: Request, res: Response, next: NextFunction) {
     try {
       const paymentData = req.body;
-      
+
       // Log seguro (removendo sensíveis) para auditoria básica
-      log.info(`[PaymentController] Recebendo tentativa de pagamento para: ${paymentData.externalReference || paymentData.metadata?.orderId}`);
+      log.info(
+        `[PaymentController] Recebendo tentativa de pagamento para: ${paymentData.externalReference || paymentData.metadata?.orderId}`,
+      );
 
-      const result = await this.paymentService.processPayment(paymentData);
+      // 2. Chama o serviço (Core Logic)
+      const result = await this.paymentService.processPayment(req.body);
 
-      return res.status(HTTP_STATUS.CREATED).json({
-        status: 'success',
-        data: result
-      });
+      // 3. Resposta padronizada esperada pelo frontend
+      return res.status(HTTP_STATUS.CREATED).json(result);
     } catch (error: any) {
-      // Capturamos nossas exceções de domínio e retornamos o status correto
-      if (error instanceof PaymentException) {
-        log.warn(`[PaymentController] Erro de domínio: ${error.message} (${error.statusCode})`);
-        return res.status(error.statusCode).json({
-          status: 'error',
-          message: error.message,
-          code: error.code
-        });
-      }
-
-      // Erros genéricos ou inesperados continuam p/ o middleware global
-      log.error('[PaymentController] Erro inesperado:', error);
       next(error);
     }
-  };
+  }
+
+  /**
+   * Webhook para receber notificações do Mercado Pago
+   */
+  async handleWebhook(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await this.paymentService.handleWebhook(req.body);
+      return res.status(HTTP_STATUS.OK).json(result);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }

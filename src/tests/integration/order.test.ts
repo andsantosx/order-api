@@ -8,8 +8,7 @@ jest.mock('../../data-source', () => ({
 import request from 'supertest';
 import app from '../../app';
 import { DataSource } from 'typeorm';
-import { Product } from '../../api/entities/Product';
-import { Size } from '../../api/entities/Size';
+import { seedStatuses } from '../utils/seedStatuses';
 
 describe('Order Integration', () => {
   let connection: DataSource;
@@ -19,6 +18,7 @@ describe('Order Integration', () => {
 
   beforeAll(async () => {
     connection = TestDataSource;
+    await seedStatuses(connection);
 
     // Create a user and get token
     // We can use the seeded 'john@example.com' user
@@ -76,8 +76,11 @@ describe('Order Integration', () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('id');
-    expect(response.body.totalAmount).toBeDefined(); // Should be calculated
-    expect(response.body.status).toBe('PENDING');
+    expect(response.body.totalAmount).toBeDefined();
+    expect(response.body.statusId).toBe(1); // OrderStatus.PENDING
+    expect(response.body.status).toBeDefined();
+    expect(response.body.status.name).toBe('PENDING');
+    expect(response.body.status.label).toBe('Pendente');
     // Verify that the size NAME is stored, not the ID
     expect(response.body.items[0].size).toBe('38');
   });
@@ -112,7 +115,7 @@ describe('Order Integration', () => {
 
   it('should update user accepted_terms status on order creation', async () => {
     // 1. Check current status of a user (jane@example.com is seeded with accepted_terms=false by default)
-    const user = await connection
+    await connection
       .getRepository('User')
       .query('SELECT * FROM users WHERE email = $1', ['jane@example.com']);
     // Note: query returns array. If migration ran, accepted_terms is false.

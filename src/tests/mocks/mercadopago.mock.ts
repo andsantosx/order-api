@@ -9,17 +9,19 @@ export class Payment {
     return this.lastCreatedPayment;
   }
 
-  async create({
-    body,
-  }: {
-    body: PaymentRequestBody;
-  }): Promise<MercadoPagoPaymentResponse> {
+  async create({ body }: { body: PaymentRequestBody }): Promise<MercadoPagoPaymentResponse> {
     const isPix = body.payment_method_id === 'pix';
     const isError = body.description?.includes('FAIL') || body.payment_method_id === 'rejected';
     const isPending = body.description?.includes('PENDING') || isPix;
 
     const status = isError ? 'rejected' : isPending ? 'pending' : 'approved';
-    const statusDetail = isError ? 'cc_rejected_high_risk' : isPending ? (isPix ? 'pending_waiting_transfer' : 'in_process') : 'accredited';
+    const statusDetail = isError
+      ? 'cc_rejected_high_risk'
+      : isPending
+        ? isPix
+          ? 'pending_waiting_transfer'
+          : 'in_process'
+        : 'accredited';
 
     const result: MercadoPagoPaymentResponse = {
       id: 123456789,
@@ -31,15 +33,19 @@ export class Payment {
         firstName: body.payer.first_name,
         lastName: body.payer.last_name,
         identification: body.payer.identification,
-        phone: body.payer.phone ? {
-          areaCode: body.payer.phone.area_code,
-          number: body.payer.phone.number,
-        } : undefined,
-        address: body.payer.address ? {
-          zipCode: body.payer.address.zip_code,
-          streetName: body.payer.address.street_name,
-          streetNumber: body.payer.address.street_number,
-        } : undefined,
+        phone: body.payer.phone
+          ? {
+              areaCode: body.payer.phone.area_code,
+              number: body.payer.phone.number,
+            }
+          : undefined,
+        address: body.payer.address
+          ? {
+              zipCode: body.payer.address.zip_code,
+              streetName: body.payer.address.street_name,
+              streetNumber: body.payer.address.street_number,
+            }
+          : undefined,
       },
       payment_method_id: body.payment_method_id,
       transaction_amount: body.transaction_amount,
@@ -96,5 +102,5 @@ export class PaymentRefund {
 }
 
 export const MercadoPagoConfig = jest.fn().mockImplementation(() => ({
-  options: { accessToken: 'test-token' }
+  options: { accessToken: 'test-token' },
 }));

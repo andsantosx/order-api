@@ -23,7 +23,9 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
   const token = (req.headers['x-recaptcha-token'] as string) || req.body.recaptchaToken;
 
   if (!token) {
-    log.warn(`Tentativa de acesso sem token reCAPTCHA na rota: ${req.originalUrl} | Ignorando bloqueio conforme configuração.`);
+    log.warn(
+      `Tentativa de acesso sem token reCAPTCHA na rota: ${req.originalUrl} | Ignorando bloqueio conforme configuração.`,
+    );
     return next();
   }
 

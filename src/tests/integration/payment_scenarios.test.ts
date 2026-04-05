@@ -18,7 +18,6 @@ import { Product } from '../../api/entities/Product';
 import { Size } from '../../api/entities/Size';
 import { Brand } from '../../api/entities/Brand';
 import { Category } from '../../api/entities/Category';
-import { Order, OrderStatus } from '../../api/entities/Order';
 import { User } from '../../api/entities/User';
 import { ProductSize } from '../../api/entities/ProductSize';
 import { log } from '../../config/logger';
@@ -30,7 +29,6 @@ describe('Payment Scenarios Integration', () => {
   let token: string;
   let productId: string;
   let sizeId: number;
-  let userId: string;
 
   // USER TEST DATA
   const TEST_DOC_MP = '12345678909';
@@ -48,7 +46,7 @@ describe('Payment Scenarios Integration', () => {
       await userRepo.delete({ email });
 
       // Using the user's test document in the system
-      const user = await userRepo.save(
+      const user = (await userRepo.save(
         userRepo.create({
           name: 'Payment Tester',
           email,
@@ -57,8 +55,7 @@ describe('Payment Scenarios Integration', () => {
           phone: '11999991111',
           acceptedTerms: true, // Alterado para camelCase
         }),
-      ) as User; // Cast explícito para Tipo único
-      userId = user.id;
+      )) as User; // Cast explícito para Tipo único
 
       token = jwt.sign({ userId: user.id, email: user.email, isAdmin: false }, env.JWT_SECRET, {
         expiresIn: '1h',
