@@ -61,15 +61,26 @@ export class PaymentService {
       // Orquestra a preparação do payload (Separação de Preocupações)
       const paymentBody = this.preparePaymentBody(order, paymentData);
 
+      // Log sanitizado do request para depurar erro 400
+      const sanitizedBody = {
+        ...paymentBody,
+        token: paymentBody.token ? '***' + paymentBody.token.slice(-4) : undefined,
+        payer: {
+          ...paymentBody.payer,
+          identification: { ...paymentBody.payer?.identification, number: '***' }
+        }
+      };
+
       log.info('Processando pagamento com Mercado Pago', {
         orderId: order.id,
         amount: paymentBody.transaction_amount,
         paymentMethod: paymentBody.payment_method_id,
+        requestBody: sanitizedBody // Ajuda a ver o que estamos enviando de fato
       });
 
       // Cria pagamento no Mercado Pago com Idempotência (Segurança)
       const result = await payment.create({
-        body: paymentBody,
+        body: paymentBody as any,
         requestOptions: {
           idempotencyKey: order.idempotencyKey || order.id,
         },
@@ -227,13 +238,25 @@ export class PaymentService {
     const payer = this.mapPayer(order, rawData, email, docType, docNumber);
     const items = this.mapItems(order);
 
+    const paymentMethodId = rawData.paymentMethodId || rawData.payment_method_id || (paymentData as any).paymentMethodId || (paymentData as any).payment_method_id;
+    const token = rawData.token || (rawData as any).token || (paymentData as any).token;
+
+    if (!paymentMethodId) throw new AppError('Método de pagamento obrigatório', HTTP_STATUS.BAD_REQUEST);
+    // Token é obrigatório para cartões (se o method não for pix ou bolbradesco)
+    if (!['pix', 'bolbradesco'].includes(paymentMethodId) && !token) {
+      throw new AppError('Token do cartão obrigatório', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const deviceId = rawData.deviceId || rawData.device_id || (paymentData as any).deviceId || (paymentData as any).device_id || 'not_provided';
+
     return {
       transaction_amount: Number(order.totalAmount) / MONEY.CENTS_PER_REAL,
       description: `Pedido #${order.id.substring(0, 8)}`,
-      payment_method_id: rawData.paymentMethodId || rawData.payment_method_id || (paymentData as any).paymentMethodId || (paymentData as any).payment_method_id,
+      payment_method_id: paymentMethodId,
       external_reference: order.id,
       notification_url: env.MERCADOPAGO_WEBHOOK_URL,
       statement_descriptor: 'ORDER STORE',
+      device_id: deviceId, // Fornecido no topo para algumas APIs de fraude
       binary_mode: true,
       payer: {
         email: payer.email,
@@ -284,9 +307,9 @@ export class PaymentService {
         pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
       },
       auto_return: 'approved',
-      metadata: { order_id: order.id, device_id: rawData.deviceId || rawData.device_id || (paymentData as any).deviceId || (paymentData as any).device_id || 'not_provided' },
+      metadata: { order_id: order.id, device_id: deviceId },
       installments: rawData.installments ? Number(rawData.installments) : undefined,
-      token: rawData.token || (rawData as any).token || (paymentData as any).token,
+      token: token,
       issuer_id: rawData.issuerId || rawData.issuer_id ? Number(rawData.issuerId || rawData.issuer_id) : undefined,
     };
   }
