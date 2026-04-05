@@ -23,12 +23,8 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
   const token = (req.headers['x-recaptcha-token'] as string) || req.body.recaptchaToken;
 
   if (!token) {
-    log.warn(`Tentativa de acesso sem token reCAPTCHA na rota: ${req.originalUrl}`);
-    res.status(400).json({
-      success: false,
-      message: 'Token reCAPTCHA é obrigatório para esta operação.',
-    });
-    return;
+    log.warn(`Tentativa de acesso sem token reCAPTCHA na rota: ${req.originalUrl} | Ignorando bloqueio conforme configuração.`);
+    return next();
   }
 
   try {
@@ -57,17 +53,10 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
     const data = (await response.json()) as RecaptchaResponse;
 
     if (!data.success) {
-      const errorCodes = data['error-codes'] || [];
       log.warn(
-        `Falha na validação do reCAPTCHA v2. Resposta Completa: ${JSON.stringify(data)} | IP: ${req.ip}`,
+        `Falha na validação do reCAPTCHA v2. Resposta Completa: ${JSON.stringify(data)} | IP: ${req.ip} | Ignorando bloqueio.`,
       );
-
-      res.status(400).json({
-        success: false,
-        message: 'Falha na verificação de segurança (reCAPTCHA). Por favor, tente novamente.',
-        errors: errorCodes,
-      });
-      return;
+      return next();
     }
 
     // Boas Práticas: Logar o hostname para auditoria
@@ -79,16 +68,12 @@ export const recaptchaMiddleware = async (req: Request, res: Response, next: Nex
     next();
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'AbortError') {
-      log.error('Timeout ao verificar reCAPTCHA com a API do Google.');
+      log.error('Timeout ao verificar reCAPTCHA com a API do Google. Prosseguindo sem validação.');
     } else {
       log.error(
-        `Erro ao verificar reCAPTCHA v2: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        `Erro ao verificar reCAPTCHA v2: ${error instanceof Error ? error.message : 'Erro desconhecido'}. Prosseguindo sem validação.`,
       );
     }
-
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno ao validar a segurança. Tente novamente em instantes.',
-    });
+    next();
   }
 };

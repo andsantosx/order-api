@@ -60,7 +60,6 @@ export class PaymentService {
 
       // Orquestra a preparação do payload (Separação de Preocupações)
       const paymentBody = this.preparePaymentBody(order, paymentData);
-
       // Log sanitizado do request para depurar erro 400
       const sanitizedBody = {
         ...paymentBody,
