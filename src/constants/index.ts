@@ -65,7 +65,7 @@ export const SHIPPING = {
   FIXED_SHIPPING_COST_CENTS: 1500,
 
   /** Valor mínimo para frete grátis em centavos (R$ 200,00) */
-  FREE_SHIPPING_THRESHOLD_CENTS: 20000,
+  FREE_SHIPPING_THRESHOLD_CENTS: 0,
 
   /** Prazo estimado de entrega em dias úteis */
   ESTIMATED_DELIVERY_DAYS: 7,

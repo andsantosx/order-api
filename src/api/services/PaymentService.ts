@@ -43,7 +43,7 @@ export class PaymentService {
   async processPayment(orderId: string, paymentData: PaymentRequestData) {
     // console.log para visibilidade imediata no terminal/logs da Railway
     console.log(`[PAYMENT_START] Iniciando processamento do pedido: ${orderId}`);
-    
+
     if (!orderId) {
       console.error('[PAYMENT_ERROR] Order ID ausente');
       throw new AppError('Order ID é obrigatório', HTTP_STATUS.BAD_REQUEST);
@@ -122,7 +122,19 @@ export class PaymentService {
       // Atualiza pedido com dados do pagamento (Responsabilidade delegada)
       await this.updateOrderWithPaymentResult(order, result as unknown as Record<string, unknown>);
 
-      return result;
+      // Simplificamos e normalizamos a resposta para o frontend (CamelCase)
+      // Isso resolve o problema do PIX não aparecer por diferença de nome de campos (snake_case vs camelCase)
+      return {
+        id: result.id,
+        status: result.status,
+        statusDetail: result.status_detail,
+        dateOfExpiration: result.date_of_expiration,
+        pointOfInteraction: result.point_of_interaction ? {
+          transaction_data: result.point_of_interaction.transaction_data
+        } : undefined,
+        // Mantemos o objeto bruto em 'raw' caso o frontend precise de algo extra sem quebras
+        raw: result
+      };
     } catch (_error) {
       log.error('Erro detalhado no processamento de pagamento:', {
         orderId,
