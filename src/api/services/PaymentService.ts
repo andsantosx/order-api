@@ -369,15 +369,14 @@ export class PaymentService {
           number: docNumber,
         },
         first_name: firstName,
-        last_name: lastName,
-        address: {
-          zip_code: order.shippingAddress?.[0]?.zip_code || rawData.payer?.address?.zip_code || '',
-          street_name: order.shippingAddress?.[0]?.street || rawData.payer?.address?.street_name || '',
-          street_number: String(rawData.payer?.address?.street_number || 'S/N'),
-          city_name: order.shippingAddress?.[0]?.city || '',
-          state_id: order.shippingAddress?.[0]?.state || 'SP',
-        }
-      },
+        address: order.shippingAddress && order.shippingAddress.length > 0 ? {
+          zip_code: order.shippingAddress[0].zip_code,
+          street_name: order.shippingAddress[0].street,
+          street_number: "S/N",
+          neighborhood: order.shippingAddress[0].city,
+          city: order.shippingAddress[0].city,
+          federal_unit: order.shippingAddress[0].state
+        } : undefined       },
       additional_info: {
         items: order.items.map(item => ({
           id: item.product?.id || item.id,
