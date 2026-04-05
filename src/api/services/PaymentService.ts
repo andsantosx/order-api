@@ -108,6 +108,12 @@ export class PaymentService {
 
       return result;
     } catch (_error) {
+      log.error('Erro detalhado no processamento de pagamento:', {
+        orderId,
+        error: _error instanceof Error ? _error.message : 'Unknown',
+        stack: _error instanceof Error ? _error.stack : undefined,
+        raw: _error
+      });
       return this.handlePaymentError(_error, orderId);
     }
   }
@@ -229,7 +235,7 @@ export class PaymentService {
       log.error('Erro no webhook', { error: error instanceof Error ? error.message : 'Unknown' });
       return 500;
     }
-}
+  }
 
   /* ==========================================
    * HELPERS DE MAPEAMENTO E NEGÓCIO (Clean Code)
@@ -300,16 +306,16 @@ export class PaymentService {
           registration_date: (order.user?.createdAt || new Date()).toISOString(),
           phone: payer.phone
             ? {
-                area_code: payer.phone.areaCode || '55',
-                number: payer.phone.number || '000000000',
-              }
+              area_code: payer.phone.areaCode || '55',
+              number: payer.phone.number || '000000000',
+            }
             : undefined,
           address: payer.address
             ? {
-                zip_code: payer.address.zipCode || '',
-                street_name: payer.address.streetName || '',
-                street_number: payer.address.streetNumber || 'S/N',
-              }
+              zip_code: payer.address.zipCode || '',
+              street_name: payer.address.streetName || '',
+              street_number: payer.address.streetNumber || 'S/N',
+            }
             : undefined,
         },
       },
@@ -336,13 +342,13 @@ export class PaymentService {
     const payerFirstName = rawData.payer?.firstName || rawData.payer?.first_name;
     const payerLastName = rawData.payer?.lastName || rawData.payer?.last_name;
 
-    const fullName = payerFirstName
+    const fullName = (payerFirstName
       ? `${payerFirstName} ${payerLastName || ''}`.trim()
-      : order.user?.name || 'Customer';
+      : order.user?.name || 'Customer').trim();
 
     const parts = fullName.split(' ');
-    const firstName = payerFirstName || parts[0] || 'Customer';
-    const lastName = payerLastName || parts.slice(1).join(' ') || 'User';
+    const firstName = parts[0] || 'Customer';
+    const lastName = parts.slice(1).join(' ') || 'User';
 
     const rawPhone = (order.phone || order.user?.phone || '000000000').replace(/\D/g, '');
     const area = rawPhone.length >= 10 ? rawPhone.substring(0, 2) : '55';
@@ -356,10 +362,10 @@ export class PaymentService {
       phone: { areaCode: area, number: number },
       address: order.shippingAddress?.[0]
         ? {
-            zipCode: order.shippingAddress[0].zipCode,
-            streetName: order.shippingAddress[0].street,
-            streetNumber: 'S/N',
-          }
+          zipCode: order.shippingAddress[0].zipCode,
+          streetName: order.shippingAddress[0].street,
+          streetNumber: 'S/N',
+        }
         : undefined,
     };
   }
@@ -371,7 +377,7 @@ export class PaymentService {
       description: (item.product?.description || item.product?.name || 'Físico').substring(0, 255),
       categoryId: this.mapCategory(item.product?.category?.name),
       quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
+      unitPrice: Number(item.unitPrice) / MONEY.CENTS_PER_REAL, // FIX: Convert cents to Reais for MP
     }));
   }
 
@@ -380,7 +386,7 @@ export class PaymentService {
    */
   private mapCategory(categoryName?: string): string {
     if (!categoryName) return 'others';
-    
+
     const cat = categoryName.toLowerCase();
     if (cat.includes('eletron') || cat.includes('tech')) return 'electronics';
     if (cat.includes('roupa') || cat.includes('vestu')) return 'fashion';
@@ -388,7 +394,7 @@ export class PaymentService {
     if (cat.includes('brinquedo')) return 'toys';
     if (cat.includes('saude') || cat.includes('beleza')) return 'health';
     if (cat.includes('livro')) return 'books';
-    
+
     return 'others';
   }
 
