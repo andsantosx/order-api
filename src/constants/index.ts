@@ -30,8 +30,8 @@ export const MONEY = {
   /** Moeda padrão do sistema */
   DEFAULT_CURRENCY: 'BRL',
 
-  /** Valor mínimo de pedido em centavos (R$ 10,00) */
-  MIN_ORDER_VALUE_CENTS: 1000,
+  /** Valor mínimo de pedido em centavos (R$ 0,00) */
+  MIN_ORDER_VALUE_CENTS: 0,
 
   /** Valor máximo de pedido em centavos (R$ 50.000,00) */
   MAX_ORDER_VALUE_CENTS: 5000000,
