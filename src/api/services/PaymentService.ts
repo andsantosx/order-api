@@ -335,12 +335,7 @@ export class PaymentService {
             : undefined,
         },
       },
-      back_urls: {
-        success: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}`,
-        failure: `${env.FRONTEND_URL}/checkout?error=payment_failed&orderId=${order.id}`,
-        pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
-      },
-      auto_return: 'approved',
+      auto_return: undefined,
       metadata: { order_id: order.id, device_id: deviceId },
       installments: rawData.installments ? Number(rawData.installments) : undefined,
       token: token,
