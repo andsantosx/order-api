@@ -41,7 +41,11 @@ export class PaymentService {
    * Concentra a orquestração do fluxo de pagamento (Clean Architecture)
    */
   async processPayment(orderId: string, paymentData: PaymentRequestData) {
+    // console.log para visibilidade imediata no terminal/logs da Railway
+    console.log(`[PAYMENT_START] Iniciando processamento do pedido: ${orderId}`);
+    
     if (!orderId) {
+      console.error('[PAYMENT_ERROR] Order ID ausente');
       throw new AppError('Order ID é obrigatório', HTTP_STATUS.BAD_REQUEST);
     }
 
@@ -56,10 +60,22 @@ export class PaymentService {
     }
 
     try {
+      // Verifica Token (Segurança contra erro de ambiente)
+      if (!env.MERCADOPAGO_ACCESS_TOKEN) {
+        console.error('[PAYMENT_ERROR] MERCADOPAGO_ACCESS_TOKEN não configurado');
+        throw new Error('Configuração de API (AccessToken) ausente');
+      }
+
       const payment = new Payment(client);
 
       // Orquestra a preparação do payload (Separação de Preocupações)
-      const paymentBody = this.preparePaymentBody(order, paymentData);
+      let paymentBody: PaymentRequestBody;
+      try {
+        paymentBody = this.preparePaymentBody(order, paymentData);
+      } catch (err: any) {
+        console.error('[PAYMENT_ERROR] Erro ao preparar corpo do pagamento:', err);
+        throw new Error(`Erro na montagem dos dados: ${err.message}`);
+      }
       // Log sanitizado do request para depurar erro 400
       const sanitizedBody = {
         ...paymentBody,
@@ -461,9 +477,12 @@ export class PaymentService {
       cause: mpError.cause,
       status: mpError.status,
       responseData: responseData,
-      rawError: error // Mais detalhado para diagnóstico
+      rawError: JSON.stringify(error, Object.getOwnPropertyNames(error)) // Dump completo do objeto
     });
-    throw new AppError(ERROR_MESSAGES.PAYMENT_FAILED, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+
+    // Se houver uma mensagem específica de erro da resposta do MP, usamos ela para facilitar o debug
+    const detail = responseData?.message || mpError.message || ERROR_MESSAGES.PAYMENT_FAILED;
+    throw new AppError(`${ERROR_MESSAGES.PAYMENT_FAILED}: ${detail}`, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 
   private verifySignature(xSignature: string, xRequestId: string, dataId: string): boolean {
