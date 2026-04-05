@@ -229,7 +229,7 @@ export class PaymentService {
     return {
       transaction_amount: Number(order.totalAmount) / MONEY.CENTS_PER_REAL,
       description: `Pedido #${order.id.substring(0, 8)}`,
-      payment_method_id: rawData.paymentMethodId,
+      payment_method_id: rawData.paymentMethodId || (rawData as any).payment_method_id,
       external_reference: order.id,
       notification_url: env.MERCADOPAGO_WEBHOOK_URL,
       statement_descriptor: 'ORDER STORE',
@@ -283,10 +283,10 @@ export class PaymentService {
         pending: `${env.FRONTEND_URL}/order-confirmation?orderId=${order.id}&status=pending`,
       },
       auto_return: 'approved',
-      metadata: { order_id: order.id, device_id: rawData.deviceId || 'not_provided' },
-      installments: rawData.installments ? Number(rawData.installments) : undefined,
-      token: rawData.token,
-      issuer_id: rawData.issuerId ? Number(rawData.issuerId) : undefined,
+      metadata: { order_id: order.id, device_id: rawData.deviceId || (rawData as any).device_id || 'not_provided' },
+      installments: rawData.installments ? Number(rawData.installments) : (rawData as any).installments ? Number((rawData as any).installments) : undefined,
+      token: rawData.token || (rawData as any).token,
+      issuer_id: rawData.issuerId ? Number(rawData.issuerId) : (rawData as any).issuer_id ? Number((rawData as any).issuer_id) : undefined,
     };
   }
 
