@@ -115,33 +115,31 @@ export class CategoryService {
    * Verifica duplicidade de slug se ele for alterado
    *
    * @param id - ID da categoria a ser atualizada
-   * @param name - Novo nome da categoria
-   * @param slug - Novo slug da categoria
+   * @param data - Dados para atualização (nome e/ou slug)
    * @returns Categoria atualizada
    * @throws {AppError} 404 - Se a categoria não for encontrada
    * @throws {AppError} 400 - Se o novo slug já estiver em uso
    *
    * @example
-   * const updated = await categoryService.update(1, 'Camisetas Premium', 'camisetas-premium');
+   * const updated = await categoryService.update(1, { name: 'Camisetas Premium' });
    */
-  async update(id: number, name: string, slug: string) {
+  async update(id: number, data: { name?: string; slug?: string }) {
     const category = await this.categoryRepository.findOneBy({ id });
     if (!category) {
       log.warn('Tentativa de atualizar categoria inexistente', { categoryId: id });
       throw new AppError(ERROR_MESSAGES.CATEGORY_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    // Verifica duplicidade de slug apenas se ele foi alterado
-    if (slug !== category.slug) {
-      const existingCategory = await this.categoryRepository.findOneBy({ slug });
+    // Verifica duplicidade de slug apenas se ele foi fornecido e alterado
+    if (data.slug && data.slug !== category.slug) {
+      const existingCategory = await this.categoryRepository.findOneBy({ slug: data.slug });
       if (existingCategory) {
-        log.warn('Tentativa de atualizar categoria com slug duplicado', { slug, categoryId: id });
+        log.warn('Tentativa de atualizar categoria com slug duplicado', { slug: data.slug, categoryId: id });
         throw new AppError('Já existe uma categoria com este slug', HTTP_STATUS.BAD_REQUEST);
       }
     }
 
-    category.name = name;
-    category.slug = slug;
+    Object.assign(category, data);
 
     const updatedCategory = await this.categoryRepository.save(category);
 

@@ -44,8 +44,7 @@ export class CategoryController {
    */
   async update(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
-    const { name, slug } = req.body;
-    const category = await this.categoryService.update(parseInt(id as string), name, slug);
+    const category = await this.categoryService.update(parseInt(id as string), req.body);
     res.json(category);
   }
 

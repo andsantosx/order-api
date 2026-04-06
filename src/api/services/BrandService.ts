@@ -115,33 +115,31 @@ export class BrandService {
    * Verifica duplicidade de slug se ele for alterado
    *
    * @param id - ID da marca a ser atualizada
-   * @param name - Novo nome da marca
-   * @param slug - Novo slug da marca
+   * @param data - Dados para atualização (nome e/ou slug)
    * @returns Marca atualizada
    * @throws {AppError} 404 - Se a marca não for encontrada
    * @throws {AppError} 400 - Se o novo slug já estiver em uso
    *
    * @example
-   * const updated = await brandService.update(1, 'Nike Pro', 'nike-pro');
+   * const updated = await brandService.update(1, { name: 'Nike Pro' });
    */
-  async update(id: number, name: string, slug: string) {
+  async update(id: number, data: { name?: string; slug?: string }) {
     const brand = await this.brandRepository.findOneBy({ id });
     if (!brand) {
       log.warn('Tentativa de atualizar marca inexistente', { brandId: id });
       throw new AppError(ERROR_MESSAGES.BRAND_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
     }
 
-    // Verifica duplicidade de slug apenas se ele foi alterado
-    if (slug !== brand.slug) {
-      const existingBrand = await this.brandRepository.findOneBy({ slug });
+    // Verifica duplicidade de slug apenas se ele foi fornecido e alterado
+    if (data.slug && data.slug !== brand.slug) {
+      const existingBrand = await this.brandRepository.findOneBy({ slug: data.slug });
       if (existingBrand) {
-        log.warn('Tentativa de atualizar marca com slug duplicado', { slug, brandId: id });
+        log.warn('Tentativa de atualizar marca com slug duplicado', { slug: data.slug, brandId: id });
         throw new AppError('Já existe uma marca com este slug', HTTP_STATUS.BAD_REQUEST);
       }
     }
 
-    brand.name = name;
-    brand.slug = slug;
+    Object.assign(brand, data);
 
     const updatedBrand = await this.brandRepository.save(brand);
 

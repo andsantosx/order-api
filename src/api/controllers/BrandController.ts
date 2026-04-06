@@ -44,8 +44,7 @@ export class BrandController {
    */
   async update(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
-    const { name, slug } = req.body;
-    const brand = await this.brandService.update(parseInt(id as string), name, slug);
+    const brand = await this.brandService.update(parseInt(id as string), req.body);
     res.json(brand);
   }
 
