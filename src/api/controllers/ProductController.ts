@@ -58,8 +58,10 @@ export class ProductController {
    * Compatibility: supports sizeIds (array of numbers).
    */
   async create(req: Request, res: Response, _next: NextFunction) {
-    const { name, priceCents, description, currency, categoryId, brandId, sizeIds, sizes, images } =
+    const { name, priceCents, price_cents, description, currency, categoryId, brandId, sizeIds, sizes, images } =
       req.body;
+
+    const finalPrice = priceCents ?? price_cents;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
@@ -68,7 +70,7 @@ export class ProductController {
 
     const product = await this.productService.create(
       name,
-      priceCents,
+      finalPrice,
       description,
       currency,
       categoryId,
@@ -84,7 +86,8 @@ export class ProductController {
    */
   async update(req: Request, res: Response, _next: NextFunction) {
     const { id } = req.params;
-    const { sizeIds, sizes, images, ...rest } = req.body;
+    const { sizeIds, sizes, images, priceCents, price_cents, ...rest } = req.body;
+    const finalPrice = priceCents ?? price_cents;
 
     let sizesData = sizes;
     if (!sizes && sizeIds) {
@@ -93,6 +96,7 @@ export class ProductController {
 
     const product = await this.productService.update(id as string, {
       ...rest,
+      priceCents: finalPrice,
       sizes: sizesData,
       images,
     });

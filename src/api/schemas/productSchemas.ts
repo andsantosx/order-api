@@ -11,7 +11,16 @@ export const createProductSchema = z.object({
         VALIDATION.PRODUCT_NAME_MAX_LENGTH,
         `Nome deve ter no máximo ${VALIDATION.PRODUCT_NAME_MAX_LENGTH} caracteres`,
       ),
-    price_cents: z.number().int().positive('Preço deve ser um número positivo'),
+    price_cents: z.preprocess(
+      (val, ctx) => {
+        // If price_cents is missing but priceCents is present in the parent object
+        // we can't easily see parent from here in a simple z.object
+        // So we'll handle it in the controller or use a more complex schema
+        return val;
+      },
+      z.number().int().positive('Preço deve ser um número positivo'),
+    ).optional(),
+    priceCents: z.number().int().positive('Preço deve ser um número positivo').optional(),
     description: z
       .string()
       .max(
@@ -24,6 +33,9 @@ export const createProductSchema = z.object({
     brandId: z.number().int().positive('ID da marca inválido').optional(),
     sizeIds: z.array(z.number().int().positive()).min(1, 'Produto deve ter pelo menos um tamanho'),
     images: z.array(imageUrlSchema).min(1, 'Pelo menos uma imagem é obrigatória').optional(),
+  }).refine(data => data.price_cents !== undefined || data.priceCents !== undefined, {
+    message: "Preço é obrigatório (price_cents ou priceCents)",
+    path: ["price_cents"]
   }),
 });
 
@@ -32,6 +44,7 @@ export const updateProductSchema = z.object({
     name: z.string().min(1).max(VALIDATION.PRODUCT_NAME_MAX_LENGTH).optional(),
     description: z.string().max(VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH).optional(),
     price_cents: z.number().int().positive().optional(),
+    priceCents: z.number().int().positive().optional(),
     currency: z.string().length(3).optional(),
     categoryId: z.number().int().positive().optional(),
     brandId: z.number().int().positive().optional(),
