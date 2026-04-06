@@ -191,18 +191,7 @@ export class UserService {
       user.passwordHash = await bcrypt.hash(data.password, SECURITY.BCRYPT_SALT_ROUNDS);
     }
 
-    // Atualiza documento se fornecido
-    if (data.document) {
-      // Verifica se já existe outro usuário com este CPF
-      const existingUser = await this.userRepository.findOneBy({ document: data.document });
-      if (existingUser && existingUser.id !== userId) {
-        throw new AppError(
-          'Este CPF já está sendo utilizado por outra conta.',
-          HTTP_STATUS.BAD_REQUEST,
-        );
-      }
-      user.document = data.document;
-    }
+    // CPF (document) update is disabled
 
     // Atualiza telefone se fornecido
     if (data.phone) {
@@ -222,18 +211,12 @@ export class UserService {
    * @returns Dados do usuário sem informações sensíveis
    */
   private getSanitizedUserOutput(user: User): UserResponse {
-    let maskedDocument = user.document;
-    if (maskedDocument && maskedDocument.length >= 11) {
-      const doc = maskedDocument.replace(/\D/g, '');
-      maskedDocument = `***.***.***-${doc.slice(-2)}`;
-    }
-
     return {
       id: user.id,
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
-      document: maskedDocument,
+      document: user.document,
       phone: user.phone,
       acceptedTerms: user.acceptedTerms,
     };

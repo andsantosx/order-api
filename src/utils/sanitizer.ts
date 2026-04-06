@@ -33,15 +33,17 @@ function normalizeSpaces(input: string): string {
 /**
  * Sanitiza dados de usuário
  */
-export function sanitizeUserData(data: { name?: string; email?: string; document?: string }): {
+export function sanitizeUserData(data: { name?: string; email?: string; document?: string; phone?: string }): {
   name?: string;
   email?: string;
   document?: string;
+  phone?: string;
 } {
   const sanitized: {
     name?: string;
     email?: string;
     document?: string;
+    phone?: string;
   } = {};
 
   if (data.name !== undefined) {
@@ -54,6 +56,10 @@ export function sanitizeUserData(data: { name?: string; email?: string; document
 
   if (data.document !== undefined) {
     sanitized.document = data.document.replace(/\D/g, '');
+  }
+
+  if (data.phone !== undefined) {
+    sanitized.phone = data.phone.replace(/\D/g, '');
   }
 
   return sanitized;

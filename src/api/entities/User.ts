@@ -43,13 +43,6 @@ export class User {
    */
   toJSON() {
     const { passwordHash, ...user } = this;
-
-    // Máscara de CPF: mantém apenas os últimos 3 dígitos visíveis
-    if (user.document && user.document.length >= 11) {
-      const doc = user.document.replace(/\D/g, '');
-      user.document = `***.***.***-${doc.slice(-2)}`;
-    }
-
     return user;
   }
 }
