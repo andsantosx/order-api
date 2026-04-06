@@ -23,7 +23,7 @@ router.post(
   validate(createProductSchema),
   productController.create.bind(productController),
 );
-router.put(
+router.patch(
   '/:id',
   authMiddleware,
   adminMiddleware,

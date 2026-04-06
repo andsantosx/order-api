@@ -23,20 +23,13 @@ router.post(
   validate(createCategorySchema),
   categoryController.create.bind(categoryController),
 );
-router.put(
+router.patch(
   '/:id',
   authMiddleware,
   adminMiddleware,
   auditMiddleware,
   validate(updateCategorySchema),
   categoryController.update.bind(categoryController),
-);
-router.delete(
-  '/:id',
-  authMiddleware,
-  adminMiddleware,
-  auditMiddleware,
-  categoryController.delete.bind(categoryController),
 );
 
 export default router;

@@ -24,7 +24,7 @@ router.post(
   validate(createOrderSchema),
   orderController.create.bind(orderController),
 );
-router.put(
+router.patch(
   '/:id/status',
   authMiddleware,
   adminMiddleware,

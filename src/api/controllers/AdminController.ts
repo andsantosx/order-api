@@ -11,7 +11,8 @@ export class AdminController {
       throw new AppError('Acesso negado. Apenas administradores.', 403);
     }
 
-    const { start_date, end_date } = req.query;
+    const start_date = (req.query.start_date || req.query.startDate) as string;
+    const end_date = (req.query.end_date || req.query.endDate) as string;
     const stats = await this.adminService.getDashboardStats(
       start_date as string,
       end_date as string,

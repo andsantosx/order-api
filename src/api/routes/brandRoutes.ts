@@ -23,20 +23,13 @@ router.post(
   validate(createBrandSchema),
   brandController.create.bind(brandController),
 );
-router.put(
+router.patch(
   '/:id',
   authMiddleware,
   adminMiddleware,
   auditMiddleware,
   validate(updateBrandSchema),
   brandController.update.bind(brandController),
-);
-router.delete(
-  '/:id',
-  authMiddleware,
-  adminMiddleware,
-  auditMiddleware,
-  brandController.delete.bind(brandController),
 );
 
 export default router;
