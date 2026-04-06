@@ -26,7 +26,7 @@ router.post(
 );
 
 router.get('/me', authMiddleware, authController.getProfile.bind(authController));
-router.put(
+router.patch(
   '/me',
   authMiddleware,
   validate(updateProfileSchema),

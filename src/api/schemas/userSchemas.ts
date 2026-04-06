@@ -83,17 +83,7 @@ export const updateProfileSchema = z.object({
         .regex(VALIDATION.CPF_REGEX, 'CPF deve conter apenas 11 dígitos')
         .optional()
         .nullable(),
-      password: z
-        .string()
-        .min(
-          SECURITY.MIN_PASSWORD_LENGTH,
-          `Senha deve ter no mínimo ${SECURITY.MIN_PASSWORD_LENGTH} caracteres`,
-        )
-        .max(
-          VALIDATION.PASSWORD_MAX_LENGTH,
-          `Senha deve ter no máximo ${VALIDATION.PASSWORD_MAX_LENGTH} caracteres`,
-        )
-        .optional(),
+
       phone: z
         .string()
         .transform((val) => val.replace(/\D/g, ''))
