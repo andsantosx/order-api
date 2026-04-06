@@ -12,15 +12,28 @@ export const createProductSchema = z.object({
         `Nome deve ter no máximo ${VALIDATION.PRODUCT_NAME_MAX_LENGTH} caracteres`,
       ),
     price_cents: z.preprocess(
-      (val, ctx) => {
-        // If price_cents is missing but priceCents is present in the parent object
-        // we can't easily see parent from here in a simple z.object
-        // So we'll handle it in the controller or use a more complex schema
+      (val) => {
+        if (typeof val === 'string') {
+          // Remove currency symbols, spaces, and replace comma with dot
+          const clean = val.replace(/[R$\s]/g, '').replace(',', '.');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? undefined : Math.round(parsed * 100);
+        }
         return val;
       },
       z.number().int().positive('Preço deve ser um número positivo'),
     ).optional(),
-    priceCents: z.number().int().positive('Preço deve ser um número positivo').optional(),
+    priceCents: z.preprocess(
+      (val) => {
+        if (typeof val === 'string') {
+          const clean = val.replace(/[R$\s]/g, '').replace(',', '.');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? undefined : Math.round(parsed * 100);
+        }
+        return val;
+      },
+      z.number().int().positive('Preço deve ser um número positivo'),
+    ).optional(),
     description: z
       .string()
       .max(
@@ -43,8 +56,28 @@ export const updateProductSchema = z.object({
   body: z.object({
     name: z.string().min(1).max(VALIDATION.PRODUCT_NAME_MAX_LENGTH).optional(),
     description: z.string().max(VALIDATION.PRODUCT_DESCRIPTION_MAX_LENGTH).optional(),
-    price_cents: z.number().int().positive().optional(),
-    priceCents: z.number().int().positive().optional(),
+    price_cents: z.preprocess(
+      (val) => {
+        if (typeof val === 'string') {
+          const clean = val.replace(/[R$\s]/g, '').replace(',', '.');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? undefined : Math.round(parsed * 100);
+        }
+        return val;
+      },
+      z.number().int().positive().optional(),
+    ).optional(),
+    priceCents: z.preprocess(
+      (val) => {
+        if (typeof val === 'string') {
+          const clean = val.replace(/[R$\s]/g, '').replace(',', '.');
+          const parsed = parseFloat(clean);
+          return isNaN(parsed) ? undefined : Math.round(parsed * 100);
+        }
+        return val;
+      },
+      z.number().int().positive().optional(),
+    ).optional(),
     currency: z.string().length(3).optional(),
     categoryId: z.number().int().positive().optional(),
     brandId: z.number().int().positive().optional(),
