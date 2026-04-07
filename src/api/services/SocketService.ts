@@ -85,7 +85,7 @@ export class SocketService {
 
           log.info(`🔄 Order status synced via socket: ${orderId}`);
         } catch (error) {
-          log.error(`❌ Error syncing order via socket: ${orderId}`, error);
+          log.error(`❌ Error syncing order via socket: ${orderId}`, { error });
         }
       });
 
