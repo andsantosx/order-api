@@ -189,15 +189,15 @@ export const ORDER_STATUS_DESCRIPTIONS: Record<string, string> = {
  * Mapeamento dos status do Mercado Pago
  */
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendente',
-  approved: 'Aprovado',
-  authorized: 'Autorizado',
-  in_process: 'Em Processamento',
-  in_mediation: 'Em Mediação',
-  rejected: 'Rejeitado',
-  cancelled: 'Cancelado',
-  refunded: 'Reembolsado',
-  charged_back: 'Estornado',
+  pending:      'Pendente',
+  approved:     'Aprovado',
+  authorized:   'Autorizado',
+  in_process:   'Em Análise',
+  in_mediation: 'Em Disputa',
+  rejected:     'Recusado',
+  cancelled:    'Cancelado',
+  refunded:     'Reembolsado',
+  charged_back: 'Contestação (Chargeback)',
 } as const;
 
 /**

@@ -54,6 +54,11 @@ const MP_TO_ORDER_STATUS: Record<MercadoPagoPaymentStatus, OrderStatus> = {
  * Exibidas diretamente ao usuário em caso de rejeição.
  */
 const STATUS_DETAIL_MESSAGES: Partial<Record<MercadoPagoStatusDetail, string>> = {
+  [MercadoPagoStatusDetail.ACCREDITED]:                           'Pagamento aprovado e creditado com sucesso.',
+  [MercadoPagoStatusDetail.PENDING_CONTINGENCY]:                  'Pagamento em análise, aguarde a confirmação.',
+  [MercadoPagoStatusDetail.PENDING_REVIEW_MANUAL]:                'Pagamento em análise manual pelo Mercado Pago.',
+  [MercadoPagoStatusDetail.PENDING_WAITING_TRANSFER]:             'Aguardando transferência via PIX.',
+  [MercadoPagoStatusDetail.PENDING_WAITING_PAYMENT]:              'Aguardando conclusão do pagamento pelo usuário.',
   [MercadoPagoStatusDetail.CC_REJECTED_INSUFFICIENT_AMOUNT]:      'Saldo insuficiente no cartão.',
   [MercadoPagoStatusDetail.CC_REJECTED_HIGH_RISK]:                'Transação recusada por segurança.',
   [MercadoPagoStatusDetail.CC_REJECTED_BAD_FILLED_CARD_NUMBER]:   'Número de cartão inválido.',
@@ -61,8 +66,9 @@ const STATUS_DETAIL_MESSAGES: Partial<Record<MercadoPagoStatusDetail, string>> =
   [MercadoPagoStatusDetail.CC_REJECTED_BAD_FILLED_SECURITY_CODE]: 'Código de segurança inválido.',
   [MercadoPagoStatusDetail.CC_REJECTED_BLACKLIST]:                'Cartão não autorizado.',
   [MercadoPagoStatusDetail.CC_REJECTED_CALL_FOR_AUTHORIZE]:       'Ligue para o banco para autorizar a transação.',
-  [MercadoPagoStatusDetail.PENDING_CONTINGENCY]:                  'Pagamento em análise, aguarde a confirmação.',
-  [MercadoPagoStatusDetail.PENDING_REVIEW_MANUAL]:                'Pagamento em análise manual pelo Mercado Pago.',
+  [MercadoPagoStatusDetail.BY_MERCHANT]:                          'Pagamento cancelado pelo lojista.',
+  [MercadoPagoStatusDetail.REFUNDED]:                             'O valor do pagamento foi estornado.',
+  [MercadoPagoStatusDetail.CHARGED_BACK]:                         'Pagamento contestado (chargeback).',
 };
 
 export class PaymentService {
