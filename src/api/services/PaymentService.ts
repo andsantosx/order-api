@@ -1,5 +1,5 @@
 import { AppError } from '../middlewares/errorHandler';
-import { HTTP_STATUS } from '../../constants';
+import { HTTP_STATUS, PAYMENT_STATUS_LABELS } from '../../constants';
 import { log } from '../../config/logger';
 import { MercadoPagoPaymentResponse } from '../../types/payment';
 import {
@@ -151,11 +151,14 @@ export class PaymentService {
     await this.orderRepository.update(order.id, updatePayload);
 
     // Registrar no histórico (fire-and-forget)
+    const mpStatusLabel = PAYMENT_STATUS_LABELS[result.status] || result.status;
+    const mpDetailLabel = STATUS_DETAIL_MESSAGES[result.status_detail as MercadoPagoStatusDetail] || result.status_detail;
+
     OrderHistoryService.record({
       order:         { ...order, statusId: previousStatusId } as Order,
       toStatusId:    newStatus,
       changedByRole: ChangedByRole.PAYMENT_GATEWAY,
-      notes:         `Mercado Pago: status=${result.status}, detail=${result.status_detail ?? 'n/a'}`,
+      notes:         `Mercado Pago: ${mpStatusLabel}${mpDetailLabel ? ` - ${mpDetailLabel}` : ''}`,
     });
 
     // Disparar evento de domínio correspondente
