@@ -1,24 +1,24 @@
 import { AppDataSource } from '../../data-source';
 import { Order, OrderStatus } from '../entities/Order';
 import { Product } from '../entities/Product';
+import { log } from '../../config/logger';
 
 export class AdminService {
   private orderRepository = AppDataSource.getRepository(Order);
   private productRepository = AppDataSource.getRepository(Product);
 
   async getDashboardStats(startDate?: string, endDate?: string) {
-    // Prepare Date Range Conditions
-    // If dates are provided, we filter. If not, defaults apply:
-    // Revenue: default to All Time (or we could say last 30 days, but usually checks all)
-    // Orders: default to All Time count
-    // RECENT: always last 5 regardless of filter? Usually yes, or filter them too.
-    // Let's filter MAIN stats by date, but keep totals as totals if no date provided.
-
+    // Receita: pedidos PAID, AWAITING_SHIPMENT, SHIPPED ou DELIVERED
     const qbRevenue = this.orderRepository
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
-      .where('order.status IN (:...statuses)', {
-        statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+      .where('order.statusId IN (:...statuses)', {
+        statuses: [
+          OrderStatus.PAID,
+          OrderStatus.AWAITING_SHIPMENT,
+          OrderStatus.SHIPPED,
+          OrderStatus.DELIVERED,
+        ],
       });
 
     const qbOrders = this.orderRepository.createQueryBuilder('order');
@@ -26,7 +26,6 @@ export class AdminService {
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      // end needs to be end of day
       end.setHours(23, 59, 59, 999);
 
       qbRevenue.andWhere('order.createdAt BETWEEN :start AND :end', { start, end });
@@ -38,29 +37,28 @@ export class AdminService {
 
     const totalOrders = await qbOrders.getCount();
 
-    // 3. Total Products (Always Global Count)
+    // Total de produtos
     const totalProducts = await this.productRepository.count();
 
-    // 4. Recent Orders (Last 5) - Optionally filtered?
-    // Usually recent orders table reflects the filter, OR it just shows "Live Feed".
-    // Let's keep it "Recent Global" for now, or "Recent in Range".
-    // User asked for "Overview", usually "Recent" implies global context.
-    // If I filter `total orders` to last 7 days, seeing an order from 2 years ago in the table is weird.
-    // Let's apply filter to recent orders too if provided.
+    // Pedidos recentes (últimos 5) com relação status carregada
     const qbRecent = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.status', 'status')
       .orderBy('order.createdAt', 'DESC')
       .take(5)
       .select([
         'order.id',
         'order.totalAmount',
-        'order.status',
+        'order.statusId',
         'order.createdAt',
         'order.guestEmail',
         'user.id',
         'user.name',
         'user.email',
+        'status.id',
+        'status.name',
+        'status.label',
       ]);
 
     if (startDate && endDate) {
@@ -72,19 +70,43 @@ export class AdminService {
 
     const recentOrders = await qbRecent.getMany();
 
-    // Format recent orders for display
+    // Contagem de pedidos por status (visão geral para o admin)
+    const statusCountsRaw = await this.orderRepository
+      .createQueryBuilder('order')
+      .select('order.statusId', 'statusId')
+      .addSelect('COUNT(order.id)', 'count')
+      .groupBy('order.statusId')
+      .getRawMany();
+
+    const ordersByStatus = statusCountsRaw.reduce(
+      (acc: Record<number, number>, row: { statusId: string; count: string }) => {
+        acc[parseInt(row.statusId, 10)] = parseInt(row.count, 10);
+        return acc;
+      },
+      {},
+    );
+
+    // Formatar pedidos recentes
     const recentOrdersFormatted = recentOrders.map((order) => ({
       id: order.id,
       customer: order.user?.name || order.guestEmail || 'Guest',
       total: order.totalAmount,
-      status: order.status,
+      statusId: order.statusId,
+      statusLabel: order.status?.label || String(order.statusId),
       date: order.createdAt,
     }));
+
+    log.info('[AdminService] Dashboard stats fetched', {
+      totalRevenue,
+      totalOrders,
+      totalProducts,
+    });
 
     return {
       totalRevenue,
       totalOrders,
       totalProducts,
+      ordersByStatus,
       recentOrders: recentOrdersFormatted,
     };
   }

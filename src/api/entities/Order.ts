@@ -12,18 +12,49 @@ import { User } from './User';
 import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
 import { Money } from '../domain/value-objects/Money';
-
 import { Status } from './Status';
+import { OrderStatusHistory } from './OrderStatusHistory';
+import { OrderDomainEvent } from '../../types/domain-enums';
 
 export enum OrderStatus {
-  PENDING = 1,
-  PROCESSING = 2,
-  PAID = 3,
-  SHIPPED = 4,
-  DELIVERED = 5,
-  CANCELLED = 6,
-  REFUNDED = 7,
+  PENDING = 1,           // Pedido criado, aguardando pagamento
+  PROCESSING = 2,        // Pagamento em análise (PIX, boleto)
+  PAID = 3,              // Pagamento aprovado/confirmado
+  SHIPPED = 4,           // Enviado ao transportador
+  DELIVERED = 5,         // Entrega confirmada
+  CANCELLED = 6,         // Cancelado
+  REFUNDED = 7,          // Reembolsado
+  AWAITING_SHIPMENT = 8, // Pago, preparando envio (separação em estoque)
 }
+
+/**
+ * Mapeamento de status do pedido → evento de domínio correspondente.
+ * Usado por services para disparar o evento correto após cada transição.
+ */
+export const ORDER_STATUS_EVENTS: Record<number, OrderDomainEvent> = {
+  [OrderStatus.PENDING]:           OrderDomainEvent.ORDER_CREATED,
+  [OrderStatus.PROCESSING]:        OrderDomainEvent.PAYMENT_PENDING,
+  [OrderStatus.PAID]:              OrderDomainEvent.PAYMENT_APPROVED,
+  [OrderStatus.AWAITING_SHIPMENT]: OrderDomainEvent.ORDER_AWAITING_SHIPMENT,
+  [OrderStatus.SHIPPED]:           OrderDomainEvent.ORDER_SHIPPED,
+  [OrderStatus.DELIVERED]:         OrderDomainEvent.ORDER_DELIVERED,
+  [OrderStatus.CANCELLED]:         OrderDomainEvent.ORDER_CANCELLED,
+  [OrderStatus.REFUNDED]:          OrderDomainEvent.ORDER_REFUNDED,
+};
+
+/**
+ * Máquina de estados: define quais transições são permitidas por papel
+ */
+export const VALID_TRANSITIONS: Record<number, number[]> = {
+  [OrderStatus.PENDING]:           [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PROCESSING]:        [OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PAID]:              [OrderStatus.AWAITING_SHIPMENT, OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
+  [OrderStatus.AWAITING_SHIPMENT]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+  [OrderStatus.SHIPPED]:           [OrderStatus.DELIVERED, OrderStatus.REFUNDED],
+  [OrderStatus.DELIVERED]:         [OrderStatus.REFUNDED],
+  [OrderStatus.CANCELLED]:         [], // Terminal
+  [OrderStatus.REFUNDED]:          [], // Terminal
+};
 
 @Entity('orders')
 export class Order {
@@ -58,7 +89,7 @@ export class Order {
   idempotencyKey!: string;
 
   @Column({ name: 'payment_id', nullable: true })
-  paymentId?: string; // Stores Mercado Pago Transaction ID
+  paymentId?: string; // ID da transação no Mercado Pago
 
   @Column({ name: 'payment_method', nullable: true })
   paymentMethod?: string; // pix, credit_card, ticket, etc.
@@ -77,6 +108,24 @@ export class Order {
   @JoinColumn({ name: 'status_id' })
   status!: Status;
 
+  // Código de rastreio do transportador
+  @Column({ name: 'tracking_code', nullable: true })
+  trackingCode?: string;
+
+  // URL do portal de rastreio
+  @Column({ name: 'tracking_url', nullable: true })
+  trackingUrl?: string;
+
+  // Timestamps de ciclo de vida
+  @Column({ name: 'shipped_at', nullable: true })
+  shippedAt?: Date;
+
+  @Column({ name: 'delivered_at', nullable: true })
+  deliveredAt?: Date;
+
+  @Column({ name: 'cancelled_at', nullable: true })
+  cancelledAt?: Date;
+
   @Index()
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
@@ -90,22 +139,15 @@ export class Order {
   @OneToMany(() => ShippingAddress, (address) => address.order, { cascade: true })
   shippingAddress!: ShippingAddress[];
 
+  @OneToMany(() => OrderStatusHistory, (history) => history.order)
+  statusHistory!: OrderStatusHistory[];
+
   /**
    * Verifica se a transição para um novo status é permitida.
    * Centraliza a lógica da Máquina de Estados do pedido.
    */
   canTransitionTo(newStatusId: number): boolean {
-    const validTransitions: Record<number, number[]> = {
-      [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
-      [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
-      [OrderStatus.PAID]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.REFUNDED, OrderStatus.CANCELLED],
-      [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
-      [OrderStatus.CANCELLED]: [], // Terminal
-      [OrderStatus.REFUNDED]: [], // Terminal
-    };
-
-    return validTransitions[this.statusId]?.includes(newStatusId) ?? false;
+    return VALID_TRANSITIONS[this.statusId]?.includes(newStatusId) ?? false;
   }
 
   /**

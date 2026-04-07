@@ -2,25 +2,34 @@ import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/OrderService';
 import { OrderStatus } from '../entities/Order';
 import { PaymentService } from '../services/PaymentService';
+import { OrderHistoryService } from '../services/OrderHistoryService';
 import { log } from '../../config/logger';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../../constants';
+import { AppError } from '../middlewares/errorHandler';
+import { ChangedByRole } from '../../types/domain-enums';
 
 export class OrderController {
   private orderService = new OrderService();
 
   /**
-   * Retorna todos os pedidos cadastrados com paginação.
-   * Query params: ?status=PENDING&page=1&limit=20
+   * GET /orders
+   * Retorna todos os pedidos com paginação e filtros.
+   * Admins veem todos; usuários veem só os seus.
+   * Query: ?status=3&page=1&limit=20&userId=<uuid> (userId só para admin)
    */
   async getAll(req: Request, res: Response) {
     try {
       const userId = req.user?.userId;
       const isAdmin = req.user?.isAdmin || false;
-      const status = req.query.status as OrderStatus | undefined;
-      const page = req.query.page ? parseInt(req.query.page as string) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
 
-      // Allow admins to filter by query user_id, otherwise they see all orders.
-      // Non-admins only ever see their own orders.
+      // Converter query param para número
+      const statusParam = req.query.status as string | undefined;
+      const status = statusParam !== undefined ? parseInt(statusParam, 10) : undefined;
+
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+
+      // Admin pode filtrar por userId específico; usuário sempre vê só os seus
       const queryUserId = req.query.userId as string | undefined;
       const targetUserId = isAdmin ? queryUserId : userId;
 
@@ -33,20 +42,41 @@ export class OrderController {
   }
 
   /**
+   * GET /orders/:id
    * Busca um pedido específico pelo ID.
-   * Retorna detalhes completos incluindo itens e usuário.
    */
   async getOne(req: Request, res: Response, _next: NextFunction) {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const userId = req.user?.userId;
     const isAdmin = req.user?.isAdmin || false;
-    const order = await this.orderService.getOne(id as string, userId, isAdmin);
+    const order = await this.orderService.getOne(id, userId, isAdmin);
     res.json(order);
   }
 
   /**
-   * Cria um novo pedido.
-   * Espera receber: guestEmail, items e shippingAddress.
+   * GET /orders/:id/history
+   * Retorna o histórico completo de mudanças de status de um pedido.
+   * Usuário só vê o histórico de seus próprios pedidos; admin vê qualquer um.
+   */
+  async getStatusHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = String(req.params.id);
+      const userId = req.user?.userId;
+      const isAdmin = req.user?.isAdmin || false;
+
+      // Verificar acesso ao pedido antes de retornar histórico
+      await this.orderService.getOne(id, userId, isAdmin);
+
+      const history = await OrderHistoryService.getByOrderId(id);
+      return res.json(history);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /orders
+   * Cria um novo pedido. Público com rate limit (Guest Checkout).
    */
   async create(req: Request, res: Response, _next: NextFunction) {
     const {
@@ -71,34 +101,141 @@ export class OrderController {
       acceptedTerms,
       idempotencyKey,
     );
-    res.status(201).json(order);
+    res.status(HTTP_STATUS.CREATED).json(order);
   }
 
   /**
-   * Atualiza o status do pedido.
+   * PATCH /orders/:id/status
+   * Atualiza o status de um pedido (apenas admin).
+   * Valida automaticamente a máquina de estados.
+   * Body: { status: number, notes?: string, trackingCode?: string, trackingUrl?: string }
    */
   async updateStatus(req: Request, res: Response, _next: NextFunction) {
-    const { id } = req.params;
-    const { status } = req.body;
+    const id = String(req.params.id);
+    const { status, notes, trackingCode, trackingUrl } = req.body;
     const isAdmin = req.user?.isAdmin || false;
-    const order = await this.orderService.updateStatus(id as string, status, isAdmin);
+    const changedById = req.user?.userId || 'unknown';
+
+    const order = await this.orderService.updateStatus(
+      id,
+      {
+        status,
+        changedById,
+        changedByRole: ChangedByRole.ADMIN,
+        notes,
+        trackingCode,
+        trackingUrl,
+      },
+      isAdmin,
+    );
     res.json(order);
   }
 
+  // =========================================================
+  // Endpoints especializados do Admin (atalhos semânticos)
+  // =========================================================
+
   /**
-   * Reembolsa um pedido pago (Apenas Admin).
+   * PATCH /orders/:id/mark-awaiting-shipment
+   * Marca o pedido como "Aguardando Envio" (separação em estoque).
+   * Admin only. Pedido deve estar PAID.
+   */
+  async markAwaitingShipment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = String(req.params.id);
+      const { notes } = req.body;
+      const changedById = req.user?.userId || 'unknown';
+
+      const order = await this.orderService.updateStatus(
+        id,
+        {
+          status: OrderStatus.AWAITING_SHIPMENT,
+          changedById,
+          changedByRole: ChangedByRole.ADMIN,
+          notes: notes || 'Pedido em preparação para envio',
+        },
+        true,
+      );
+      res.json(order);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PATCH /orders/:id/mark-shipped
+   * Marca o pedido como "Enviado". Código de rastreio é obrigatório.
+   * Admin only.
+   */
+  async markShipped(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = String(req.params.id);
+      const { trackingCode, trackingUrl, notes } = req.body;
+      const changedById = req.user?.userId || 'unknown';
+
+      if (!trackingCode) {
+        throw new AppError(ERROR_MESSAGES.TRACKING_CODE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+      }
+
+      const order = await this.orderService.updateStatus(
+        id,
+        {
+          status: OrderStatus.SHIPPED,
+          changedById,
+          changedByRole: ChangedByRole.ADMIN,
+          notes: notes || 'Pedido enviado ao transportador',
+          trackingCode,
+          trackingUrl,
+        },
+        true,
+      );
+      res.json(order);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PATCH /orders/:id/mark-delivered
+   * Marca o pedido como "Entregue".
+   * Admin only.
+   */
+  async markDelivered(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = String(req.params.id);
+      const { notes } = req.body;
+      const changedById = req.user?.userId || 'unknown';
+
+      const order = await this.orderService.updateStatus(
+        id,
+        {
+          status: OrderStatus.DELIVERED,
+          changedById,
+          changedByRole: ChangedByRole.ADMIN,
+          notes: notes || 'Entrega confirmada',
+        },
+        true,
+      );
+      res.json(order);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /orders/:id/refund
+   * Inicia reembolso de um pedido pago (apenas admin).
    */
   async refund(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
-    // Check if user is admin (Extra safeguard, middleware should handle this)
     if (!req.user?.isAdmin) {
-      return res.status(403).json({ message: 'Unauthorized' });
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ message: ERROR_MESSAGES.ORDER_UNAUTHORIZED });
     }
 
     try {
       const paymentService = new PaymentService();
-      const result = await paymentService.refundPayment(id as string);
+      const result = await paymentService.refundPayment(id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -106,20 +243,23 @@ export class OrderController {
   }
 
   /**
-   * Cancela um pedido (Usuário dono ou Admin).
+   * POST /orders/:id/cancel
+   * Cancela um pedido.
+   * Usuário: apenas se PENDING.
+   * Admin: qualquer estado válido pela máquina de estados.
    */
   async cancel(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const userId = req.user?.userId;
     const isAdmin = req.user?.isAdmin || false;
 
     if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.INVALID_TOKEN });
     }
 
     try {
       const paymentService = new PaymentService();
-      const result = await paymentService.cancelOrder(id as string, userId, isAdmin);
+      const result = await paymentService.cancelOrder(id, userId, isAdmin);
       res.json(result);
     } catch (error) {
       next(error);

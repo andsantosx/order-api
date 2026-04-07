@@ -4,6 +4,7 @@ import { QueryFailedError } from 'typeorm';
 import { log } from '../../config/logger';
 import { PostgresQueryError } from '../../types/system';
 import { isProduction } from '../../config/env';
+import { PaymentException } from '../exceptions/PaymentException';
 
 /**
  * Classe customizada para erros da aplicação
@@ -49,6 +50,24 @@ export const errorHandler = (err: Error, req: Request, res: Response, _next: Nex
     return res.status(err.statusCode).json({
       status: 'error',
       message: err.message,
+    });
+  }
+
+  // 2. PaymentException - Erros de pagamento (Mercado Pago)
+  if (err instanceof PaymentException) {
+    log.warn('Erro de pagamento', {
+      name:       err.name,
+      message:    err.message,
+      statusCode: err.statusCode,
+      code:       err.code,
+      path:       req.path,
+      userId:     req.user?.userId,
+    });
+
+    return res.status(err.statusCode).json({
+      status:  'error',
+      message: err.message,
+      code:    err.code,
     });
   }
 

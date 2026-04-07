@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
+import { env } from '../../config/env';
 
 interface JwtPayload {
   userId: string;
@@ -8,27 +9,31 @@ interface JwtPayload {
   isAdmin: boolean;
 }
 
+/**
+ * optionalAuthMiddleware
+ *
+ * Tenta autenticar a requisição se o header Authorization estiver presente.
+ * Se não houver token, segue normalmente (Guest Checkout).
+ * Se o token for inválido/expirado, retorna 401.
+ */
 export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return next();
+    return next(); // Guest — sem auth é válido para este endpoint
   }
 
   const [, token] = authHeader.split(' ');
 
   if (!token) {
-    // If header exists but no token, consider it malformed -> 401
-    throw new AppError('Malformed token', 401);
+    throw new AppError('Token mal formatado', 401);
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as JwtPayload;
-
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     req.user = decoded;
     next();
-  } catch (_error) {
-    // If token provided but invalid/expired -> 401
-    throw new AppError('Invalid token', 401);
+  } catch {
+    throw new AppError('Token inválido ou expirado', 401);
   }
 };

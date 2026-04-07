@@ -1,4 +1,4 @@
-import { Order, OrderStatus } from '../entities/Order';
+import { Order, OrderStatus, ORDER_STATUS_EVENTS } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { ShippingAddress } from '../entities/ShippingAddress';
@@ -7,7 +7,6 @@ import { Size } from '../entities/Size';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middlewares/errorHandler';
 import { AppDataSource } from '../../data-source';
-import { FindOptionsWhere } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { log } from '../../config/logger';
 import { executeInTransaction } from '../../utils/transaction';
@@ -16,6 +15,9 @@ import { isValidZipCode } from '../../utils/validators';
 import { CPF } from '../domain/value-objects/CPF';
 import { ProductSize } from '../entities/ProductSize';
 import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { domainEvents } from '../domain/events/DomainEvents';
+import { OrderHistoryService } from './OrderHistoryService';
+import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
 
 /**
  * Interface para dados de endereço de entrega
@@ -35,6 +37,18 @@ interface OrderItemInput {
   productId: string;
   quantity: number;
   size: string;
+}
+
+/**
+ * Interface para opções de atualização de status pelo admin
+ */
+interface UpdateStatusOptions {
+  status: number;
+  changedById: string;
+  changedByRole?: ChangedByRole;
+  notes?: string;
+  trackingCode?: string;
+  trackingUrl?: string;
 }
 
 /**
@@ -68,7 +82,8 @@ export class OrderService {
       whereCondition.user = { id: userId };
     }
 
-    if (status) {
+    // Filtro por statusId (numérico, direto)
+    if (status !== undefined && status !== null) {
       whereCondition.statusId = status;
     }
 
@@ -89,13 +104,6 @@ export class OrderService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
-  }
-
-  /**
-   * Transforma pedido para formato de resposta
-   */
-  transform(order: Order) {
-    return order;
   }
 
   /**
@@ -120,12 +128,19 @@ export class OrderService {
   }
 
   /**
-   * Atualiza o status de um pedido
+   * Atualiza o status de um pedido (usado pelo admin)
+   * Valida a máquina de estados, salva histórico e dispara evento de domínio.
    */
-  async updateStatus(id: string, status: number, requesterIsAdmin: boolean = false) {
+  async updateStatus(
+    id: string,
+    options: UpdateStatusOptions,
+    requesterIsAdmin: boolean = false,
+  ) {
+    const { status: newStatusId, changedById, changedByRole = ChangedByRole.ADMIN, notes, trackingCode, trackingUrl } = options;
+
     const order = await this.orderRepository.findOne({
       where: { id },
-      relations: ['status'],
+      relations: ['status', 'user'],
     });
 
     if (!order) {
@@ -133,25 +148,72 @@ export class OrderService {
     }
 
     if (!requesterIsAdmin) {
-      throw new AppError(
-        'Apenas administradores podem alterar o status do pedido',
-        HTTP_STATUS.FORBIDDEN,
-      );
+      throw new AppError('Apenas administradores podem alterar o status do pedido', HTTP_STATUS.FORBIDDEN);
     }
 
-    if (!order.canTransitionTo(status)) {
-      const currentStatusName = order.status?.name || `ID ${order.statusId}`;
+    if (!order.canTransitionTo(newStatusId)) {
+      const currentStatusName = order.status?.label || `ID ${order.statusId}`;
       throw new AppError(
-        `Não é possível alterar o status de ${currentStatusName} para o novo status solicitado.`,
+        `Não é possível alterar o status de "${currentStatusName}" para o novo status solicitado.`,
         HTTP_STATUS.BAD_REQUEST,
       );
     }
 
-    order.statusId = status;
-    await this.orderRepository.save(order);
+    // Validação específica: SHIPPED exige código de rastreio
+    if (newStatusId === OrderStatus.SHIPPED && !trackingCode) {
+      throw new AppError(ERROR_MESSAGES.TRACKING_CODE_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+    }
 
-    log.info('Status do pedido atualizado pelo admin', { orderId: id, newStatus: status });
-    return order;
+    const previousStatusId = order.statusId;
+
+    // Atualizar campos de ciclo de vida e rastreio
+    const updatePayload: Partial<Order> = { statusId: newStatusId };
+
+    if (newStatusId === OrderStatus.SHIPPED) {
+      updatePayload.trackingCode = trackingCode;
+      updatePayload.trackingUrl = trackingUrl;
+      updatePayload.shippedAt = new Date();
+    } else if (newStatusId === OrderStatus.DELIVERED) {
+      updatePayload.deliveredAt = new Date();
+    } else if (newStatusId === OrderStatus.CANCELLED) {
+      updatePayload.cancelledAt = new Date();
+    }
+
+    await this.orderRepository.update(order.id, updatePayload);
+
+    // Registrar no histórico (fire-and-forget)
+    OrderHistoryService.record({
+      order:         { ...order, statusId: previousStatusId } as Order,
+      toStatusId:    newStatusId,
+      changedById,
+      changedByRole: changedByRole as ChangedByRole,
+      notes,
+      trackingCode,
+      trackingUrl,
+    });
+
+    // Disparar evento de domínio
+    const eventName = ORDER_STATUS_EVENTS[newStatusId];
+    if (eventName) {
+      domainEvents.dispatch(eventName, {
+        orderId: order.id,
+        userId: order.user?.id,
+        newStatusId,
+        previousStatusId,
+        trackingCode,
+        trackingUrl,
+        changedById,
+      });
+    }
+
+    log.info('Status do pedido atualizado pelo admin', {
+      orderId: id,
+      from: previousStatusId,
+      to: newStatusId,
+      by: changedById,
+    });
+
+    return this.getOne(id, undefined, true);
   }
 
   /**
@@ -168,14 +230,7 @@ export class OrderService {
     acceptedTerms: boolean,
     idempotencyKey?: string,
   ) {
-    this.validateOrderInput(
-      userId,
-      guestEmail,
-      guestCpf,
-      shippingAddressData,
-      items,
-      acceptedTerms,
-    );
+    this.validateOrderInput(userId, guestEmail, guestCpf, shippingAddressData, items, acceptedTerms);
 
     const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf, phone);
     const finalEmail = guestEmail || user.email;
@@ -183,12 +238,7 @@ export class OrderService {
     const { productsMap, sizeNamesMap, totalAmount, shippingCost } =
       await this.validateAndCalculateOrder(items);
 
-    const existingOrder = await this.checkIdempotency(
-      user.id,
-      finalEmail,
-      totalAmount,
-      idempotencyKey,
-    );
+    const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount, idempotencyKey);
     if (existingOrder) {
       log.info('Pedido duplicado detectado', { orderId: existingOrder.id });
       return this.getOne(existingOrder.id);
@@ -211,6 +261,21 @@ export class OrderService {
       user.acceptedTerms = true;
       await this.userRepository.save(user);
     }
+
+    // Registrar histórico inicial (status PENDING)
+    OrderHistoryService.record({
+      order:         { ...order, statusId: 0 } as Order,
+      toStatusId:    OrderStatus.PENDING,
+      changedByRole: ChangedByRole.SYSTEM,
+      notes:         'Pedido criado',
+    });
+
+    // Disparar evento ORDER_CREATED
+    domainEvents.dispatch(OrderDomainEvent.ORDER_CREATED, {
+      orderId:     order.id,
+      userId:      user.id,
+      totalAmount,
+    });
 
     return this.getOne(order.id);
   }

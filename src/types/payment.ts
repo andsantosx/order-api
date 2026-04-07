@@ -1,6 +1,8 @@
 /**
- * Dados do pagador
+ * @file src/types/payment.ts
+ * Tipos para integração com o Mercado Pago.
  */
+import { MercadoPagoPaymentStatus, MercadoPagoStatusDetail } from './domain-enums';
 export interface PayerData {
   email: string;
   firstName: string;
@@ -207,12 +209,13 @@ export interface WebhookBody {
 }
 
 /**
- * Resposta padrão de criação de pagamento do Mercado Pago
+ * Resposta padrão de criação de pagamento do Mercado Pago.
+ * Tipada com os enums de domínio para garantir segurança de tipos.
  */
 export interface MercadoPagoPaymentResponse {
   id: number;
-  status: string;
-  status_detail: string;
+  status: MercadoPagoPaymentStatus;
+  status_detail: MercadoPagoStatusDetail;
   date_approved?: string | null;
   payer?: PayerData;
   payment_method_id?: string;

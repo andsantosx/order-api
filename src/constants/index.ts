@@ -160,13 +160,28 @@ export const VALIDATION = {
  * Usado para exibição ao usuário e admin
  */
 export const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendente',
-  PAID: 'Pago',
-  PROCESSING: 'Processando',
-  SHIPPED: 'Enviado',
-  DELIVERED: 'Entregue',
-  CANCELED: 'Cancelado',
-  REFUNDED: 'Reembolsado',
+  PENDING:            'Pendente',
+  PROCESSING:         'Processando',
+  PAID:               'Pago',
+  AWAITING_SHIPMENT:  'Aguardando Envio',
+  SHIPPED:            'Enviado',
+  DELIVERED:          'Entregue',
+  CANCELLED:          'Cancelado',
+  REFUNDED:           'Reembolsado',
+} as const;
+
+/**
+ * Descrições amigáveis para o usuário final sobre cada status
+ */
+export const ORDER_STATUS_DESCRIPTIONS: Record<string, string> = {
+  PENDING:            'Seu pedido foi criado e está aguardando confirmação do pagamento.',
+  PROCESSING:         'Seu pagamento está sendo analisado. Em breve confirmaremos.',
+  PAID:               'Pagamento confirmado! Seu pedido está sendo preparado.',
+  AWAITING_SHIPMENT:  'Seu pedido está sendo separado no estoque para envio.',
+  SHIPPED:            'Seu pedido foi enviado ao transportador. Acompanhe pelo código de rastreio.',
+  DELIVERED:          'Seu pedido foi entregue. Obrigado pela compra!',
+  CANCELLED:          'Seu pedido foi cancelado.',
+  REFUNDED:           'O reembolso do seu pedido foi processado.',
 } as const;
 
 /**
@@ -237,6 +252,15 @@ export const ERROR_MESSAGES = {
   // Pagamento
   PAYMENT_FAILED: 'Falha ao processar pagamento',
   REFUND_FAILED: 'Falha ao processar reembolso',
+  PAYMENT_REJECTED: 'Pagamento recusado. Verifique os dados do cartão ou tente outro método.',
+
+  // Rastreio
+  TRACKING_CODE_REQUIRED: 'Código de rastreio é obrigatório para marcar o pedido como enviado.',
+  INVALID_STATUS_TRANSITION: 'Transição de status inválida para o estado atual do pedido.',
+  ORDER_CANNOT_BE_CANCELLED: 'Este pedido não pode ser cancelado no estado atual.',
+  ORDER_ALREADY_TERMINAL: 'Este pedido já está em um estado final e não pode ser alterado.',
+  ORDER_NOT_PAID: 'O pedido precisa estar pago para ser enviado.',
+  STATUS_HISTORY_NOT_FOUND: 'Histórico de status não encontrado.',
 
   // Validação
   INVALID_INPUT: 'Dados de entrada inválidos',
