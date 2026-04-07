@@ -83,6 +83,7 @@ export class OrderService {
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('o.shippingAddress', 'shippingAddress')
       .leftJoinAndSelect('o.status', 'status')
+      .leftJoinAndSelect('o.statusHistory', 'statusHistory')
       .orderBy('o.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -129,7 +130,7 @@ export class OrderService {
   async getOne(id: string, userId?: string, isAdmin: boolean = false) {
     const order = await this.orderRepository.findOne({
       where: { id },
-      relations: ['user', 'items', 'items.product', 'shippingAddress', 'status'],
+      relations: ['user', 'items', 'items.product', 'shippingAddress', 'status', 'statusHistory'],
     });
 
     if (!order) {
