@@ -54,7 +54,7 @@ export class SocketHandler {
       const event = data as OrderCreatedEventData;
       log.info(`[SocketHandler] ORDER_CREATED: ${event.orderId}`);
 
-      socketService.emitToAdmins('ORDER_CREATED', {
+      socketService.emitToAdmins('order_created', {
         orderId: event.orderId,
         message: 'Novo pedido recebido!',
         totalAmount: event.totalAmount,
