@@ -259,45 +259,29 @@ export class PaymentService {
       );
     }
 
-    // Regra extra para usuário comum: só pode cancelar PENDING
-    if (!isAdmin && order.statusId !== OrderStatus.PENDING) {
+    // Regra rigorosa: só pode cancelar se for PENDING (1) ou PROCESSING (2)
+    const canCancel = order.statusId === OrderStatus.PENDING || order.statusId === OrderStatus.PROCESSING;
+
+    if (!canCancel) {
       throw new AppError(
-        'Apenas pedidos pendentes podem ser cancelados pelo cliente. Pedidos pagos ou enviados não podem ser cancelados diretamente.',
+        `Não é possível cancelar um pedido com status "${order.status?.label ?? order.statusId}". Pedidos pagos ou em trânsito não permitem cancelamento direto.`,
         HTTP_STATUS.BAD_REQUEST,
       );
     }
 
     const previousStatusId = order.statusId;
-    let autoRefundExecuted = false;
-
-    // Se for ADMIN e o pedido já estiver PAGO, processamos o REEMBOLSO automático ao cancelar
-    const isPaid = order.statusId === OrderStatus.PAID || 
-                   order.statusId === OrderStatus.AWAITING_SHIPMENT || 
-                   order.statusId === OrderStatus.SHIPPED;
-
-    if (isAdmin && isPaid && order.paymentId) {
-      try {
-        log.info('[PaymentService] Admin cancelling paid order. Triggering auto-refund...', { orderId: order.id, paymentId: order.paymentId });
-        await refundClient.create({ payment_id: Number(order.paymentId) });
-        autoRefundExecuted = true;
-      } catch (error: any) {
-        log.error('[PaymentService] Auto-refund failed during cancellation', { orderId: order.id, error: error.message });
-        throw new PaymentProcessingException(`Não foi possível cancelar: o estorno automático falhou (${error.message}). Realize o cancelamento manualmente ou verifique seu saldo no Mercado Pago.`);
-      }
-    }
 
     await this.orderRepository.update(order.id, {
       statusId:    OrderStatus.CANCELLED,
       cancelledAt: new Date(),
     });
 
-    const refundNote = autoRefundExecuted ? ' (Estorno automático processado)' : '';
     OrderHistoryService.record({
       order:         { ...order, statusId: previousStatusId } as Order,
       toStatusId:    OrderStatus.CANCELLED,
       changedById:   userId,
       changedByRole: isAdmin ? ChangedByRole.ADMIN : ChangedByRole.USER,
-      notes:         isAdmin ? `Cancelado pelo administrador${refundNote}` : 'Cancelado pelo cliente',
+      notes:         isAdmin ? 'Cancelado pelo administrador' : 'Cancelado pelo cliente',
     });
 
     domainEvents.dispatch(OrderDomainEvent.ORDER_CANCELLED, {

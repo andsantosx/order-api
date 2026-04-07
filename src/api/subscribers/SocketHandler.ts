@@ -152,6 +152,12 @@ export class SocketHandler {
         friendlyReason: event.friendlyReason,
         statusDetail: event.statusDetail,
       });
+
+      socketService.emitToOrder(event.orderId, 'ORDER_STATUS_UPDATE', {
+        orderId: event.orderId,
+        statusId: 6, // CANCELLED
+        message: event.friendlyReason || ORDER_STATUS_DESCRIPTIONS['CANCELLED'],
+      });
     });
 
     // pedido aguardando envio
