@@ -360,7 +360,14 @@ export class OrderService {
     phone: string | undefined,
   ): Promise<User> {
     const existingUser = await this.userRepository.findOneBy({ email });
-    if (existingUser) throw new AppError('E-mail já cadastrado', HTTP_STATUS.BAD_REQUEST);
+    
+    // Se o usuário já existe (seja como outro Guest ou como login), vinculamos o pedido a ele
+    // sem dar erro. Isso permite a compra recorrente sem atritos.
+    if (existingUser) {
+      log.info('Seamless Guest Checkout: vinculando pedido a usuário existente', { email });
+      return existingUser;
+    }
+
     return await this.createGuestAccount(email, name, cpf, phone);
   }
 
