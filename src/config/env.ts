@@ -61,6 +61,8 @@ const envSchema = z.object({
 
   RATE_LIMIT_PAYMENT_WINDOW: z.string().regex(/^\d+$/).transform(Number).optional(),
   RATE_LIMIT_PAYMENT_MAX: z.string().regex(/^\d+$/).transform(Number).optional(),
+  ORDER_EXPIRATION_HOURS: z.string().regex(/^\d+$/).transform(Number).default(24),
+  ORDER_EXPIRATION_CRON: z.string().default('0 */30 * * * *'),
 });
 
 // Valida as variáveis de ambiente (Eritamente o que está no process.env)
