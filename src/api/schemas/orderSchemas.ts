@@ -57,7 +57,9 @@ export const createOrderSchema = z.object({
       country: z
         .string()
         .min(2, 'País deve ter no mínimo 2 caracteres')
-        .max(60, 'País deve ter no máximo 60 caracteres'),
+        .max(60, 'País deve ter no máximo 60 caracteres')
+        .optional()
+        .default('Brasil'),
     }),
     idempotencyKey: z.string().uuid().optional(),
   }),
