@@ -28,12 +28,13 @@ export class OrderController {
 
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const search = req.query.search as string | undefined;
 
       // Admin pode filtrar por userId específico; usuário sempre vê só os seus
       const queryUserId = req.query.userId as string | undefined;
       const targetUserId = isAdmin ? queryUserId : userId;
 
-      const result = await this.orderService.getAll(isAdmin, targetUserId, status, page, limit);
+      const result = await this.orderService.getAll(isAdmin, targetUserId, status, page, limit, search);
       return res.json(result);
     } catch (error) {
       log.error('Erro ao buscar pedidos', { error });

@@ -1,3 +1,4 @@
+import { Brackets } from 'typeorm';
 import { Order, OrderStatus, ORDER_STATUS_EVENTS } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
@@ -72,30 +73,44 @@ export class OrderService {
     status?: number,
     page: number = 1,
     limit: number = 20,
+    search?: string,
   ) {
     const skip = (page - 1) * limit;
-    const whereCondition: any = {};
+    
+    const query = this.orderRepository.createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
+      .leftJoinAndSelect('order.status', 'status')
+      .orderBy('order.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
 
     if (!isAdmin && userId) {
-      whereCondition.user = { id: userId };
+      query.andWhere('user.id = :userId', { userId });
     } else if (isAdmin && userId) {
-      whereCondition.user = { id: userId };
+      query.andWhere('user.id = :userId', { userId });
     }
 
-    // Filtro por statusId (numérico, direto)
     if (status !== undefined && status !== null) {
-      whereCondition.statusId = status;
+      query.andWhere('order.statusId = :status', { status });
     }
 
-    const [orders, total] = await this.orderRepository.findAndCount({
-      where: whereCondition,
-      relations: ['user', 'items', 'items.product', 'shippingAddress', 'status'],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim()}%`;
+      query.andWhere(new Brackets(qb => {
+        qb.where('order.id::text ILIKE :search', { search: searchTerm })
+          .orWhere('order.guestName ILIKE :search', { search: searchTerm })
+          .orWhere('user.name ILIKE :search', { search: searchTerm })
+          .orWhere('order.guestCpf ILIKE :search', { search: searchTerm })
+          .orWhere('user.document ILIKE :search', { search: searchTerm });
+      }));
+    }
 
-    log.info('Pedidos listados', { count: orders.length, total, userId, isAdmin, page });
+    const [orders, total] = await query.getManyAndCount();
+
+    log.info('Pedidos listados', { count: orders.length, total, userId, isAdmin, page, search });
 
     return {
       data: orders,
