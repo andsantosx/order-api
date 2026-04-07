@@ -77,13 +77,13 @@ export class OrderService {
   ) {
     const skip = (page - 1) * limit;
     
-    const query = this.orderRepository.createQueryBuilder('order')
-      .leftJoinAndSelect('order.user', 'user')
-      .leftJoinAndSelect('order.items', 'items')
+    const query = this.orderRepository.createQueryBuilder('o')
+      .leftJoinAndSelect('o.user', 'user')
+      .leftJoinAndSelect('o.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
-      .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
-      .leftJoinAndSelect('order.status', 'status')
-      .orderBy('order.createdAt', 'DESC')
+      .leftJoinAndSelect('o.shippingAddress', 'shippingAddress')
+      .leftJoinAndSelect('o.status', 'status')
+      .orderBy('o.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
 
@@ -94,7 +94,7 @@ export class OrderService {
     }
 
     if (status !== undefined && status !== null) {
-      query.andWhere('order.statusId = :status', { status });
+      query.andWhere('o.statusId = :status', { status });
     }
 
     if (search && search.trim() !== '') {
@@ -103,11 +103,10 @@ export class OrderService {
       const searchTerm = `%${cleanSearch}%`;
       
       query.andWhere(new Brackets(qb => {
-        qb.where('CAST(order.id AS TEXT) ILIKE :search', { search: searchTerm })
-          .orWhere('order.guestName ILIKE :search')
-          .orWhere('user.name ILIKE :search')
-          .orWhere('order.guestCpf ILIKE :search')
-          .orWhere('user.document ILIKE :search');
+        qb.where('CAST(o.id AS TEXT) ILIKE :search', { search: searchTerm })
+          .orWhere('o.guestEmail ILIKE :search', { search: searchTerm })
+          .orWhere('user.name ILIKE :search', { search: searchTerm })
+          .orWhere('user.document ILIKE :search', { search: searchTerm });
       }));
     }
 
