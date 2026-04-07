@@ -1,6 +1,8 @@
 import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { log } from '../../config/logger';
+import { OrderService } from './OrderService';
+import { ORDER_STATUS_DESCRIPTIONS } from '../../constants';
 
 export interface CustomSocket extends Socket {
   userId?: string;
@@ -59,6 +61,31 @@ export class SocketService {
         if (orderId) {
           socket.join(`order:${orderId}`);
           log.info(`📦 Socket joined order room: order:${orderId}`);
+        }
+      });
+
+      // Sincroniza o status de um pedido sob demanda (ex: ao voltar pra aba)
+      socket.on('sync_order', async (orderId: string) => {
+        if (!orderId) return;
+
+        try {
+          const orderService = new OrderService();
+          // Busca o pedido sem restrição de userId aqui, pois o socket já entrou na sala se for dele
+          // ou o frontend está validando a posse. O getOne lançará erro se não encontrar.
+          const order = await orderService.getOne(orderId, undefined, true);
+          
+          socket.emit('ORDER_STATUS_UPDATE', {
+            orderId: order.id,
+            statusId: order.statusId,
+            message: order.status?.label || ORDER_STATUS_DESCRIPTIONS['PENDING'], // fallback seguro
+            trackingCode: order.trackingCode,
+            trackingUrl: order.trackingUrl,
+            sync: true // Flag para o frontend saber que é um sync
+          });
+
+          log.info(`🔄 Order status synced via socket: ${orderId}`);
+        } catch (error) {
+          log.error(`❌ Error syncing order via socket: ${orderId}`, error);
         }
       });
 
