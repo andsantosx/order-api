@@ -98,13 +98,16 @@ export class OrderService {
     }
 
     if (search && search.trim() !== '') {
-      const searchTerm = `%${search.trim()}%`;
+      const originalSearch = search.trim();
+      const cleanSearch = originalSearch.replace('#', '');
+      const searchTerm = `%${cleanSearch}%`;
+      
       query.andWhere(new Brackets(qb => {
-        qb.where('order.id::text ILIKE :search', { search: searchTerm })
-          .orWhere('order.guestName ILIKE :search', { search: searchTerm })
-          .orWhere('user.name ILIKE :search', { search: searchTerm })
-          .orWhere('order.guestCpf ILIKE :search', { search: searchTerm })
-          .orWhere('user.document ILIKE :search', { search: searchTerm });
+        qb.where('CAST(order.id AS TEXT) ILIKE :search', { search: searchTerm })
+          .orWhere('order.guestName ILIKE :search')
+          .orWhere('user.name ILIKE :search')
+          .orWhere('order.guestCpf ILIKE :search')
+          .orWhere('user.document ILIKE :search');
       }));
     }
 
