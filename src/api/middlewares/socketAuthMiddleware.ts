@@ -25,15 +25,15 @@ export const socketAuthMiddleware = (socket: CustomSocket, next: (err?: Error) =
   const token = socket.handshake.auth?.token;
 
   if (!token) {
-    log.warn('Socket connection attempt without token');
-    return next(new Error('Authentication error: Token not provided'));
+    log.info('Socket connection allowed for guest user (no token)');
+    return next();
   }
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as TokenPayload;
 
     // Expõe userId e isAdmin no socket para uso em rooms e eventos
-    socket.userId  = decoded.userId;
+    socket.userId = decoded.userId;
     socket.isAdmin = decoded.isAdmin ?? false;
 
     log.info(`Socket authenticated: user=${decoded.userId} isAdmin=${socket.isAdmin}`);

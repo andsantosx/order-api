@@ -17,7 +17,7 @@ export class SocketService {
   private static instance: SocketService;
   private io: SocketServer | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): SocketService {
     if (!SocketService.instance) {
@@ -29,10 +29,12 @@ export class SocketService {
   public init(httpServer: HttpServer): void {
     this.io = new SocketServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || '*',
+        origin: [process.env.FRONTEND_URL || '*', "https://ordersc.com.br", "http://localhost:3000", "http://localhost:3001"],
         methods: ['GET', 'POST'],
         credentials: true,
       },
+      transports: ['polling', 'websocket'],
+      allowEIO3: true
     });
 
     log.info('🔌 Socket.io initialized');
