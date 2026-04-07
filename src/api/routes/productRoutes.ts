@@ -31,12 +31,5 @@ router.patch(
   validate(updateProductSchema),
   productController.update.bind(productController),
 );
-router.delete(
-  '/:id',
-  authMiddleware,
-  adminMiddleware,
-  auditMiddleware('DELETE_PRODUCT'),
-  productController.delete.bind(productController),
-);
 
 export default router;

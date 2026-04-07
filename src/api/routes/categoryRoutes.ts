@@ -19,7 +19,7 @@ router.post(
   '/',
   authMiddleware,
   adminMiddleware,
-  auditMiddleware,
+  auditMiddleware('CREATE_CATEGORY'),
   validate(createCategorySchema),
   categoryController.create.bind(categoryController),
 );
@@ -27,7 +27,7 @@ router.patch(
   '/:id',
   authMiddleware,
   adminMiddleware,
-  auditMiddleware,
+  auditMiddleware('UPDATE_CATEGORY'),
   validate(updateCategorySchema),
   categoryController.update.bind(categoryController),
 );

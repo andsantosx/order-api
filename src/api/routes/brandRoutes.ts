@@ -19,7 +19,7 @@ router.post(
   '/',
   authMiddleware,
   adminMiddleware,
-  auditMiddleware,
+  auditMiddleware('CREATE_BRAND'),
   validate(createBrandSchema),
   brandController.create.bind(brandController),
 );
@@ -27,7 +27,7 @@ router.patch(
   '/:id',
   authMiddleware,
   adminMiddleware,
-  auditMiddleware,
+  auditMiddleware('UPDATE_BRAND'),
   validate(updateBrandSchema),
   brandController.update.bind(brandController),
 );
