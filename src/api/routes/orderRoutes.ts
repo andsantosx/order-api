@@ -24,11 +24,11 @@ const orderController = new OrderController();
 /** GET /orders - Lista pedidos do usuário autenticado (admin vê todos) */
 router.get('/', authMiddleware, orderController.getAll.bind(orderController));
 
-/** GET /orders/:id - Detalhes de um pedido */
-router.get('/:id', authMiddleware, orderController.getOne.bind(orderController));
+/** GET /orders/:id - Detalhes de um pedido (acesso via UUID para Guests) */
+router.get('/:id', optionalAuthMiddleware, orderController.getOne.bind(orderController));
 
 /** GET /orders/:id/history - Histórico de mudanças de status */
-router.get('/:id/history', authMiddleware, orderController.getStatusHistory.bind(orderController));
+router.get('/:id/history', optionalAuthMiddleware, orderController.getStatusHistory.bind(orderController));
 
 /** POST /orders - Criar novo pedido (público, com rate limit e reCAPTCHA) */
 router.post(
