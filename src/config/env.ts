@@ -63,6 +63,10 @@ const envSchema = z.object({
   RATE_LIMIT_PAYMENT_MAX: z.string().regex(/^\d+$/).transform(Number).optional(),
   ORDER_EXPIRATION_HOURS: z.string().regex(/^\d+$/).transform(Number).default(24),
   ORDER_EXPIRATION_CRON: z.string().default('0 */30 * * * *'),
+  MAILJET_API_KEY: z.string().min(1, 'Mailjet API Key é obrigatória'),
+  MAILJET_API_SECRET: z.string().min(1, 'Mailjet API Secret é obrigatória'),
+  MAILJET_SENDER_EMAIL: z.string().email('Email do remetente Mailjet inválido'),
+  MAILJET_SENDER_NAME: z.string().default('Equipe Order API'),
 });
 
 // Valida as variáveis de ambiente (Eritamente o que está no process.env)

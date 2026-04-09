@@ -9,6 +9,7 @@ import { sanitizeUserData } from '../../utils/sanitizer';
 import { SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 import { CPF } from '../domain/value-objects/CPF';
 import { Password as PasswordVO } from '../domain/value-objects/Password';
+import { EmailService } from './EmailService';
 
 /**
  * Service responsável pela lógica de negócio relacionada a usuários
@@ -16,6 +17,7 @@ import { Password as PasswordVO } from '../domain/value-objects/Password';
  */
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
+  private emailService = new EmailService();
 
   /**
    * Registra um novo usuário no sistema
@@ -74,6 +76,9 @@ export class UserService {
     });
 
     await this.userRepository.save(user);
+
+    // Envia e-mail de boas-vindas (assíncrono, não bloqueia o retorno)
+    this.emailService.sendWelcomeEmail(user.email, user.name);
 
     // Retorna dados do usuário sem informações sensíveis
     return this.getSanitizedUserOutput(user);

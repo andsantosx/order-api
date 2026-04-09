@@ -42,6 +42,7 @@
     "jsonwebtoken": "^9.0.3",
     "mercadopago": "^2.12.0",
     "node-cron": "^4.2.1",
+    "node-mailjet": "^6.0.11",
     "pg": "^8.17.2",
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.3",
