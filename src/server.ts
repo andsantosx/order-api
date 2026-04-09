@@ -5,6 +5,7 @@ import { log } from './config/logger';
 import { SocketService } from './api/services/SocketService';
 import { socketAuthMiddleware } from './api/middlewares/socketAuthMiddleware';
 import { SocketHandler } from './api/subscribers/SocketHandler';
+import { EmailHandler } from './api/subscribers/EmailHandler';
 import { OrderExpirationJob } from './api/jobs/OrderExpirationJob';
 
 const PORT = env.PORT || 3000;
@@ -27,6 +28,7 @@ AppDataSource.initialize()
     const socketService = SocketService.getInstance();
     socketService.init(server);
     SocketHandler.init();
+    EmailHandler.init();
     OrderExpirationJob.init();
 
     // Aplica o middleware de autenticação no socket

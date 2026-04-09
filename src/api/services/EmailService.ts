@@ -6,6 +6,7 @@ import path from 'path';
 
 /**
  * Serviço responsável pelo envio de e-mails transacionais utilizando Mailjet.
+ * Utiliza um design premium, minimalista e profissional.
  */
 export class EmailService {
   private mailjet: Mailjet;
@@ -17,7 +18,7 @@ export class EmailService {
       apiSecret: env.MAILJET_API_SECRET,
     });
 
-    // Carregar a imagem da empresa para anexar via CID (mais profissional e confiável)
+    // Carregar a imagem da empresa para anexar via CID
     try {
       const logoPath = path.join(process.cwd(), 'order.png');
       if (fs.existsSync(logoPath)) {
@@ -29,183 +30,116 @@ export class EmailService {
   }
 
   /**
-   * Envia um e-mail de boas-vindas para um novo usuário.
-   * 
-   * @param to - E-mail do destinatário
-   * @param name - Nome do destinatário
+   * Layout Premium Base
    */
-  async sendWelcomeEmail(to: string, name: string): Promise<void> {
+  private getHtmlTemplate(title: string, content: string, ctaText?: string, ctaUrl?: string, notes?: string, items?: any[]): string {
+    const year = new Date().getFullYear();
+    
+    // Botão de Call to Action
+    const ctaHtml = ctaText && ctaUrl 
+      ? `<div style="margin-top: 40px; text-align: left;">
+          <a href="${ctaUrl}" style="background-color: #1A1A1A; color: #ffffff !important; padding: 18px 36px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500; display: inline-block; letter-spacing: 0.1em; text-transform: uppercase;">
+            ${ctaText}
+          </a>
+        </div>`
+      : '';
+
+    // Seção de Observações (Notas)
+    const notesHtml = notes
+      ? `<div style="margin-top: 35px; padding: 25px; background-color: #FAFAFA; border-left: 2px solid #1A1A1A; font-size: 14px; color: #555555; line-height: 1.6;">
+          <strong style="color: #1A1A1A; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">Mensagem do Sistema / Notas:</strong>
+          ${notes}
+        </div>`
+      : '';
+
+    // Tabela de Itens (Opcional)
+    let itemsHtml = '';
+    if (items && items.length > 0) {
+      itemsHtml = `
+        <div style="margin-top: 45px; border-top: 1px solid #EEEEEE; padding-top: 30px;">
+          <strong style="font-size: 11px; color: #A0A0A0; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 20px;">Resumo do Pedido</strong>
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 14px; color: #4A4A4A;">
+            ${items.map(item => `
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #F9F9F9;">
+                  <span style="color: #1A1A1A; font-weight: 500;">${item.product?.name || 'Produto'}</span><br>
+                  <span style="font-size: 12px; color: #A0A0A0;">Qtd: ${item.quantity}</span>
+                </td>
+                <td align="right" style="padding: 12px 0; border-bottom: 1px solid #F9F9F9; color: #1A1A1A;">
+                  ${((item.priceAtTime || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+      `;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
+          </style>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #F9F9F9; font-family: 'Outfit', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1A1A1A; -webkit-font-smoothing: antialiased;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F9F9F9; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 0; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.03);">
+                  <!-- Header Image -->
+                  <tr>
+                    <td>
+                      <img src="cid:company-logo" alt="Order" width="600" style="width: 100%; height: auto; display: block; object-fit: cover;">
+                    </td>
+                  </tr>
+                  <!-- Content Body -->
+                  <tr>
+                    <td style="padding: 60px 50px;">
+                      <h1 style="font-size: 32px; font-weight: 600; line-height: 1.2; margin: 0 0 30px 0; letter-spacing: -0.03em; color: #1A1A1A;">
+                        ${title}
+                      </h1>
+                      <div style="font-size: 17px; line-height: 1.8; color: #4A4A4A; font-weight: 300;">
+                        ${content}
+                      </div>
+                      ${notesHtml}
+                      ${itemsHtml}
+                      ${ctaHtml}
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td style="padding: 0 50px 60px 50px; border-top: 1px solid #F0F0F0;">
+                      <div style="padding-top: 40px; font-size: 11px; color: #A0A0A0; letter-spacing: 0.05em; line-height: 1.8;">
+                        © ${year} ORDER. ESTE É UM E-MAIL TRANSACIONAL AUTOMÁTICO.<br>
+                        A SIMPLICIDADE É O AUGE DA SOFISTICAÇÃO.<br><br>
+                        <a href="${env.FRONTEND_URL}" style="color: #A0A0A0; text-decoration: underline;">VISITE NOSSO MANIFESTO</a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    `;
+  }
+
+  private async send(to: string, name: string, subject: string, html: string, text?: string): Promise<void> {
     try {
       const result = await this.mailjet.post('send', { version: 'v3.1' }).request({
         Messages: [
           {
-            From: {
-              Email: env.MAILJET_SENDER_EMAIL,
-              Name: env.MAILJET_SENDER_NAME,
-            },
-            To: [
-              {
-                Email: to,
-                Name: name,
-              },
-            ],
-            Subject: `Bem-vindo(a), ${name}!`,
-            TextPart: `Olá ${name}, seja muito bem-vindo à nossa plataforma! Estamos felizes em ter você conosco.`,
-            HTMLPart: `
-              <!DOCTYPE html>
-              <html lang="pt-BR">
-                <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <style>
-                    /* Importando fonte premium se o cliente suportar */
-                    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
-
-                    body {
-                      margin: 0;
-                      padding: 0;
-                      background-color: #F8F7F2; /* Tom creme suave e sofisticado */
-                      -webkit-font-smoothing: antialiased;
-                    }
-
-                    .wrapper {
-                      width: 100%;
-                      table-layout: fixed;
-                      background-color: #F8F7F2;
-                      padding-bottom: 60px;
-                      padding-top: 40px;
-                    }
-
-                    .container {
-                      max-width: 600px;
-                      margin: 0 auto;
-                      background-color: #ffffff;
-                      border-radius: 16px;
-                      overflow: hidden;
-                      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-                    }
-
-                    .header-image {
-                      width: 100%;
-                      aspect-ratio: 16/9;
-                      display: block;
-                      object-fit: cover;
-                    }
-
-                    .content {
-                      padding: 48px 40px;
-                      font-family: 'Outfit', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                      color: #2D2D2D;
-                    }
-
-                    h1 {
-                      font-size: 28px;
-                      font-weight: 600;
-                      letter-spacing: -0.02em;
-                      margin: 0 0 24px 0;
-                      color: #1A1A1A;
-                      text-align: left;
-                    }
-
-                    .welcome-text {
-                      font-size: 17px;
-                      line-height: 1.7;
-                      color: #4A4A4A;
-                      margin-bottom: 32px;
-                      font-weight: 300;
-                    }
-
-                    .highlight {
-                      color: #4A3B63; /* Cor do logotipo Ordem */
-                      font-weight: 600;
-                    }
-
-                    .cta-container {
-                      margin: 40px 0;
-                      text-align: left;
-                    }
-
-                    .cta-button {
-                      background-color: #1A1A1A; /* Preto minimalista */
-                      color: #ffffff !important;
-                      padding: 18px 36px;
-                      text-decoration: none;
-                      border-radius: 8px;
-                      font-size: 15px;
-                      font-weight: 500;
-                      display: inline-block;
-                      letter-spacing: 0.05em;
-                      text-transform: uppercase;
-                      transition: opacity 0.2s;
-                    }
-
-                    .divider {
-                      height: 1px;
-                      background-color: #F0F0F0;
-                      margin: 40px 0;
-                    }
-
-                    .footer {
-                      font-family: 'Outfit', sans-serif;
-                      padding: 0 40px 48px 40px;
-                      font-size: 12px;
-                      color: #A0A0A0;
-                      text-align: left;
-                      line-height: 1.6;
-                    }
-
-                    .brand-story {
-                      font-style: italic;
-                      color: #808080;
-                      margin-bottom: 24px;
-                      display: block;
-                    }
-
-                    .unsub {
-                      color: #A0A0A0;
-                      text-decoration: underline;
-                    }
-
-                    /* Responsividade */
-                    @media screen and (max-width: 600px) {
-                      .content {
-                        padding: 32px 24px;
-                      }
-                      h1 {
-                        font-size: 24px;
-                      }
-                    }
-                  </style>
-                </head>
-                <body>
-                  <div class="wrapper">
-                    <div class="container">
-                      <img src="cid:company-logo" alt="Order" class="header-image">
-                      
-                      <div class="content">
-                        <h1>Sua jornada com a <span class="highlight">Order</span> começa agora.</h1>
-                        
-                        <div class="welcome-text">
-                          Olá, ${name}.<br><br>
-                          É um prazer receber você. Na <strong>Order</strong>, acreditamos que a simplicidade é o auge da sofisticação. Nossa missão é transformar a complexidade da gestão em uma experiência fluida, autêntica e, acima de tudo, humana.<br><br>
-                          Sua conta foi criada com sucesso. Estamos prontos para elevar o seu padrão de operação daqui em diante.
-                        </div>
-                        
-                        <div class="cta-container">
-                          <a href="${env.FRONTEND_URL}/login" class="cta-button">Explorar Plataforma</a>
-                        </div>
-                      </div>
-
-                      <div class="footer">
-                        © ${new Date().getFullYear()} Order - Inteligência em Gestão de Pedidos.<br>
-                        Este é um e-mail transacional enviado para confirmar seu cadastro.<br>
-                        <a href="${env.FRONTEND_URL}" class="unsub">Visite nosso manifesto</a>
-                      </div>
-                    </div>
-                  </div>
-                </body>
-              </html>
-            `,
+            From: { Email: env.MAILJET_SENDER_EMAIL, Name: env.MAILJET_SENDER_NAME },
+            To: [{ Email: to, Name: name }],
+            Subject: subject,
+            TextPart: text || subject,
+            HTMLPart: html,
+            CustomID: `order-api-${Date.now()}`,
             InlinedAttachments: this.logoBase64 ? [
               {
                 ContentType: 'image/png',
@@ -217,10 +151,112 @@ export class EmailService {
           },
         ],
       });
-
-      winston.info(`E-mail de boas-vindas enviado para ${to}. ID: ${result.response.status}`);
+      const body = result.body as any;
+      const messageId = body.Messages[0].To[0].MessageID;
+      winston.info(`E-mail enviado para ${to}. Status: ${result.response.status}. MessageID: ${messageId}`);
     } catch (error: any) {
       winston.error(`Erro ao enviar e-mail para ${to}: ${error.message}`);
     }
+  }
+
+  async sendWelcomeEmail(to: string, name: string): Promise<void> {
+    const title = `Sua jornada com a <span style="color: #4A3B63;">Order</span> começa agora.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      É um prazer receber você. Na <strong>Order</strong>, acreditamos que a simplicidade é o auge da sofisticação.<br><br>
+      Sua conta foi criada com sucesso. Estamos prontos para elevar o seu padrão de operação daqui em diante.
+    `;
+    const text = `Boas-vindas à Order, ${name}!`;
+    await this.send(to, name, `Bem-vindo(a), ${name}!`, this.getHtmlTemplate(title, content, 'Explorar Plataforma', `${env.FRONTEND_URL}/login`), text);
+  }
+
+  async sendOrderConfirmation(to: string, name: string, orderId: string, totalAmount: number, notes?: string, items?: any[]): Promise<void> {
+    const formattedTotal = (totalAmount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const title = `Pedido Recebido. <span style="color: #4A3B63;">#${orderId.slice(0, 8)}</span>`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Seu pedido foi registrado em nosso sistema e está aguardando a confirmação do pagamento.<br><br>
+      <strong>Valor Total: ${formattedTotal}</strong>
+    `;
+    const text = `Pedido #${orderId.slice(0, 8)} recebido. Total: ${formattedTotal}.`;
+    await this.send(to, name, `Pedido Confirmado #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendPaymentPending(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Pagamento em <span style="color: #4A3B63;">Processamento</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      O pagamento do seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi recebido e está em análise pelo nosso sistema de segurança.<br><br>
+      Assim que a transação for autorizada, você receberá uma nova confirmação por aqui.
+    `;
+    const text = `Pagamento do pedido #${orderId.slice(0, 8)} em processamento.`;
+    await this.send(to, name, `Pagamento em Análise - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendPaymentApproved(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Pagamento <span style="color: #4A3B63;">Confirmado</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Ótimas notícias. O pagamento do seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi aprovado com sucesso.<br><br>
+      Nossa equipe já está providenciando a separação e o envio dos seus produtos.
+    `;
+    const text = `Pagamento aprovado para o pedido #${orderId.slice(0, 8)}.`;
+    await this.send(to, name, `Pagamento Aprovado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendPaymentRejected(to: string, name: string, orderId: string, reason?: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Houve um problema com seu <span style="color: #4A3B63;">Pagamento</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Infelizmente, nosso processador de pagamentos não pôde autorizar a transação para o seu pedido <strong>#${orderId.slice(0, 8)}</strong>.<br><br>
+      <strong>Motivo:</strong> ${reason || 'Não foi possível processar o cartão informado.'}<br><br>
+      Você pode tentar realizar o pagamento novamente utilizando um novo método ou entrar em contato com seu banco.
+    `;
+    const text = `Pagamento recusado para o pedido #${orderId.slice(0, 8)}.`;
+    await this.send(to, name, `Problema no Pagamento - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Tentar Novamente', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendOrderShipped(to: string, name: string, orderId: string, trackingCode: string, trackingUrl?: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Seu pedido está a <span style="color: #4A3B63;">caminho</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi entregue à transportadora e já está em trânsito.<br><br>
+      <strong>Código de Rastreio:</strong> ${trackingCode}
+    `;
+    const text = `Pedido #${orderId.slice(0, 8)} enviado. Rastreio: ${trackingCode}.`;
+    await this.send(to, name, `Pedido em Trânsito #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Rastrear Entrega', trackingUrl || `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendOrderDelivered(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Pedido <span style="color: #4A3B63;">Entregue</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi entregue com sucesso.<br><br>
+      Esperamos que você aproveite sua experiência com a <strong>Order</strong>.
+    `;
+    const text = `Pedido #${orderId.slice(0, 8)} entregue.`;
+    await this.send(to, name, `Pedido Entregue - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Avaliar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendOrderCancelled(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `Pedido <span style="color: #4A3B63;">Cancelado</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Informamos que o seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi cancelado.<br><br>
+      Se você não solicitou este cancelamento ou acredita que houve um erro, entre em contato com nosso suporte.
+    `;
+    const text = `Pedido #${orderId.slice(0, 8)} cancelado.`;
+    await this.send(to, name, `Pedido Cancelado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+  }
+
+  async sendOrderRefunded(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
+    const title = `O seu reembolso foi <span style="color: #4A3B63;">processado</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Conforme solicitado, o estorno do pagamento referente ao pedido <strong>#${orderId.slice(0, 8)}</strong> foi concluído.<br><br>
+      O valor deverá aparecer em sua fatura ou conta conforme os prazos da sua operadora financeira.
+    `;
+    const text = `Reembolso processado para o pedido #${orderId.slice(0, 8)}.`;
+    await this.send(to, name, `Reembolso Concluído - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes do Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
   }
 }

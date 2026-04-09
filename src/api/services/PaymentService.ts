@@ -56,7 +56,7 @@ const MP_TO_ORDER_STATUS: Record<MercadoPagoPaymentStatus, OrderStatus> = {
 const STATUS_DETAIL_MESSAGES: Partial<Record<MercadoPagoStatusDetail, string>> = {
   [MercadoPagoStatusDetail.ACCREDITED]:                           'Pagamento aprovado e creditado com sucesso.',
   [MercadoPagoStatusDetail.PENDING_CONTINGENCY]:                  'Pagamento em análise, aguarde a confirmação.',
-  [MercadoPagoStatusDetail.PENDING_REVIEW_MANUAL]:                'Pagamento em análise manual pelo Mercado Pago.',
+  [MercadoPagoStatusDetail.PENDING_REVIEW_MANUAL]:                'Pagamento em análise manual pelo sistema.',
   [MercadoPagoStatusDetail.PENDING_WAITING_TRANSFER]:             'Aguardando transferência via PIX.',
   [MercadoPagoStatusDetail.PENDING_WAITING_PAYMENT]:              'Aguardando conclusão do pagamento pelo usuário.',
   [MercadoPagoStatusDetail.CC_REJECTED_INSUFFICIENT_AMOUNT]:      'Saldo insuficiente no cartão.',
@@ -164,7 +164,7 @@ export class PaymentService {
       order:         { ...order, statusId: previousStatusId } as Order,
       toStatusId:    newStatus,
       changedByRole: ChangedByRole.PAYMENT_GATEWAY,
-      notes:         `Mercado Pago: ${mpStatusLabel}${mpDetailLabel ? ` - ${mpDetailLabel}` : ''}`,
+      notes:         `Sistema: ${mpStatusLabel}${mpDetailLabel ? ` - ${mpDetailLabel}` : ''}`,
     });
 
     // Disparar evento de domínio correspondente
@@ -178,6 +178,7 @@ export class PaymentService {
         mpStatus:         result.status,
         mpStatusDetail:   result.status_detail,
         paymentMethod:    result.payment_method_id,
+        notes:            `Sistema: ${mpStatusLabel}${mpDetailLabel ? ` - ${mpDetailLabel}` : ''}`,
       });
     }
 
@@ -226,7 +227,7 @@ export class PaymentService {
         order:         { ...order, statusId: previousStatusId } as Order,
         toStatusId:    OrderStatus.REFUNDED,
         changedByRole: ChangedByRole.SYSTEM,
-        notes:         'Reembolso processado via Mercado Pago',
+        notes:            'Reembolso processado via sistema',
       });
 
       domainEvents.dispatch(OrderDomainEvent.ORDER_REFUNDED, {
@@ -234,6 +235,7 @@ export class PaymentService {
         userId:           order.user?.id,
         newStatusId:      OrderStatus.REFUNDED,
         previousStatusId,
+        notes:            'Reembolso processado via Mercado Pago',
       });
 
       return refund;
@@ -299,6 +301,7 @@ export class PaymentService {
       cancelledById:    userId,
       newStatusId:      OrderStatus.CANCELLED,
       previousStatusId,
+      notes:            isAdmin ? 'Cancelado pelo administrador' : 'Cancelado pelo cliente',
     });
 
     order.statusId = OrderStatus.CANCELLED;

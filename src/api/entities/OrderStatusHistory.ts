@@ -54,7 +54,12 @@ export class OrderStatusHistory {
   /**
    * Papel de quem fez a mudança: USER | ADMIN | SYSTEM | PAYMENT_GATEWAY
    */
-  @Column({ name: 'changed_by_role', default: ChangedByRole.SYSTEM })
+  @Column({
+    name: 'changed_by_role',
+    type: 'enum',
+    enum: ChangedByRole,
+    default: ChangedByRole.SYSTEM,
+  })
   changedByRole!: ChangedByRole;
 
   /**

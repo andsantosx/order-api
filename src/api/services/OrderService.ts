@@ -221,6 +221,7 @@ export class OrderService {
         trackingCode,
         trackingUrl,
         changedById,
+        notes,
       });
     }
 
@@ -293,6 +294,7 @@ export class OrderService {
       orderId:     order.id,
       userId:      user.id,
       totalAmount,
+      notes:       'Pedido criado',
     });
 
     return this.getOne(order.id);
