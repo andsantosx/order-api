@@ -23,9 +23,12 @@ export class EmailService {
       const logoPath = path.join(process.cwd(), 'order.png');
       if (fs.existsSync(logoPath)) {
         this.logoBase64 = fs.readFileSync(logoPath).toString('base64');
+        winston.info('🎨 EmailService: Imagem order.png carregada com sucesso para os e-mails.');
+      } else {
+        winston.warn('⚠️ EmailService: Imagem order.png NÃO encontrada no diretório raiz.');
       }
     } catch (error: any) {
-      winston.error(`Erro ao carregar order.png: ${error.message}`);
+      winston.error(`❌ EmailService: Erro crítico ao carregar order.png: ${error.message}`);
     }
   }
 
