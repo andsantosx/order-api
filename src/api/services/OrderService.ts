@@ -294,6 +294,7 @@ export class OrderService {
       orderId:     order.id,
       userId:      user.id,
       totalAmount,
+      isAccountLinked: !userId && guestEmail && !tempPassword,
       notes:       'Pedido criado',
     });
 

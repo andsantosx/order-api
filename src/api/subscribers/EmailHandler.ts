@@ -26,7 +26,8 @@ export class EmailHandler {
           order.id,
           order.totalAmount,
           data.notes,
-          order.items
+          order.items,
+          data.isAccountLinked
         );
       } catch (error: any) {
         winston.error(`EmailHandler Error (ORDER_CREATED): ${error.message}`);

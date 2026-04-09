@@ -34,9 +34,9 @@ export class EmailService {
    */
   private getHtmlTemplate(title: string, content: string, ctaText?: string, ctaUrl?: string, notes?: string, items?: any[]): string {
     const year = new Date().getFullYear();
-    
+
     // Botão de Call to Action
-    const ctaHtml = ctaText && ctaUrl 
+    const ctaHtml = ctaText && ctaUrl
       ? `<div style="margin-top: 40px; text-align: left;">
           <a href="${ctaUrl}" style="background-color: #1A1A1A; color: #ffffff !important; padding: 18px 36px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500; display: inline-block; letter-spacing: 0.1em; text-transform: uppercase;">
             ${ctaText}
@@ -170,13 +170,22 @@ export class EmailService {
     await this.send(to, name, `Bem-vindo(a), ${name}!`, this.getHtmlTemplate(title, content, 'Explorar Plataforma', `${env.FRONTEND_URL}/login`), text);
   }
 
-  async sendOrderConfirmation(to: string, name: string, orderId: string, totalAmount: number, notes?: string, items?: any[]): Promise<void> {
+  async sendOrderConfirmation(to: string, name: string, orderId: string, totalAmount: number, notes?: string, items?: any[], isAccountLinked: boolean = false): Promise<void> {
     const formattedTotal = (totalAmount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const title = `Pedido Recebido. <span style="color: #4A3B63;">#${orderId.slice(0, 8)}</span>`;
+
+    let linkNotice = '';
+    if (isAccountLinked) {
+      linkNotice = `<br><br><div style="padding: 15px; background-color: #F0F7FF; border-left: 3px solid #007BFF; color: #0056B3; font-size: 14px;">
+        <strong>Sincronização Automática:</strong> Identificamos que você já possui uma conta conosco. Este pedido foi vinculado ao seu histórico para sua conveniência.
+      </div>`;
+    }
+
     const content = `
       Olá, ${name}.<br><br>
       Seu pedido foi registrado em nosso sistema e está aguardando a confirmação do pagamento.<br><br>
       <strong>Valor Total: ${formattedTotal}</strong>
+      ${linkNotice}
     `;
     const text = `Pedido #${orderId.slice(0, 8)} recebido. Total: ${formattedTotal}.`;
     await this.send(to, name, `Pedido Confirmado #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
@@ -278,10 +287,10 @@ export class EmailService {
     `;
     const text = `Sua conta na Order foi criada! Senha temporária: ${password}`;
     await this.send(
-      to, 
-      name, 
-      `Sua conta foi criada! - Bem-vindo(a) à Order`, 
-      this.getHtmlTemplate(title, content, 'Fazer Primeiro Acesso', `${env.FRONTEND_URL}/login`), 
+      to,
+      name,
+      `Sua conta foi criada! - Bem-vindo(a) à Order`,
+      this.getHtmlTemplate(title, content, 'Fazer Primeiro Acesso', `${env.FRONTEND_URL}/login`),
       text
     );
   }
