@@ -45,10 +45,10 @@ export class PaymentMapper {
         },
         address: payer.address
           ? {
-              zip_code: payer.address.zipCode || shipping?.zipCode || '',
-              street_name: payer.address.streetName || shipping?.street || '',
-              street_number: payer.address.streetNumber || 'SN',
-            }
+            zip_code: payer.address.zipCode || shipping?.zipCode || '',
+            street_name: payer.address.streetName || shipping?.street || '',
+            street_number: payer.address.streetNumber || 'SN',
+          }
           : undefined,
       },
 
@@ -60,16 +60,16 @@ export class PaymentMapper {
           registration_date: order.user?.createdAt?.toISOString() || new Date().toISOString(),
           phone: payer.phone
             ? {
-                area_code: payer.phone.areaCode || '11',
-                number: payer.phone.number || '',
-              }
+              area_code: payer.phone.areaCode || '11',
+              number: payer.phone.number || '',
+            }
             : undefined,
           address: payer.address
             ? {
-                zip_code: payer.address.zipCode || shipping?.zipCode || '',
-                street_name: payer.address.streetName || shipping?.street || '',
-                street_number: payer.address.streetNumber || 'SN',
-              }
+              zip_code: payer.address.zipCode || shipping?.zipCode || '',
+              street_name: payer.address.streetName || shipping?.street || '',
+              street_number: payer.address.streetNumber || 'SN',
+            }
             : undefined,
         },
       },
@@ -112,8 +112,8 @@ export class PaymentMapper {
       dateOfExpiration: result.date_of_expiration,
       pointOfInteraction: result.point_of_interaction
         ? {
-            transaction_data: result.point_of_interaction.transaction_data,
-          }
+          transaction_data: result.point_of_interaction.transaction_data,
+        }
         : undefined,
       externalReference: result.external_reference,
       transactionAmount: result.transaction_amount,

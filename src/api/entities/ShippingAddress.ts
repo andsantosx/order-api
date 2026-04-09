@@ -11,9 +11,6 @@ export class ShippingAddress {
     order!: Order;
 
     @Column()
-    name!: string;
-
-    @Column()
     street!: string;
 
     @Column()
@@ -22,9 +19,9 @@ export class ShippingAddress {
     @Column()
     state!: string;
 
-    @Column()
-    zip_code!: string;
-
     @Column({ default: 'Brasil' })
     country!: string;
+
+    @Column({ name: 'zip_code' })
+    zipCode!: string;
 }
