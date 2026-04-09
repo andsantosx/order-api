@@ -2,6 +2,7 @@ import { AppDataSource } from '../../data-source';
 import { ContactMessage, ContactMessageStatus } from '../entities/ContactMessage';
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
+import { EmailService } from './EmailService';
 
 interface ContactMessageData {
   name: string;
@@ -13,6 +14,7 @@ interface ContactMessageData {
 
 export class ContactService {
   private contactRepository = AppDataSource.getRepository(ContactMessage);
+  private emailService = new EmailService();
 
   async create(data: ContactMessageData) {
     const contactMessage = this.contactRepository.create({
@@ -58,6 +60,20 @@ export class ContactService {
     message.statusId = ContactMessageStatus.REPLIED;
 
     const saved = await this.contactRepository.save(message);
+
+    // Enviar e-mail de resposta para o cliente
+    try {
+      await this.emailService.sendContactResponseEmail(
+        saved.email,
+        saved.name,
+        saved.subject,
+        saved.message,
+        saved.response || ''
+      );
+    } catch (error) {
+      console.error('Erro ao enviar e-mail de resposta de contato:', error);
+    }
+
     return this.getOne(saved.id);
   }
 

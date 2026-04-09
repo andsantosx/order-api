@@ -54,6 +54,8 @@ export class EmailHandler {
     domainEvents.on(OrderDomainEvent.PAYMENT_APPROVED, async (data: any) => {
       try {
         const order = await this.orderService.getOne(data.orderId, undefined, true);
+        
+        // E-mail para o Cliente
         await this.emailService.sendPaymentApproved(
           order.user?.email || '',
           order.user?.name || 'Cliente',
@@ -61,6 +63,10 @@ export class EmailHandler {
           data.notes,
           order.items
         );
+
+        // Notificação Interna para Administração (Controle de Estoque/Logística)
+        await this.emailService.sendInternalOrderNotification(order);
+        
       } catch (error: any) {
         winston.error(`EmailHandler Error (PAYMENT_APPROVED): ${error.message}`);
       }

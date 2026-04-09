@@ -69,7 +69,7 @@ export class EmailService {
                   <span style="font-size: 12px; color: #A0A0A0;">Qtd: ${item.quantity}</span>
                 </td>
                 <td align="right" style="padding: 12px 0; border-bottom: 1px solid #F9F9F9; color: #1A1A1A;">
-                  ${((item.priceAtTime || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  ${((item.unitPrice || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>
               </tr>
             `).join('')}
@@ -191,7 +191,49 @@ export class EmailService {
       ${linkNotice}
     `;
     const text = `Pedido #${orderId.slice(0, 8)} recebido. Total: ${formattedTotal}.`;
-    await this.send(to, name, `Pedido Confirmado #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Pedido Confirmado #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders`), text);
+  }
+
+  /**
+   * Envia notificação interna para a administração avisando sobre um novo pedido pago.
+   * Destinatário: orderstoreco@gmail.com
+   */
+  async sendInternalOrderNotification(order: any): Promise<void> {
+    const formattedTotal = (order.totalAmount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const title = `🚨 <span style="color: #4A3B63;">NOVO PEDIDO PAGO</span>`;
+
+    const customerName = order.user?.name || 'Cliente';
+    const customerEmail = order.guestEmail || order.user?.email || 'N/A';
+    const customerDoc = order.user?.document || 'N/A';
+
+    const addr = order.shippingAddress;
+    const addressStr = addr
+      ? `${addr.street}, ${addr.city} - ${addr.state}. CEP: ${addr.zipCode}`
+      : 'Não informado';
+
+    const content = `
+      <strong>Um novo pagamento foi confirmado!</strong><br><br>
+      <div style="background-color: #FAFAFA; padding: 20px; border-radius: 4px; border: 1px solid #EEE;">
+        <strong>ID do Pedido:</strong> #${order.id}<br>
+        <strong>Valor Total:</strong> ${formattedTotal}<br><br>
+        <strong>CLIENTE:</strong><br>
+        Nome: ${customerName}<br>
+        E-mail: ${customerEmail}<br>
+        Documento: ${customerDoc}<br><br>
+        <strong>ENTREGA:</strong><br>
+        ${addressStr}
+      </div>
+      <br>Os detalhes dos itens estão listados abaixo para separação.
+    `;
+
+    const subject = `[NOVO PEDIDO PAGO] ${customerName} - ${formattedTotal}`;
+    await this.send(
+      'orderstoreco@gmail.com',
+      'Admin Order Store',
+      subject,
+      this.getHtmlTemplate(title, content, 'Ver no Painel Admin', `${env.FRONTEND_URL}`, 'Pedido pronto para processamento', order.items),
+      `Novo pedido pago: #${order.id} de ${customerName}. Valor: ${formattedTotal}`
+    );
   }
 
   async sendPaymentPending(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
@@ -202,7 +244,7 @@ export class EmailService {
       Assim que a transação for autorizada, você receberá uma nova confirmação por aqui.
     `;
     const text = `Pagamento do pedido #${orderId.slice(0, 8)} em processamento.`;
-    await this.send(to, name, `Pagamento em Análise - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Pagamento em Análise - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   async sendPaymentApproved(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
@@ -213,7 +255,7 @@ export class EmailService {
       Nossa equipe já está providenciando a separação e o envio dos seus produtos.
     `;
     const text = `Pagamento aprovado para o pedido #${orderId.slice(0, 8)}.`;
-    await this.send(to, name, `Pagamento Aprovado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Pagamento Aprovado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Acompanhar Pedido', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   async sendPaymentRejected(to: string, name: string, orderId: string, reason?: string, notes?: string, items?: any[]): Promise<void> {
@@ -225,7 +267,7 @@ export class EmailService {
       Você pode tentar realizar o pagamento novamente utilizando um novo método ou entrar em contato com seu banco.
     `;
     const text = `Pagamento recusado para o pedido #${orderId.slice(0, 8)}.`;
-    await this.send(to, name, `Problema no Pagamento - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Tentar Novamente', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Problema no Pagamento - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Tentar Novamente', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   async sendOrderShipped(to: string, name: string, orderId: string, trackingCode: string, trackingUrl?: string, notes?: string, items?: any[]): Promise<void> {
@@ -247,7 +289,7 @@ export class EmailService {
       Esperamos que você aproveite sua experiência com a <strong>Order</strong>.
     `;
     const text = `Pedido #${orderId.slice(0, 8)} entregue.`;
-    await this.send(to, name, `Pedido Entregue - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Avaliar Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Pedido Entregue - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Avaliar Pedido', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   async sendOrderCancelled(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
@@ -258,7 +300,7 @@ export class EmailService {
       Se você não solicitou este cancelamento ou acredita que houve um erro, entre em contato com nosso suporte.
     `;
     const text = `Pedido #${orderId.slice(0, 8)} cancelado.`;
-    await this.send(to, name, `Pedido Cancelado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Pedido Cancelado - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   async sendOrderRefunded(to: string, name: string, orderId: string, notes?: string, items?: any[]): Promise<void> {
@@ -269,7 +311,7 @@ export class EmailService {
       O valor deverá aparecer em sua fatura ou conta conforme os prazos da sua operadora financeira.
     `;
     const text = `Reembolso processado para o pedido #${orderId.slice(0, 8)}.`;
-    await this.send(to, name, `Reembolso Concluído - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes do Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
+    await this.send(to, name, `Reembolso Concluído - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes do Pedido', `${env.FRONTEND_URL}/profile/orders`), text);
   }
 
   /**
@@ -294,6 +336,39 @@ export class EmailService {
       name,
       `Sua conta foi criada! - Bem-vindo(a) à Order`,
       this.getHtmlTemplate(title, content, 'Fazer Primeiro Acesso', `${env.FRONTEND_URL}/login`),
+      text
+    );
+  }
+
+  /**
+   * Envia uma resposta direta a uma mensagem de contato recebida pelo site.
+   */
+  async sendContactResponseEmail(to: string, name: string, subject: string, originalMessage: string, responseText: string): Promise<void> {
+    const title = `Recebemos sua mensagem. <span style="color: #4A3B63;">Esta é nossa resposta.</span>`;
+    
+    const content = `
+      Olá, ${name}.<br><br>
+      Agradecemos seu contato sobre o assunto: <strong>"${subject}"</strong>.<br><br>
+      
+      <div style="margin: 20px 0; padding: 25px; background-color: #FAFAFA; border-left: 3px solid #1A1A1A; border-radius: 4px;">
+        <strong style="color: #1A1A1A; display: block; margin-bottom: 10px; font-size: 13px; text-transform: uppercase;">Nossa Resposta:</strong>
+        <div style="color: #1A1A1A; font-size: 16px; line-height: 1.6;">
+          "${responseText}"
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; font-size: 14px; color: #777;">
+        <strong style="text-transform: uppercase; font-size: 11px;">Sua mensagem original:</strong><br>
+        <em>"${originalMessage}"</em>
+      </div>
+    `;
+
+    const text = `Recebemos sua mensagem. Nossa resposta: ${responseText}`;
+    await this.send(
+      to, 
+      name, 
+      `Re: ${subject} - Suporte Order`, 
+      this.getHtmlTemplate(title, content, 'Visitar nosso site', env.FRONTEND_URL), 
       text
     );
   }
