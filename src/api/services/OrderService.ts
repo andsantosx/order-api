@@ -251,7 +251,7 @@ export class OrderService {
   ) {
     this.validateOrderInput(userId, guestEmail, guestCpf, shippingAddressData, items, acceptedTerms);
 
-    const user = await this.resolveUser(userId, guestEmail, guestName, guestCpf, phone);
+    const { user, tempPassword } = await this.resolveUser(userId, guestEmail, guestName, guestCpf, phone);
     const finalEmail = guestEmail || user.email;
 
     const { productsMap, sizeNamesMap, totalAmount, shippingCost } =
@@ -296,6 +296,15 @@ export class OrderService {
       totalAmount,
       notes:       'Pedido criado',
     });
+
+    // Disparar evento USER_CREATED se for um novo guest
+    if (tempPassword) {
+      domainEvents.dispatch(OrderDomainEvent.USER_GUEST_CREATED, {
+        email: finalEmail,
+        name: user.name,
+        password: tempPassword,
+      });
+    }
 
     return this.getOne(order.id);
   }
@@ -364,10 +373,10 @@ export class OrderService {
     guestName: string | undefined,
     guestCpf: string | undefined,
     phone: string | undefined,
-  ): Promise<User> {
+  ): Promise<{ user: User, tempPassword?: string }> {
     if (userId) {
       const user = await this.userRepository.findOneBy({ id: userId });
-      if (user) return user;
+      if (user) return { user };
     }
     if (guestEmail) return await this.handleGuestUser(guestEmail, guestName, guestCpf, phone);
     throw new AppError('Usuário não identificado', HTTP_STATUS.BAD_REQUEST);
@@ -378,14 +387,13 @@ export class OrderService {
     name: string | undefined,
     cpf: string | undefined,
     phone: string | undefined,
-  ): Promise<User> {
+  ): Promise<{ user: User, tempPassword?: string }> {
     const existingUser = await this.userRepository.findOneBy({ email });
     
-    // Se o usuário já existe (seja como outro Guest ou como login), vinculamos o pedido a ele
-    // sem dar erro. Isso permite a compra recorrente sem atritos.
+    // Se o usuário já existe, vinculamos o pedido a ele sem dar erro.
     if (existingUser) {
       log.info('Seamless Guest Checkout: vinculando pedido a usuário existente', { email });
-      return existingUser;
+      return { user: existingUser };
     }
 
     return await this.createGuestAccount(email, name, cpf, phone);
@@ -396,7 +404,7 @@ export class OrderService {
     name: string | undefined,
     cpf: string | undefined,
     phone: string | undefined,
-  ): Promise<User> {
+  ): Promise<{ user: User, tempPassword?: string }> {
     const randomPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(randomPassword, SECURITY.BCRYPT_SALT_ROUNDS);
     const newUser = this.userRepository.create({
@@ -408,7 +416,8 @@ export class OrderService {
       phone,
       acceptedTerms: true,
     });
-    return await this.userRepository.save(newUser);
+    const savedUser = await this.userRepository.save(newUser);
+    return { user: savedUser, tempPassword: randomPassword };
   }
 
   private async checkIdempotency(

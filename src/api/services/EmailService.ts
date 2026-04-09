@@ -259,4 +259,30 @@ export class EmailService {
     const text = `Reembolso processado para o pedido #${orderId.slice(0, 8)}.`;
     await this.send(to, name, `Reembolso Concluído - #${orderId.slice(0, 8)}`, this.getHtmlTemplate(title, content, 'Ver Detalhes do Pedido', `${env.FRONTEND_URL}/profile/orders/${orderId}`, notes, items), text);
   }
+
+  /**
+   * Envia e-mail de boas-vindas para clientes que compraram como convidado (Guest Checkout)
+   * Inclui a senha gerada automaticamente para acesso futuro.
+   */
+  async sendGuestWelcomeEmail(to: string, name: string, password: string): Promise<void> {
+    const title = `Uma nova experiência começa agora.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Para facilitar o acompanhamento do seu pedido e futuras compras, criamos uma conta automática para você.<br><br>
+      <strong>Acesse sua conta com os dados abaixo:</strong><br>
+      <div style="margin: 20px 0; padding: 20px; background-color: #FAFAFA; border-radius: 4px; border: 1px dashed #DDD;">
+        E-mail: ${to}<br>
+        Senha Temporária: <strong style="color: #1A1A1A; font-family: monospace; font-size: 18px;">${password}</strong>
+      </div>
+      Recomendamos que você altere sua senha no primeiro acesso para total segurança.
+    `;
+    const text = `Sua conta na Order foi criada! Senha temporária: ${password}`;
+    await this.send(
+      to, 
+      name, 
+      `Sua conta foi criada! - Bem-vindo(a) à Order`, 
+      this.getHtmlTemplate(title, content, 'Fazer Primeiro Acesso', `${env.FRONTEND_URL}/login`), 
+      text
+    );
+  }
 }

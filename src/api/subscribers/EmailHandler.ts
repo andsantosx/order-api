@@ -148,6 +148,19 @@ export class EmailHandler {
       }
     });
 
+    // 9. Criação de Conta Automática (Guest Checkout)
+    domainEvents.on(OrderDomainEvent.USER_GUEST_CREATED, async (data: any) => {
+      try {
+        await this.emailService.sendGuestWelcomeEmail(
+          data.email,
+          data.name,
+          data.password
+        );
+      } catch (error: any) {
+        winston.error(`EmailHandler Error (USER_GUEST_CREATED): ${error.message}`);
+      }
+    });
+
     winston.info('📧 EmailHandler: Automação completa de e-mails transacionais ativada.');
   }
 }

@@ -74,6 +74,7 @@ export enum OrderDomainEvent {
   ORDER_DELIVERED         = 'ORDER_DELIVERED',
   ORDER_CANCELLED         = 'ORDER_CANCELLED',
   ORDER_REFUNDED          = 'ORDER_REFUNDED',
+  USER_GUEST_CREATED      = 'USER_GUEST_CREATED',
 }
 
 // ============================================================
