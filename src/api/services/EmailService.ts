@@ -217,7 +217,7 @@ export class EmailService {
     const content = `
       <strong>Um novo pagamento foi confirmado!</strong><br><br>
       <div style="background-color: #FAFAFA; padding: 20px; border-radius: 4px; border: 1px solid #EEE;">
-        <strong>ID do Pedido:</strong> #${order.id}<br>
+        <strong>ID do Pedido:</strong> #${order.id.slice(0, 8)}<br>
         <strong>Valor Total:</strong> ${formattedTotal}<br><br>
         <strong>CLIENTE:</strong><br>
         Nome: ${customerName}<br>
