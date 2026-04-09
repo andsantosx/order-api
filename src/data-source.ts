@@ -17,6 +17,7 @@ import { Status } from './api/entities/Status';
 import { Brand } from './api/entities/Brand';
 import { AdminAuditLog } from './api/entities/AdminAuditLog';
 import { OrderStatusHistory } from './api/entities/OrderStatusHistory';
+import { EmailHandler } from './api/subscribers/EmailHandler';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -46,5 +47,5 @@ export const AppDataSource = new DataSource({
     OrderStatusHistory,
   ],
   migrations: [env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts'],
-  subscribers: [],
+  subscribers: [EmailHandler],
 });
