@@ -3,6 +3,7 @@ import { Order, OrderStatus, ORDER_STATUS_EVENTS } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { ShippingAddress } from '../entities/ShippingAddress';
+import { EmailVerification } from '../entities/EmailVerification';
 import { User } from '../entities/User';
 import { Size } from '../entities/Size';
 import { v4 as uuidv4 } from 'uuid';
@@ -63,6 +64,7 @@ export class OrderService {
   private userRepository = AppDataSource.getRepository(User);
   private sizeRepository = AppDataSource.getRepository(Size);
   private productSizeRepository = AppDataSource.getRepository(ProductSize);
+  private emailVerificationRepository = AppDataSource.getRepository(EmailVerification);
 
   /**
    * Retorna pedidos filtrados por usuário e/ou status com paginação
@@ -76,8 +78,9 @@ export class OrderService {
     search?: string,
   ) {
     const skip = (page - 1) * limit;
-    
-    const query = this.orderRepository.createQueryBuilder('o')
+
+    const query = this.orderRepository
+      .createQueryBuilder('o')
       .leftJoinAndSelect('o.user', 'user')
       .leftJoinAndSelect('o.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
@@ -102,13 +105,15 @@ export class OrderService {
       const originalSearch = search.trim();
       const cleanSearch = originalSearch.replace('#', '');
       const searchTerm = `%${cleanSearch}%`;
-      
-      query.andWhere(new Brackets(qb => {
-        qb.where('CAST(o.id AS TEXT) ILIKE :search', { search: searchTerm })
-          .orWhere('o.guestEmail ILIKE :search', { search: searchTerm })
-          .orWhere('user.name ILIKE :search', { search: searchTerm })
-          .orWhere('user.document ILIKE :search', { search: searchTerm });
-      }));
+
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('CAST(o.id AS TEXT) ILIKE :search', { search: searchTerm })
+            .orWhere('o.guestEmail ILIKE :search', { search: searchTerm })
+            .orWhere('user.name ILIKE :search', { search: searchTerm })
+            .orWhere('user.document ILIKE :search', { search: searchTerm });
+        }),
+      );
     }
 
     const [orders, total] = await query.getManyAndCount();
@@ -149,12 +154,15 @@ export class OrderService {
    * Atualiza o status de um pedido (usado pelo admin)
    * Valida a máquina de estados, salva histórico e dispara evento de domínio.
    */
-  async updateStatus(
-    id: string,
-    options: UpdateStatusOptions,
-    requesterIsAdmin: boolean = false,
-  ) {
-    const { status: newStatusId, changedById, changedByRole = ChangedByRole.ADMIN, notes, trackingCode, trackingUrl } = options;
+  async updateStatus(id: string, options: UpdateStatusOptions, requesterIsAdmin: boolean = false) {
+    const {
+      status: newStatusId,
+      changedById,
+      changedByRole = ChangedByRole.ADMIN,
+      notes,
+      trackingCode,
+      trackingUrl,
+    } = options;
 
     const order = await this.orderRepository.findOne({
       where: { id },
@@ -166,7 +174,10 @@ export class OrderService {
     }
 
     if (!requesterIsAdmin) {
-      throw new AppError('Apenas administradores podem alterar o status do pedido', HTTP_STATUS.FORBIDDEN);
+      throw new AppError(
+        'Apenas administradores podem alterar o status do pedido',
+        HTTP_STATUS.FORBIDDEN,
+      );
     }
 
     if (!order.canTransitionTo(newStatusId)) {
@@ -201,8 +212,8 @@ export class OrderService {
 
     // Registrar no histórico (fire-and-forget)
     OrderHistoryService.record({
-      order:         { ...order, statusId: previousStatusId } as Order,
-      toStatusId:    newStatusId,
+      order: { ...order, statusId: previousStatusId } as Order,
+      toStatusId: newStatusId,
       changedById,
       changedByRole: changedByRole as ChangedByRole,
       notes,
@@ -249,15 +260,33 @@ export class OrderService {
     acceptedTerms: boolean,
     idempotencyKey?: string,
   ) {
-    this.validateOrderInput(userId, guestEmail, guestCpf, shippingAddressData, items, acceptedTerms);
+    this.validateOrderInput(
+      userId,
+      guestEmail,
+      guestCpf,
+      shippingAddressData,
+      items,
+      acceptedTerms,
+    );
 
-    const { user, tempPassword } = await this.resolveUser(userId, guestEmail, guestName, guestCpf, phone);
+    const { user, tempPassword } = await this.resolveUser(
+      userId,
+      guestEmail,
+      guestName,
+      guestCpf,
+      phone,
+    );
     const finalEmail = guestEmail || user.email;
 
     const { productsMap, sizeNamesMap, totalAmount, shippingCost } =
       await this.validateAndCalculateOrder(items);
 
-    const existingOrder = await this.checkIdempotency(user.id, finalEmail, totalAmount, idempotencyKey);
+    const existingOrder = await this.checkIdempotency(
+      user.id,
+      finalEmail,
+      totalAmount,
+      idempotencyKey,
+    );
     if (existingOrder) {
       log.info('Pedido duplicado detectado', { orderId: existingOrder.id });
       return this.getOne(existingOrder.id);
@@ -276,6 +305,8 @@ export class OrderService {
       phone,
     );
 
+    const isNewUser = !!tempPassword;
+
     if (acceptedTerms && !user.acceptedTerms) {
       user.acceptedTerms = true;
       await this.userRepository.save(user);
@@ -283,19 +314,19 @@ export class OrderService {
 
     // Registrar histórico inicial (status PENDING)
     OrderHistoryService.record({
-      order:         { ...order, statusId: 0 } as Order,
-      toStatusId:    OrderStatus.PENDING,
+      order: { ...order, statusId: 0 } as Order,
+      toStatusId: OrderStatus.PENDING,
       changedByRole: ChangedByRole.SYSTEM,
-      notes:         'Pedido criado',
+      notes: 'Pedido criado',
     });
 
     // Disparar evento ORDER_CREATED
     domainEvents.dispatch(OrderDomainEvent.ORDER_CREATED, {
-      orderId:     order.id,
-      userId:      user.id,
+      orderId: order.id,
+      userId: user.id,
       totalAmount,
       isAccountLinked: !userId && guestEmail && !tempPassword,
-      notes:       'Pedido criado',
+      notes: 'Pedido criado',
     });
 
     // Disparar evento USER_CREATED se for um novo guest
@@ -307,7 +338,8 @@ export class OrderService {
       });
     }
 
-    return this.getOne(order.id);
+    const finalOrder = await this.getOne(order.id);
+    return { order: finalOrder, isNewUser };
   }
 
   private validateOrderInput(
@@ -374,7 +406,7 @@ export class OrderService {
     guestName: string | undefined,
     guestCpf: string | undefined,
     phone: string | undefined,
-  ): Promise<{ user: User, tempPassword?: string }> {
+  ): Promise<{ user: User; tempPassword?: string }> {
     if (userId) {
       const user = await this.userRepository.findOneBy({ id: userId });
       if (user) return { user };
@@ -388,13 +420,26 @@ export class OrderService {
     name: string | undefined,
     cpf: string | undefined,
     phone: string | undefined,
-  ): Promise<{ user: User, tempPassword?: string }> {
+  ): Promise<{ user: User; tempPassword?: string }> {
     const existingUser = await this.userRepository.findOneBy({ email });
-    
+
     // Se o usuário já existe, vinculamos o pedido a ele sem dar erro.
     if (existingUser) {
       log.info('Seamless Guest Checkout: vinculando pedido a usuário existente', { email });
       return { user: existingUser };
+    }
+
+    // Se é um e-mail novo, DEVE estar verificado
+    const verification = await this.emailVerificationRepository.findOneBy({
+      email,
+      isVerified: true,
+    });
+
+    if (!verification) {
+      throw new AppError(
+        'E-mail não verificado. Por favor, confirme o código enviado ao seu e-mail.',
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     return await this.createGuestAccount(email, name, cpf, phone);
@@ -405,7 +450,7 @@ export class OrderService {
     name: string | undefined,
     cpf: string | undefined,
     phone: string | undefined,
-  ): Promise<{ user: User, tempPassword?: string }> {
+  ): Promise<{ user: User; tempPassword?: string }> {
     const randomPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(randomPassword, SECURITY.BCRYPT_SALT_ROUNDS);
     const newUser = this.userRepository.create({

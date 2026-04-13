@@ -37,12 +37,23 @@ export class User {
   @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
   wishlist!: Wishlist[];
 
+  @Column({ name: 'reset_password_code', nullable: true, select: false })
+  resetPasswordCode?: string;
+
+  @Column({ name: 'reset_password_expires_at', nullable: true, select: false })
+  resetPasswordExpiresAt?: Date;
+
   /**
    * Método toJSON para sanitizar a saída automática da API.
    * Mascara dados sensíveis antes de enviar ao frontend.
    */
   toJSON() {
-    const { passwordHash, ...user } = this;
+    const {
+      passwordHash: _passwordHash,
+      resetPasswordCode: _resetPasswordCode,
+      resetPasswordExpiresAt: _resetPasswordExpiresAt,
+      ...user
+    } = this;
     return user;
   }
 }

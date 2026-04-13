@@ -34,7 +34,14 @@ export class OrderController {
       const queryUserId = req.query.userId as string | undefined;
       const targetUserId = isAdmin ? queryUserId : userId;
 
-      const result = await this.orderService.getAll(isAdmin, targetUserId, status, page, limit, search);
+      const result = await this.orderService.getAll(
+        isAdmin,
+        targetUserId,
+        status,
+        page,
+        limit,
+        search,
+      );
       return res.json(result);
     } catch (error) {
       log.error('Erro ao buscar pedidos', { error });
@@ -91,7 +98,7 @@ export class OrderController {
       idempotencyKey,
     } = req.body;
     const userId = req.user?.userId;
-    const order = await this.orderService.create(
+    const result = await this.orderService.create(
       userId,
       guestName,
       guestEmail,
@@ -102,7 +109,7 @@ export class OrderController {
       acceptedTerms,
       idempotencyKey,
     );
-    res.status(HTTP_STATUS.CREATED).json(order);
+    res.status(HTTP_STATUS.CREATED).json(result);
   }
 
   /**

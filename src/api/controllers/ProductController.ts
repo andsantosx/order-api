@@ -10,7 +10,8 @@ export class ProductController {
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort } = req.query;
+      const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort } =
+        req.query;
       const pageNum = page ? parseInt(page as string) : 1;
       const limitNum = limit ? parseInt(limit as string) : 20;
 
@@ -71,8 +72,18 @@ export class ProductController {
    */
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, priceCents, price_cents, description, currency, categoryId, brandId, sizeIds, sizes, images } =
-        req.body;
+      const {
+        name,
+        priceCents,
+        price_cents,
+        description,
+        currency,
+        categoryId,
+        brandId,
+        sizeIds,
+        sizes,
+        images,
+      } = req.body;
 
       const finalPrice = priceCents ?? price_cents;
 

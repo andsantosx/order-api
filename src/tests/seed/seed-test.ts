@@ -17,8 +17,13 @@ async function runTestSeed() {
     await seedDatabase(TestDataSource);
     log.info('✅ Test database seeded successfully!');
     process.exit(0);
-  } catch (error) {
-    log.error('❌ Test database seeding failed:', { error });
+  } catch (error: unknown) {
+    const err = error as Error;
+    log.error('❌ Test database seeding failed:', {
+      message: err.message,
+      stack: err.stack,
+      error,
+    });
     process.exit(1);
   }
 }

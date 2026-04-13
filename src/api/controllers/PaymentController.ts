@@ -22,8 +22,8 @@ export class PaymentController {
 
       log.info('[PaymentController] Payment attempt received', {
         orderId: paymentData.orderId ?? paymentData.externalReference,
-        method:  paymentData.paymentMethodId ?? paymentData.payment_method_id,
-        userId:  req.user?.userId,
+        method: paymentData.paymentMethodId ?? paymentData.payment_method_id,
+        userId: req.user?.userId,
       });
 
       const result = await this.paymentService.processPayment(req.body);
@@ -45,7 +45,7 @@ export class PaymentController {
   async handleWebhook(req: Request, res: Response, next: NextFunction) {
     try {
       log.info('[Webhook] Notification received', {
-        type:   req.body.type,
+        type: req.body.type,
         dataId: req.body.data?.id,
       });
 
@@ -69,7 +69,7 @@ export class PaymentController {
 
       if (isNaN(paymentId)) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
-          status:  'error',
+          status: 'error',
           message: 'ID de pagamento deve ser um número válido',
         });
       }

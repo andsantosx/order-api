@@ -28,7 +28,11 @@ router.get('/', authMiddleware, orderController.getAll.bind(orderController));
 router.get('/:id', optionalAuthMiddleware, orderController.getOne.bind(orderController));
 
 /** GET /orders/:id/history - Histórico de mudanças de status */
-router.get('/:id/history', optionalAuthMiddleware, orderController.getStatusHistory.bind(orderController));
+router.get(
+  '/:id/history',
+  optionalAuthMiddleware,
+  orderController.getStatusHistory.bind(orderController),
+);
 
 /** POST /orders - Criar novo pedido (público, com rate limit e reCAPTCHA) */
 router.post(

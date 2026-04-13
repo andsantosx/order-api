@@ -9,11 +9,11 @@ import { LessThan, In } from 'typeorm';
 
 /**
  * OrderExpirationJob
- * 
+ *
  * Rotina automática responsável por cancelar pedidos que ficaram pendentes ou em processamento
  * por muito tempo (expiração de Pix ou pedidos abandonados).
- * 
- * Implementação utilizando node-cron, seguindo padrões de mercado para 
+ *
+ * Implementação utilizando node-cron, seguindo padrões de mercado para
  * sistemas de e-commerce resilientes.
  */
 export class OrderExpirationJob {
@@ -31,7 +31,11 @@ export class OrderExpirationJob {
     }
 
     this.isRunning = true;
-    log.info('[OrderExpirationJob] Verificando pedidos expirados (Threshold: ' + env.ORDER_EXPIRATION_HOURS + 'h)...');
+    log.info(
+      '[OrderExpirationJob] Verificando pedidos expirados (Threshold: ' +
+        env.ORDER_EXPIRATION_HOURS +
+        'h)...',
+    );
 
     const orderRepository = AppDataSource.getRepository(Order);
     const expirationThreshold = new Date();
@@ -52,7 +56,9 @@ export class OrderExpirationJob {
         return;
       }
 
-      log.info(`[OrderExpirationJob] Processando expiração para ${expiredOrders.length} pedidos...`);
+      log.info(
+        `[OrderExpirationJob] Processando expiração para ${expiredOrders.length} pedidos...`,
+      );
 
       // 2. Processamento individual para garantir auditoria e disparar notificações (WebSockets/Emails)
       let count = 0;
@@ -66,17 +72,21 @@ export class OrderExpirationJob {
               changedById: 'SYSTEM_AUTOMATION',
               notes: `Cancelamento automático do sistema: pedido pendente/pix expirado (há mais de ${env.ORDER_EXPIRATION_HOURS}h).`,
             },
-            true // requesterIsAdmin: permite que o sistema altere o status ignorando travas de permissão de usuário
+            true, // requesterIsAdmin: permite que o sistema altere o status ignorando travas de permissão de usuário
           );
           count++;
-        } catch (error: any) {
-          log.error(`[OrderExpirationJob] Falha ao expirar pedido ${order.id}:`, { error: error.message });
+        } catch (error: unknown) {
+          log.error(`[OrderExpirationJob] Falha ao expirar pedido ${order.id}:`, {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
         }
       }
 
       log.info(`[OrderExpirationJob] Finalizado. ${count} pedidos foram cancelados agora.`);
-    } catch (error: any) {
-      log.error('[OrderExpirationJob] Erro inesperado na rotina de expiração:', { error: error.message });
+    } catch (error: unknown) {
+      log.error('[OrderExpirationJob] Erro inesperado na rotina de expiração:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     } finally {
       this.isRunning = false;
     }
@@ -87,9 +97,11 @@ export class OrderExpirationJob {
    * Por padrão, roda a cada 30 minutos.
    */
   public static init(): void {
-    const cronSchedule = env.ORDER_EXPIRATION_CRON; 
+    const cronSchedule = env.ORDER_EXPIRATION_CRON;
 
-    log.info(`[OrderExpirationJob] Agendado com sucesso (Cron: ${cronSchedule}) | Expiração: ${env.ORDER_EXPIRATION_HOURS}h.`);
+    log.info(
+      `[OrderExpirationJob] Agendado com sucesso (Cron: ${cronSchedule}) | Expiração: ${env.ORDER_EXPIRATION_HOURS}h.`,
+    );
 
     // Executa uma vez no boot do sistema (com delay leve para garantir DB pronto)
     setTimeout(() => this.checkExpirations(), 5000);

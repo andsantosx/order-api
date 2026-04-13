@@ -33,7 +33,12 @@ function normalizeSpaces(input: string): string {
 /**
  * Sanitiza dados de usuário
  */
-export function sanitizeUserData(data: { name?: string; email?: string; document?: string; phone?: string }): {
+export function sanitizeUserData(data: {
+  name?: string;
+  email?: string;
+  document?: string;
+  phone?: string;
+}): {
   name?: string;
   email?: string;
   document?: string;

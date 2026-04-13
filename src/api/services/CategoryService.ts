@@ -134,7 +134,10 @@ export class CategoryService {
     if (data.slug && data.slug !== category.slug) {
       const existingCategory = await this.categoryRepository.findOneBy({ slug: data.slug });
       if (existingCategory) {
-        log.warn('Tentativa de atualizar categoria com slug duplicado', { slug: data.slug, categoryId: id });
+        log.warn('Tentativa de atualizar categoria com slug duplicado', {
+          slug: data.slug,
+          categoryId: id,
+        });
         throw new AppError('Já existe uma categoria com este slug', HTTP_STATUS.BAD_REQUEST);
       }
     }

@@ -19,7 +19,7 @@ export class SocketService {
   private static instance: SocketService;
   private io: SocketServer | null = null;
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): SocketService {
     if (!SocketService.instance) {
@@ -31,12 +31,17 @@ export class SocketService {
   public init(httpServer: HttpServer): void {
     this.io = new SocketServer(httpServer, {
       cors: {
-        origin: [process.env.FRONTEND_URL || '*', "https://ordersc.com.br", "http://localhost:3000", "http://localhost:3001"],
+        origin: [
+          process.env.FRONTEND_URL || '*',
+          'https://ordersc.com.br',
+          'http://localhost:3000',
+          'http://localhost:3001',
+        ],
         methods: ['GET', 'POST'],
         credentials: true,
       },
       transports: ['polling', 'websocket'],
-      allowEIO3: true
+      allowEIO3: true,
     });
 
     log.info('🔌 Socket.io initialized');
@@ -73,14 +78,14 @@ export class SocketService {
           // Busca o pedido sem restrição de userId aqui, pois o socket já entrou na sala se for dele
           // ou o frontend está validando a posse. O getOne lançará erro se não encontrar.
           const order = await orderService.getOne(orderId, undefined, true);
-          
+
           socket.emit('ORDER_STATUS_UPDATE', {
             orderId: order.id,
             statusId: order.statusId,
             message: order.status?.label || ORDER_STATUS_DESCRIPTIONS['PENDING'], // fallback seguro
             trackingCode: order.trackingCode,
             trackingUrl: order.trackingUrl,
-            sync: true // Flag para o frontend saber que é um sync
+            sync: true, // Flag para o frontend saber que é um sync
           });
 
           log.info(`🔄 Order status synced via socket: ${orderId}`);

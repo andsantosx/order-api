@@ -31,23 +31,23 @@ export class OrderHistoryService {
   public static async record(options: RecordStatusChangeOptions): Promise<void> {
     try {
       const entry = this.repository.create({
-        orderId:        options.order.id,
-        fromStatusId:   options.order.statusId || undefined,
-        toStatusId:     options.toStatusId,
-        changedById:    options.changedById,
-        changedByRole:  options.changedByRole,
-        notes:          options.notes,
-        trackingCode:   options.trackingCode,
-        trackingUrl:    options.trackingUrl,
+        orderId: options.order.id,
+        fromStatusId: options.order.statusId || undefined,
+        toStatusId: options.toStatusId,
+        changedById: options.changedById,
+        changedByRole: options.changedByRole,
+        notes: options.notes,
+        trackingCode: options.trackingCode,
+        trackingUrl: options.trackingUrl,
       });
 
       await this.repository.save(entry);
 
       log.info('[OrderHistory] Status change recorded', {
         orderId: options.order.id,
-        from:    options.order.statusId,
-        to:      options.toStatusId,
-        by:      options.changedByRole,
+        from: options.order.statusId,
+        to: options.toStatusId,
+        by: options.changedByRole,
       });
     } catch (error) {
       // Falha no histórico não deve derrubar o fluxo principal

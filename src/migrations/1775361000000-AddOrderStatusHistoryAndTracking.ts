@@ -22,15 +22,27 @@ export class AddOrderStatusHistoryAndTracking1775361000000 implements MigrationI
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_osh_order_id" ON "order_status_history" ("order_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_osh_created_at" ON "order_status_history" ("created_at")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_osh_order_id" ON "order_status_history" ("order_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_osh_created_at" ON "order_status_history" ("created_at")`,
+    );
 
     // 2. Adicionar campos de rastreio e timestamps de ciclo de vida na tabela orders
-    await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "tracking_code" character varying`);
-    await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "tracking_url" character varying`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "tracking_code" character varying`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "tracking_url" character varying`,
+    );
     await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "shipped_at" TIMESTAMP`);
-    await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "delivered_at" TIMESTAMP`);
-    await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "cancelled_at" TIMESTAMP`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "delivered_at" TIMESTAMP`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "cancelled_at" TIMESTAMP`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

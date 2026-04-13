@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import path from 'path';
 import { DataSource } from 'typeorm';
 import { env } from './config/env';
 import { Product } from './api/entities/Product';
@@ -17,6 +18,7 @@ import { Status } from './api/entities/Status';
 import { Brand } from './api/entities/Brand';
 import { AdminAuditLog } from './api/entities/AdminAuditLog';
 import { OrderStatusHistory } from './api/entities/OrderStatusHistory';
+import { EmailVerification } from './api/entities/EmailVerification';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -25,7 +27,7 @@ export const AppDataSource = new DataSource({
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-  synchronize: false,
+  synchronize: true,
   logging: env.NODE_ENV === 'development',
   entities: [
     Product,
@@ -44,7 +46,8 @@ export const AppDataSource = new DataSource({
     Brand,
     AdminAuditLog,
     OrderStatusHistory,
+    EmailVerification,
   ],
-  migrations: [env.NODE_ENV === 'production' ? './dist/migrations/*.js' : './src/migrations/*.ts'],
+  migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   subscribers: [],
 });

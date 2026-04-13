@@ -160,28 +160,28 @@ export const VALIDATION = {
  * Usado para exibição ao usuário e admin
  */
 export const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING:            'Pendente',
-  PROCESSING:         'Processando',
-  PAID:               'Pago',
-  AWAITING_SHIPMENT:  'Aguardando Envio',
-  SHIPPED:            'Enviado',
-  DELIVERED:          'Entregue',
-  CANCELLED:          'Cancelado',
-  REFUNDED:           'Reembolsado',
+  PENDING: 'Pendente',
+  PROCESSING: 'Processando',
+  PAID: 'Pago',
+  AWAITING_SHIPMENT: 'Aguardando Envio',
+  SHIPPED: 'Enviado',
+  DELIVERED: 'Entregue',
+  CANCELLED: 'Cancelado',
+  REFUNDED: 'Reembolsado',
 } as const;
 
 /**
  * Descrições amigáveis para o usuário final sobre cada status
  */
 export const ORDER_STATUS_DESCRIPTIONS: Record<string, string> = {
-  PENDING:            'Seu pedido foi criado e está aguardando confirmação do pagamento.',
-  PROCESSING:         'Seu pagamento está sendo analisado. Em breve confirmaremos.',
-  PAID:               'Pagamento confirmado! Seu pedido está sendo preparado.',
-  AWAITING_SHIPMENT:  'Seu pedido está sendo separado no estoque para envio.',
-  SHIPPED:            'Seu pedido foi enviado ao transportador. Acompanhe pelo código de rastreio.',
-  DELIVERED:          'Seu pedido foi entregue. Obrigado pela compra!',
-  CANCELLED:          'Seu pedido foi cancelado.',
-  REFUNDED:           'O reembolso do seu pedido foi processado.',
+  PENDING: 'Seu pedido foi criado e está aguardando confirmação do pagamento.',
+  PROCESSING: 'Seu pagamento está sendo analisado. Em breve confirmaremos.',
+  PAID: 'Pagamento confirmado! Seu pedido está sendo preparado.',
+  AWAITING_SHIPMENT: 'Seu pedido está sendo separado no estoque para envio.',
+  SHIPPED: 'Seu pedido foi enviado ao transportador. Acompanhe pelo código de rastreio.',
+  DELIVERED: 'Seu pedido foi entregue. Obrigado pela compra!',
+  CANCELLED: 'Seu pedido foi cancelado.',
+  REFUNDED: 'O reembolso do seu pedido foi processado.',
 } as const;
 
 /**
@@ -189,14 +189,14 @@ export const ORDER_STATUS_DESCRIPTIONS: Record<string, string> = {
  * Mapeamento dos status do Mercado Pago
  */
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending:      'Pendente',
-  approved:     'Aprovado',
-  authorized:   'Autorizado',
-  in_process:   'Em Análise',
+  pending: 'Pendente',
+  approved: 'Aprovado',
+  authorized: 'Autorizado',
+  in_process: 'Em Análise',
   in_mediation: 'Em Disputa',
-  rejected:     'Recusado',
-  cancelled:    'Cancelado',
-  refunded:     'Reembolsado',
+  rejected: 'Recusado',
+  cancelled: 'Cancelado',
+  refunded: 'Reembolsado',
   charged_back: 'Contestação (Chargeback)',
 } as const;
 

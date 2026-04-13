@@ -1,5 +1,6 @@
 import { AppDataSource } from '../../data-source';
 import { User } from '../entities/User';
+import { EmailVerification } from '../entities/EmailVerification';
 import { AppError } from '../middlewares/errorHandler';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -17,6 +18,7 @@ import { EmailService } from './EmailService';
  */
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
+  private emailVerificationRepository = AppDataSource.getRepository(EmailVerification);
   private emailService = new EmailService();
 
   /**
@@ -62,20 +64,35 @@ export class UserService {
       throw new AppError(ERROR_MESSAGES.USER_EXISTS, HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Gera hash seguro da senha usando bcrypt
     const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_SALT_ROUNDS);
+
+    // Verifica se o e-mail foi validado via OTP
+    const verification = await this.emailVerificationRepository.findOneBy({
+      email: sanitized.email,
+      isVerified: true,
+    });
+
+    if (!verification) {
+      throw new AppError(
+        'E-mail não verificado. Por favor, confirme seu e-mail antes de criar a conta.',
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
 
     const user = this.userRepository.create({
       name: sanitized.name,
       email: sanitized.email,
       passwordHash: passwordHash,
-      isAdmin: false, // Usuários normais não são admin por padrão
+      isAdmin: false,
       document: document || undefined,
       phone: phone || undefined,
       acceptedTerms: true,
     });
 
     await this.userRepository.save(user);
+
+    // Remove a verificação após o registro bem sucedido
+    await this.emailVerificationRepository.remove(verification);
 
     // Envia e-mail de boas-vindas (assíncrono, não bloqueia o retorno)
     this.emailService.sendWelcomeEmail(user.email, user.name);
@@ -206,6 +223,160 @@ export class UserService {
     await this.userRepository.save(user);
 
     return this.getSanitizedUserOutput(user);
+  }
+
+  /**
+   * Solicita a recuperação de senha
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const sanitized = sanitizeUserData({ email });
+    const user = await this.userRepository.findOneBy({ email: sanitized.email });
+
+    // Se o usuário não existir, retornamos sucesso silencioso por segurança
+    // Mas não enviamos email se não existir
+    if (!user) {
+      // Pequeno delay para evitar timing attacks
+      await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 500));
+      return;
+    }
+
+    // Gera código de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    user.resetPasswordCode = code;
+    user.resetPasswordExpiresAt = expiresAt;
+
+    await this.userRepository.save(user);
+
+    // Envia o email
+    await this.emailService.sendPasswordResetEmail(user.email, user.name, code);
+  }
+
+  /**
+   * Verifica se o código de recuperação é válido
+   */
+  async verifyCode(email: string, code: string): Promise<boolean> {
+    const sanitized = sanitizeUserData({ email });
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.resetPasswordCode')
+      .addSelect('user.resetPasswordExpiresAt')
+      .where('user.email = :email', { email: sanitized.email })
+      .getOne();
+
+    if (!user || user.resetPasswordCode !== code) {
+      throw new AppError('Código inválido ou e-mail não encontrado', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (user.resetPasswordExpiresAt && user.resetPasswordExpiresAt < new Date()) {
+      throw new AppError('Código expirado', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    return true;
+  }
+
+  /**
+   * Redefine a senha do usuário usando o código de verificação
+   */
+  async resetPassword(email: string, code: string, password: PasswordVO): Promise<void> {
+    const sanitized = sanitizeUserData({ email });
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.resetPasswordCode')
+      .addSelect('user.resetPasswordExpiresAt')
+      .where('user.email = :email', { email: sanitized.email })
+      .getOne();
+
+    if (!user || user.resetPasswordCode !== code) {
+      throw new AppError('Código inválido ou e-mail não encontrado', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (user.resetPasswordExpiresAt && user.resetPasswordExpiresAt < new Date()) {
+      throw new AppError('Código expirado', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Hash da nova senha
+    user.passwordHash = await bcrypt.hash(password.toString(), SECURITY.BCRYPT_SALT_ROUNDS);
+
+    // Limpa os campos de reset
+    user.resetPasswordCode = undefined;
+    user.resetPasswordExpiresAt = undefined;
+
+    await this.userRepository.save(user);
+  }
+
+  /**
+   * Verifica se um e-mail já possui conta cadastrada na plataforma
+   * @param email - E-mail a ser verificado
+   * @returns { userExists: boolean }
+   */
+  async checkEmailStatus(email: string): Promise<{ userExists: boolean }> {
+    const sanitized = sanitizeUserData({ email });
+    const user = await this.userRepository.findOneBy({ email: sanitized.email });
+
+    return { userExists: !!user };
+  }
+
+  /**
+   * Solicita um código de verificação para e-mail (Checkout ou Cadastro)
+   */
+  async requestEmailVerification(email: string): Promise<void> {
+    const sanitized = sanitizeUserData({ email });
+
+    // Gera código de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    // Salva ou atualiza a verificação pendente
+    let verification = await this.emailVerificationRepository.findOneBy({
+      email: sanitized.email,
+    });
+
+    if (verification) {
+      verification.code = code;
+      verification.expiresAt = expiresAt;
+      verification.isVerified = false;
+    } else {
+      verification = this.emailVerificationRepository.create({
+        email: sanitized.email,
+        code,
+        expiresAt,
+        isVerified: false,
+      });
+    }
+
+    await this.emailVerificationRepository.save(verification);
+
+    // Envia o e-mail com o código
+    await this.emailService.sendEmailVerificationEmail(sanitized.email!, code);
+  }
+
+  /**
+   * Valida o código de verificação de e-mail
+   */
+  async verifyEmailCode(email: string, code: string): Promise<{ verified: boolean }> {
+    const sanitized = sanitizeUserData({ email });
+    const verification = await this.emailVerificationRepository.findOneBy({
+      email: sanitized.email,
+    });
+
+    if (!verification) {
+      throw new AppError('Nenhuma verificação pendente para este e-mail', HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (verification.code !== code) {
+      throw new AppError('Código de verificação incorreto', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (verification.expiresAt < new Date()) {
+      throw new AppError('Este código já expirou. Peça um novo.', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    verification.isVerified = true;
+    await this.emailVerificationRepository.save(verification);
+
+    return { verified: true };
   }
 
   /**

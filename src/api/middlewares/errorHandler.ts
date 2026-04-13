@@ -56,18 +56,18 @@ export const errorHandler = (err: Error, req: Request, res: Response, _next: Nex
   // 2. PaymentException - Erros de pagamento (Mercado Pago)
   if (err instanceof PaymentException) {
     log.warn('Erro de pagamento', {
-      name:       err.name,
-      message:    err.message,
+      name: err.name,
+      message: err.message,
       statusCode: err.statusCode,
-      code:       err.code,
-      path:       req.path,
-      userId:     req.user?.userId,
+      code: err.code,
+      path: req.path,
+      userId: req.user?.userId,
     });
 
     return res.status(err.statusCode).json({
-      status:  'error',
+      status: 'error',
       message: err.message,
-      code:    err.code,
+      code: err.code,
     });
   }
 

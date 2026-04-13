@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { VALIDATION, SECURITY } from '../../constants';
-import { isValidCPF, normalizePhone } from '../../utils/validation';
+import { isValidCPF } from '../../utils/validation';
 
 /**
  * Schema para registro de novo usuário
@@ -96,4 +96,72 @@ export const updateProfileSchema = z.object({
     .refine((data) => Object.keys(data).length > 0, {
       message: 'Pelo menos um campo deve ser fornecido para atualização',
     }),
+});
+
+/**
+ * Schema para solicitação de recuperação de senha
+ */
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+    recaptchaToken: z.string().min(1, 'Token do reCAPTCHA é obrigatório'),
+  }),
+});
+
+/**
+ * Schema para verificação de código de recuperação
+ */
+export const verifyCodeSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+    code: z.string().length(6, 'Código deve ter 6 dígitos'),
+  }),
+});
+
+/**
+ * Schema para redefinição de senha final
+ */
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+    code: z.string().length(6, 'Código deve ter 6 dígitos'),
+    password: z
+      .string()
+      .min(
+        SECURITY.MIN_PASSWORD_LENGTH,
+        `Senha deve ter no mínimo ${SECURITY.MIN_PASSWORD_LENGTH} caracteres`,
+      )
+      .max(
+        VALIDATION.PASSWORD_MAX_LENGTH,
+        `Senha deve ter no máximo ${VALIDATION.PASSWORD_MAX_LENGTH} caracteres`,
+      ),
+  }),
+});
+
+/**
+ * Schema para verificação de status de e-mail (checkout)
+ */
+export const checkEmailStatusSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+  }),
+});
+
+/**
+ * Schema para solicitação de código de checkout
+ */
+export const requestCheckoutVerificationSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+  }),
+});
+
+/**
+ * Schema para validar código de checkout
+ */
+export const verifyCheckoutCodeSchema = z.object({
+  body: z.object({
+    email: z.string().email('Email inválido').toLowerCase().trim(),
+    code: z.string().length(6, 'Código deve ter 6 dígitos'),
+  }),
 });

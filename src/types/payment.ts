@@ -59,6 +59,7 @@ export interface PaymentRequestData {
   payment_method_id?: string;
   externalReference?: string;
   external_reference?: string;
+  orderId?: string;
   notificationUrl?: string;
   notification_url?: string;
   payer: PayerData;

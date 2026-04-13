@@ -7,17 +7,13 @@ jest.mock('../../data-source', () => ({
 
 import request from 'supertest';
 import app from '../../app';
-import { DataSource } from 'typeorm';
 import { ContactMessageStatus } from '../../api/entities/ContactMessage';
 
 describe('Contact Integration', () => {
-  let connection: DataSource;
   let adminToken: string;
   let messageId: string;
 
   beforeAll(async () => {
-    connection = TestDataSource;
-
     // Login as admin
     const loginRes = await request(app).post('/api/auth/login').send({
       email: 'admin@admin.com',

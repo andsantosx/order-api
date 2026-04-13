@@ -55,7 +55,7 @@ export class ContactService {
     }
 
     // Reset relation to avoid precedence conflict with statusId during save
-    delete (message as any).status;
+    Object.assign(message, { status: undefined });
     message.response = responseText;
     message.statusId = ContactMessageStatus.REPLIED;
 
@@ -68,9 +68,9 @@ export class ContactService {
         saved.name,
         saved.subject,
         saved.message,
-        saved.response || ''
+        saved.response || '',
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao enviar e-mail de resposta de contato:', error);
     }
 
@@ -88,7 +88,7 @@ export class ContactService {
     }
 
     // Reset relation to avoid precedence conflict with statusId during save
-    (message as any).status = undefined;
+    Object.assign(message, { status: undefined });
     message.statusId = statusId;
 
     const saved = await this.contactRepository.save(message);

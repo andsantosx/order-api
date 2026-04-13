@@ -17,13 +17,13 @@ import { OrderStatusHistory } from './OrderStatusHistory';
 import { OrderDomainEvent } from '../../types/domain-enums';
 
 export enum OrderStatus {
-  PENDING = 1,           // Pedido criado, aguardando pagamento
-  PROCESSING = 2,        // Pagamento em análise (PIX, boleto)
-  PAID = 3,              // Pagamento aprovado/confirmado
-  SHIPPED = 4,           // Enviado ao transportador
-  DELIVERED = 5,         // Entrega confirmada
-  CANCELLED = 6,         // Cancelado
-  REFUNDED = 7,          // Reembolsado
+  PENDING = 1, // Pedido criado, aguardando pagamento
+  PROCESSING = 2, // Pagamento em análise (PIX, boleto)
+  PAID = 3, // Pagamento aprovado/confirmado
+  SHIPPED = 4, // Enviado ao transportador
+  DELIVERED = 5, // Entrega confirmada
+  CANCELLED = 6, // Cancelado
+  REFUNDED = 7, // Reembolsado
   AWAITING_SHIPMENT = 8, // Pago, preparando envio (separação em estoque)
 }
 
@@ -32,28 +32,28 @@ export enum OrderStatus {
  * Usado por services para disparar o evento correto após cada transição.
  */
 export const ORDER_STATUS_EVENTS: Record<number, OrderDomainEvent> = {
-  [OrderStatus.PENDING]:           OrderDomainEvent.ORDER_CREATED,
-  [OrderStatus.PROCESSING]:        OrderDomainEvent.PAYMENT_PENDING,
-  [OrderStatus.PAID]:              OrderDomainEvent.PAYMENT_APPROVED,
+  [OrderStatus.PENDING]: OrderDomainEvent.ORDER_CREATED,
+  [OrderStatus.PROCESSING]: OrderDomainEvent.PAYMENT_PENDING,
+  [OrderStatus.PAID]: OrderDomainEvent.PAYMENT_APPROVED,
   [OrderStatus.AWAITING_SHIPMENT]: OrderDomainEvent.ORDER_AWAITING_SHIPMENT,
-  [OrderStatus.SHIPPED]:           OrderDomainEvent.ORDER_SHIPPED,
-  [OrderStatus.DELIVERED]:         OrderDomainEvent.ORDER_DELIVERED,
-  [OrderStatus.CANCELLED]:         OrderDomainEvent.ORDER_CANCELLED,
-  [OrderStatus.REFUNDED]:          OrderDomainEvent.ORDER_REFUNDED,
+  [OrderStatus.SHIPPED]: OrderDomainEvent.ORDER_SHIPPED,
+  [OrderStatus.DELIVERED]: OrderDomainEvent.ORDER_DELIVERED,
+  [OrderStatus.CANCELLED]: OrderDomainEvent.ORDER_CANCELLED,
+  [OrderStatus.REFUNDED]: OrderDomainEvent.ORDER_REFUNDED,
 };
 
 /**
  * Máquina de estados: define quais transições são permitidas por papel
  */
 export const VALID_TRANSITIONS: Record<number, number[]> = {
-  [OrderStatus.PENDING]:           [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
-  [OrderStatus.PROCESSING]:        [OrderStatus.PAID, OrderStatus.CANCELLED],
-  [OrderStatus.PAID]:              [OrderStatus.AWAITING_SHIPMENT, OrderStatus.SHIPPED, OrderStatus.REFUNDED],
+  [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PAID]: [OrderStatus.AWAITING_SHIPMENT, OrderStatus.SHIPPED, OrderStatus.REFUNDED],
   [OrderStatus.AWAITING_SHIPMENT]: [OrderStatus.SHIPPED, OrderStatus.REFUNDED],
-  [OrderStatus.SHIPPED]:           [OrderStatus.DELIVERED, OrderStatus.REFUNDED],
-  [OrderStatus.DELIVERED]:         [OrderStatus.REFUNDED],
-  [OrderStatus.CANCELLED]:         [], // Terminal
-  [OrderStatus.REFUNDED]:          [], // Terminal
+  [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.REFUNDED],
+  [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
+  [OrderStatus.CANCELLED]: [], // Terminal
+  [OrderStatus.REFUNDED]: [], // Terminal
 };
 
 @Entity('orders')
@@ -154,7 +154,7 @@ export class Order {
    * Sanitiza a saída do pedido para evitar vazamento de chaves internas.
    */
   toJSON() {
-    const { idempotencyKey, paymentId, ...order } = this;
+    const { idempotencyKey: _unused, paymentId, ...order } = this;
     return {
       ...order,
       paymentId: paymentId ? `****${paymentId.slice(-4)}` : undefined,

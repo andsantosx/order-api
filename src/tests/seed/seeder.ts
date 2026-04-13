@@ -7,7 +7,11 @@ import { Product } from '../../api/entities/Product';
 import { ProductImage } from '../../api/entities/ProductImage';
 import { ProductSize } from '../../api/entities/ProductSize';
 import { Status } from '../../api/entities/Status';
+import { Order } from '../../api/entities/Order';
+import { OrderItem } from '../../api/entities/OrderItem';
+import { ShippingAddress } from '../../api/entities/ShippingAddress';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { log } from '../../config/logger';
 
 export async function seedDatabase(dataSource: DataSource) {
@@ -25,6 +29,9 @@ export async function seedDatabase(dataSource: DataSource) {
     const imageRepo = dataSource.getRepository(ProductImage);
     const productSizeRepo = dataSource.getRepository(ProductSize);
     const statusRepo = dataSource.getRepository(Status);
+    const orderRepo = dataSource.getRepository(Order);
+    const orderItemRepo = dataSource.getRepository(OrderItem);
+    const shippingAddressRepo = dataSource.getRepository(ShippingAddress);
 
     // 0. Seed Statuses (PREREQUISITE for orders/contacts)
     const statuses = [
@@ -35,6 +42,7 @@ export async function seedDatabase(dataSource: DataSource) {
       { id: 5, name: 'DELIVERED', label: 'Entregue', type: 'ORDER' },
       { id: 6, name: 'CANCELLED', label: 'Cancelado', type: 'ORDER' },
       { id: 7, name: 'REFUNDED', label: 'Reembolsado', type: 'ORDER' },
+      { id: 8, name: 'AWAITING_SHIPMENT', label: 'Aguardando Envio', type: 'ORDER' },
       { id: 101, name: 'PENDING', label: 'Novo', type: 'CONTACT' },
       { id: 102, name: 'REPLIED', label: 'Respondido', type: 'CONTACT' },
       { id: 103, name: 'CLOSED', label: 'Fechado', type: 'CONTACT' },
@@ -252,6 +260,55 @@ export async function seedDatabase(dataSource: DataSource) {
             }
           }
         }
+      }
+    }
+
+    // 6. Seed Sample Orders
+    const john = await userRepo.findOneBy({ email: 'john@example.com' });
+    const nikeAirForce = await productRepo.findOneBy({ name: 'Nike Air Force 1' });
+
+    if (john && nikeAirForce) {
+      const orderIdempotencyKey = uuidv4();
+      const existingOrder = await orderRepo.findOneBy({ idempotencyKey: orderIdempotencyKey });
+
+      if (!existingOrder) {
+        // Create Sample Order for John Doe
+        const order = orderRepo.create({
+          user: john,
+          totalAmount: nikeAirForce.priceCents,
+          currency: 'BRL',
+          idempotencyKey: uuidv4(),
+          statusId: 3, // PAID
+          phone: john.phone,
+          acceptedTerms: true,
+          paymentMethod: 'pix',
+          installments: 1,
+        });
+
+        const savedOrder = await orderRepo.save(order);
+
+        // Order Item
+        await orderItemRepo.save(
+          orderItemRepo.create({
+            order: savedOrder,
+            product: nikeAirForce,
+            quantity: 1,
+            unitPrice: nikeAirForce.priceCents,
+          }),
+        );
+
+        // Shipping Address
+        await shippingAddressRepo.save(
+          shippingAddressRepo.create({
+            order: savedOrder,
+            street: 'Rua das Flores, 123',
+            city: 'São Paulo',
+            state: 'SP',
+            zipCode: '01234-567',
+          }),
+        );
+
+        log.info(`Created sample Order for John Doe: ${savedOrder.id}`);
       }
     }
 

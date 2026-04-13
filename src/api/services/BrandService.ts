@@ -134,7 +134,10 @@ export class BrandService {
     if (data.slug && data.slug !== brand.slug) {
       const existingBrand = await this.brandRepository.findOneBy({ slug: data.slug });
       if (existingBrand) {
-        log.warn('Tentativa de atualizar marca com slug duplicado', { slug: data.slug, brandId: id });
+        log.warn('Tentativa de atualizar marca com slug duplicado', {
+          slug: data.slug,
+          brandId: id,
+        });
         throw new AppError('Já existe uma marca com este slug', HTTP_STATUS.BAD_REQUEST);
       }
     }

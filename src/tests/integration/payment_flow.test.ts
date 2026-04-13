@@ -17,7 +17,6 @@ import { Order, OrderStatus } from '../../api/entities/Order';
 import { User } from '../../api/entities/User';
 import { Product } from '../../api/entities/Product';
 import { ProductSize } from '../../api/entities/ProductSize';
-import { Size } from '../../api/entities/Size';
 import { log } from '../../config/logger';
 import { seedStatuses } from '../utils/seedStatuses';
 
@@ -26,7 +25,6 @@ jest.setTimeout(60000);
 describe('Payment Flow Integration (Mercado Pago)', () => {
   let token: string;
   let orderId: string;
-  let userId: string;
 
   beforeAll(async () => {
     try {
@@ -50,7 +48,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
           acceptedTerms: true,
         }),
       );
-      userId = user.id;
+      // userId was unused and removed
 
       // Seed a product for the test
       const productRepo = TestDataSource.getRepository(Product);
@@ -94,7 +92,13 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
       .post('/api/orders')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        items: [{ productId: (await TestDataSource.getRepository('Product').findOneBy({}))?.id, quantity: 1, size: 'M' }],
+        items: [
+          {
+            productId: (await TestDataSource.getRepository('Product').findOneBy({}))?.id,
+            quantity: 1,
+            size: 'M',
+          },
+        ],
         shippingAddress: {
           zipCode: '01001-000',
           street: 'Rua de Teste Longa',
