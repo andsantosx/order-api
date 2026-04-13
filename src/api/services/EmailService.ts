@@ -1,8 +1,6 @@
 import Mailjet from 'node-mailjet';
 import { env } from '../../config/env';
 import winston from 'winston';
-import fs from 'fs';
-import path from 'path';
 
 /**
  * Interfaces para tipos internos do EmailService
@@ -41,27 +39,11 @@ interface IEmailOrder {
  */
 export class EmailService {
   private mailjet: Mailjet;
-  private logoBase64: string = '';
-
   constructor() {
     this.mailjet = new Mailjet({
       apiKey: env.MAILJET_API_KEY,
       apiSecret: env.MAILJET_API_SECRET,
     });
-
-    // Carregar a imagem da empresa para anexar via CID
-    try {
-      const logoPath = path.join(process.cwd(), 'order.png');
-      if (fs.existsSync(logoPath)) {
-        this.logoBase64 = fs.readFileSync(logoPath).toString('base64');
-        winston.info('🎨 EmailService: Imagem order.png carregada com sucesso para os e-mails.');
-      } else {
-        winston.warn('⚠️ EmailService: Imagem order.png NÃO encontrada no diretório raiz.');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro desconhecido';
-      winston.error(`❌ EmailService: Erro crítico ao carregar order.png: ${message}`);
-    }
   }
 
   /**
@@ -80,8 +62,8 @@ export class EmailService {
     // Botão de Call to Action
     const ctaHtml =
       ctaText && ctaUrl
-        ? `<div style="margin-top: 40px; text-align: left;">
-          <a href="${ctaUrl}" style="background-color: #1A1A1A; color: #ffffff !important; padding: 18px 36px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500; display: inline-block; letter-spacing: 0.1em; text-transform: uppercase;">
+        ? `<div style="margin-top: 48px; text-align: left;">
+          <a href="${ctaUrl}" style="background-color: #5A4373; color: #ffffff !important; padding: 18px 35px; text-decoration: none; border-radius: 12px; font-size: 15px; font-weight: 600; display: inline-block; transition: background-color 0.2s; box-shadow: 0 4px 12px rgba(90, 67, 115, 0.2);">
             ${ctaText}
           </a>
         </div>`
@@ -89,8 +71,8 @@ export class EmailService {
 
     // Seção de Observações (Notas)
     const notesHtml = notes
-      ? `<div style="margin-top: 35px; padding: 25px; background-color: #FAFAFA; border-left: 2px solid #1A1A1A; font-size: 14px; color: #555555; line-height: 1.6;">
-          <strong style="color: #1A1A1A; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">Mensagem do Sistema / Notas:</strong>
+      ? `<div style="margin-top: 40px; padding: 24px; background-color: #F3E9FF; border-left: 4px solid #5A4373; border-radius: 16px; font-size: 14px; color: #444444; line-height: 1.6;">
+          <strong style="color: #5A4373; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Destaque</strong>
           ${notes}
         </div>`
       : '';
@@ -99,18 +81,18 @@ export class EmailService {
     let itemsHtml = '';
     if (items && items.length > 0) {
       itemsHtml = `
-        <div style="margin-top: 45px; border-top: 1px solid #EEEEEE; padding-top: 30px;">
-          <strong style="font-size: 11px; color: #A0A0A0; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 20px;">Resumo do Pedido</strong>
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 14px; color: #4A4A4A;">
+        <div style="margin-top: 50px; border-top: 1px solid #EEEEEE; padding-top: 30px;">
+          <strong style="font-size: 11px; color: #999999; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 24px;">Resumo do Pedido</strong>
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 15px; color: #111111;">
             ${items
               .map(
                 (item) => `
               <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #F9F9F9;">
-                  <span style="color: #1A1A1A; font-weight: 500;">${item.product?.name || 'Produto'}</span><br>
-                  <span style="font-size: 12px; color: #A0A0A0;">Qtd: ${item.quantity}</span>
+                <td style="padding: 16px 0; border-bottom: 1px solid #F0F0F0;">
+                  <span style="color: #111111; font-weight: 600;">${item.product?.name || 'Produto'}</span><br>
+                  <span style="font-size: 13px; color: #666666;">Qtd: ${item.quantity}</span>
                 </td>
-                <td align="right" style="padding: 12px 0; border-bottom: 1px solid #F9F9F9; color: #1A1A1A;">
+                <td align="right" style="padding: 16px 0; border-bottom: 1px solid #F0F0F0; color: #111111; font-weight: 700;">
                   ${((item.unitPrice || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>
               </tr>
@@ -129,47 +111,47 @@ export class EmailService {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Playfair+Display:ital,wght@1,700&display=swap');
             
             @media only screen and (max-width: 600px) {
+              .outer-td { padding: 0 !important; }
               .main-card {
-                padding: 40px 25px !important;
+                padding: 50px 30px !important;
                 border-radius: 0 !important;
               }
-              .logo-td {
-                padding: 0 0 25px 0 !important;
-              }
-              .title-h1 {
-                font-size: 28px !important;
-              }
+              .header-td { padding: 30px 30px 10px 30px !important; }
+              .footer-td { padding: 40px 30px 60px 30px !important; }
+              .title-h1 { font-size: 28px !important; }
             }
           </style>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #F8F9FA; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1A1A1A; -webkit-font-smoothing: antialiased;">
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8F9FA;">
+        <body style="margin: 0; padding: 0; background-color: #F5F5F7; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F5F5F7;">
             <tr>
-              <td align="center" style="padding: 40px 15px;">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px;">
-                  <!-- Header Logo -->
+              <td align="center" class="outer-td" style="padding: 50px 0;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #F5F5F7;">
+                  <!-- Header Logo Area (White) -->
                   <tr>
-                    <td align="left" class="logo-td" style="padding: 0 0 35px 0;">
-                      <img src="cid:company-logo" alt="Order" width="140" style="width: 140px; height: auto; display: block; border: 0;">
+                    <td align="left" class="header-td" style="padding: 0 0 30px 0;">
+                      <a href="${env.FRONTEND_URL}" style="text-decoration: none;">
+                        <span style="font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700; font-style: italic; color: #5A4373; letter-spacing: -0.03em;">order</span>
+                      </a>
                     </td>
                   </tr>
                   
-                  <!-- Main Content Card -->
+                  <!-- Main Content Card (Light) -->
                   <tr>
-                    <td class="main-card" style="background-color: #ffffff; border-radius: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.03); border: 1px solid #F0F0F0;">
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <td align="center" style="padding: 0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" class="main-card" style="background-color: #FFFFFF; border-radius: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.03);">
                         <tr>
                           <td style="padding: 60px 50px;">
                             <!-- Heading -->
-                            <h1 class="title-h1" style="font-size: 34px; font-weight: 600; line-height: 1.15; margin: 0 0 32px 0; letter-spacing: -0.04em; color: #1A1A1A;">
+                            <h1 class="title-h1" style="font-size: 34px; font-weight: 600; line-height: 1.25; margin: 0 0 30px 0; letter-spacing: -0.04em; color: #111111;">
                               ${title}
                             </h1>
                             
                             <!-- Body Text -->
-                            <div style="font-size: 17px; line-height: 1.75; color: #333333; font-weight: 400; letter-spacing: -0.01em;">
+                            <div style="font-size: 17px; line-height: 1.6; color: #444444; font-weight: 400; letter-spacing: -0.01em;">
                               ${content}
                             </div>
 
@@ -178,47 +160,43 @@ export class EmailService {
                             ${ctaHtml}
                           </td>
                         </tr>
-                        
-                        <!-- Footer Section -->
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Footer Area (Light Minimal) -->
+                  <tr>
+                    <td class="footer-td" style="padding: 50px 50px 80px 50px;">
+                      <div style="font-size: 13px; color: #999999; line-height: 1.8; margin-bottom: 40px; font-weight: 400;">
+                        Este é um e-mail automático da Order para sua segurança. <strong>Não responda esta mensagem.</strong>
+                      </div>
+
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
                         <tr>
-                          <td style="padding: 0 50px 60px 50px;">
-                            <div style="border-top: 1px solid #F5F5F5; padding-top: 45px;">
-                              <!-- Security Info -->
-                              <div style="font-size: 13px; color: #888888; line-height: 1.6; font-weight: 400; margin-bottom: 35px;">
-                                Esta é uma mensagem automática de segurança. Por favor, <strong>não responda este e-mail</strong>.
-                              </div>
-
-                              <!-- Support Grid -->
-                              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                <tr>
-                                  <td style="padding-bottom: 30px;">
-                                    <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #1A1A1A; text-transform: uppercase; letter-spacing: 0.08em;">Suporte e Contato</p>
-                                    <div style="font-size: 14px; color: #555555; line-height: 1.8;">
-                                      <a href="mailto:orderstoreco@gmail.com" style="color: #4A3B63; text-decoration: none; font-weight: 500;">orderstoreco@gmail.com</a><br>
-                                      <a href="https://wa.me/554898192343" style="color: #4A3B63; text-decoration: none; font-weight: 500;">WhatsApp +55 48 9819-2343</a>
-                                      <div style="color: #999; font-size: 12px; margin-top: 4px;">Dias úteis, 08h às 18h.</div>
-                                    </div>
-                                  </td>
-                                </tr>
-                              </table>
-
-                              <!-- Branding & Legal -->
-                              <div style="margin-top: 10px; padding-top: 30px; border-top: 1px dashed #EEEEEE;">
-                                <div style="display: inline-block; margin-bottom: 20px;">
-                                  <a href="https://www.instagram.com/order.sc" target="_blank" style="text-decoration: none;">
-                                    <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="IG" width="32" style="filter: grayscale(100%) contrast(0); opacity: 0.5;">
-                                  </a>
-                                </div>
-                                <div style="font-size: 11px; color: #B0B0B0; letter-spacing: 0.12em; line-height: 2; text-transform: uppercase;">
-                                  © ${year} ORDER. CO — CRICIÚMA, SC.<br>
-                                  A SIMPLICIDADE É O AUGE DA SOFISTICAÇÃO.<br>
-                                  <a href="${env.FRONTEND_URL}/manifesto" style="color: #1A1A1A; text-decoration: none; border-bottom: 1px solid #CCC; padding-bottom: 1px;">NOSSO MANIFESTO</a>
-                                </div>
-                              </div>
+                          <td style="padding-bottom: 30px;">
+                            <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 700; color: #111111; text-transform: uppercase; letter-spacing: 0.1em;">Suporte</p>
+                            <div style="font-size: 14px; color: #666666; line-height: 1.8;">
+                              <a href="mailto:orderstoreco@gmail.com" style="color: #5A4373; text-decoration: none; font-weight: 600;">orderstoreco@gmail.com</a><br>
+                              <a href="https://wa.me/554898192343" style="color: #5A4373; text-decoration: none; font-weight: 600;">WhatsApp +55 48 9819-2343</a>
                             </div>
                           </td>
                         </tr>
                       </table>
+
+                      <div style="margin-top: 15px;">
+                        <div style="margin-bottom: 25px;">
+                          <a href="https://www.instagram.com/order.sc" target="_blank" style="text-decoration: none; margin-right: 15px;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="IG" width="20" style="filter: grayscale(100%); opacity: 0.3;">
+                          </a>
+                          <a href="${env.FRONTEND_URL}" target="_blank" style="text-decoration: none;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/711/711100.png" alt="WEB" width="20" style="filter: grayscale(100%); opacity: 0.3;">
+                          </a>
+                        </div>
+                        <div style="font-size: 11px; color: #BBBBBB; letter-spacing: 0.05em; line-height: 2;">
+                          © ${year} ORDER. CO — CRICIÚMA, SANTA CATARINA.<br>
+                          <a href="${env.FRONTEND_URL}/privacidade" style="color: #999999; text-decoration: none;">Privacidade</a> &bull; <a href="${env.FRONTEND_URL}/termos" style="color: #999999; text-decoration: none;">Termos</a>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </table>
@@ -247,16 +225,6 @@ export class EmailService {
             TextPart: text || subject,
             HTMLPart: html,
             CustomID: `order-api-${Date.now()}`,
-            InlinedAttachments: this.logoBase64
-              ? [
-                  {
-                    ContentType: 'image/png',
-                    Filename: 'order.png',
-                    Base64Content: this.logoBase64,
-                    ContentID: 'company-logo',
-                  },
-                ]
-              : [],
           },
         ],
       });

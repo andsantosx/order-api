@@ -113,6 +113,12 @@ export class PaymentService {
 
       const result = response as unknown as MercadoPagoPaymentResponse;
 
+      log.info('[PaymentService] MP response received', {
+        orderId: order.id,
+        status: result.status,
+        statusDetail: result.status_detail,
+      });
+
       await this.syncOrderWithPaymentResult(order, result);
 
       return PaymentMapper.toFrontendResponse(result);

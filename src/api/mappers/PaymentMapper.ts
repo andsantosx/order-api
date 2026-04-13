@@ -34,7 +34,6 @@ export class PaymentMapper {
       external_reference: order.id.toString(),
       notification_url: data.notificationUrl || process.env.MERCADOPAGO_WEBHOOK_URL,
       statement_descriptor: 'ORDERSC PAY',
-      binary_mode: true,
 
       payer: {
         email: payer.email,
