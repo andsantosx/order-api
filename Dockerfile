@@ -31,7 +31,6 @@ RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/.env.example ./.env
-COPY --from=builder /app/order.png ./order.png
 
 EXPOSE 3000
 
