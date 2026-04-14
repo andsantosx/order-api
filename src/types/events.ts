@@ -9,6 +9,8 @@ export interface OrderEventPayload {
   notes?: string;
   previousStatusId?: number;
   newStatusId?: number;
+  generatedPassword?: string;
+  paymentMethod?: string;
 }
 
 export interface PaymentRejectedEventPayload extends OrderEventPayload {

@@ -268,6 +268,7 @@ export class OrderService {
     shippingAddressData: ShippingAddressData,
     acceptedTerms: boolean,
     idempotencyKey?: string,
+    paymentMethod?: string,
   ) {
     this.validateOrderInput(
       userId,
@@ -335,6 +336,8 @@ export class OrderService {
       userId: user.id,
       totalAmount,
       isAccountLinked: !userId && guestEmail && !tempPassword,
+      generatedPassword: tempPassword,
+      paymentMethod: paymentMethod,
       notes: 'Pedido criado',
     });
 

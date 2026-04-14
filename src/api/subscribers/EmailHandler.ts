@@ -7,7 +7,6 @@ import {
   OrderEventPayload,
   PaymentRejectedEventPayload,
   OrderShippedEventPayload,
-  UserGuestCreatedEventPayload,
 } from '../../types/events';
 
 /**
@@ -28,15 +27,36 @@ export class EmailHandler {
       async (data: OrderEventPayload & { isAccountLinked?: boolean }) => {
         try {
           const order = await this.orderService.getOne(data.orderId, undefined, true);
-          await this.emailService.sendOrderConfirmation(
-            order.user?.email || '',
-            order.user?.name || 'Cliente',
-            order.id,
-            order.totalAmount,
-            data.notes,
-            order.items,
-            data.isAccountLinked,
-          );
+
+          // Lógica Minimalista: Só envia e-mail de "Pedido Recebido" se for Boleto (bolbradesco)
+          // Para Cartão e Pix, ele receberá direto o e-mail de "Pagamento Aprovado" ou "Recusado".
+          if (data.paymentMethod === 'bolbradesco') {
+            await this.emailService.sendOrderConfirmation(
+              order.user?.email || '',
+              order.user?.name || 'Cliente',
+              order.id,
+              order.totalAmount,
+              data.notes,
+              order.items,
+              data.isAccountLinked,
+              data.generatedPassword, // Senha unificada aqui
+            );
+          } else if (data.generatedPassword) {
+            // Se for Cartão/Pix mas for um NOVO GUEST, enviamos o e-mail de boas-vindas separado?
+            // Não, o usuário quer unificar. Mas se não enviarmos o Pedido Recebido,
+            // ele só receberá a senha quando o pagamento aprovar.
+            // Decisão: Se for novo Guest, sempre enviamos o Pedido Recebido para ele ter a senha de imediato.
+            await this.emailService.sendOrderConfirmation(
+              order.user?.email || '',
+              order.user?.name || 'Cliente',
+              order.id,
+              order.totalAmount,
+              data.notes,
+              order.items,
+              data.isAccountLinked,
+              data.generatedPassword,
+            );
+          }
         } catch (error: unknown) {
           winston.error(
             `EmailHandler Error (ORDER_CREATED): ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -45,6 +65,7 @@ export class EmailHandler {
       },
     );
 
+    /* 
     // 2. Pagamento Pendente / Em Processamento (Gateway)
     domainEvents.on(OrderDomainEvent.PAYMENT_PENDING, async (data: OrderEventPayload) => {
       try {
@@ -62,6 +83,7 @@ export class EmailHandler {
         );
       }
     });
+    */
 
     // 3. Pagamento Aprovado
     domainEvents.on(OrderDomainEvent.PAYMENT_APPROVED, async (data: OrderEventPayload) => {
@@ -128,7 +150,8 @@ export class EmailHandler {
       }
     });
 
-    // 6. Pedido Entregue
+    /*
+    // 6. Pedido Entregue (Desativado conforme solicitação: Minimalismo)
     domainEvents.on(OrderDomainEvent.ORDER_DELIVERED, async (data: OrderEventPayload) => {
       try {
         const order = await this.orderService.getOne(data.orderId, undefined, true);
@@ -145,6 +168,7 @@ export class EmailHandler {
         );
       }
     });
+    */
 
     // 7. Pedido Cancelado
     domainEvents.on(OrderDomainEvent.ORDER_CANCELLED, async (data: OrderEventPayload) => {
@@ -182,7 +206,8 @@ export class EmailHandler {
       }
     });
 
-    // 9. Criação de Conta Automática (Guest Checkout)
+    /*
+    // 9. Criação de Conta Automática (GUEST) - UNIFICADO NO ORDER_CREATED
     domainEvents.on(
       OrderDomainEvent.USER_GUEST_CREATED,
       async (data: UserGuestCreatedEventPayload) => {
@@ -195,6 +220,7 @@ export class EmailHandler {
         }
       },
     );
+    */
 
     winston.info('📧 EmailHandler: Automação completa de e-mails transacionais ativada.');
   }

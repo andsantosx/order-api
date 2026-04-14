@@ -266,6 +266,7 @@ export class EmailService {
     notes?: string,
     items?: IEmailItem[],
     isAccountLinked: boolean = false,
+    generatedPassword?: string,
   ): Promise<void> {
     const formattedTotal = (totalAmount / 100).toLocaleString('pt-BR', {
       style: 'currency',
@@ -280,11 +281,26 @@ export class EmailService {
       </div>`;
     }
 
+    let passwordNotice = '';
+    if (generatedPassword) {
+      passwordNotice = `
+      <div style="margin-top: 30px; padding: 25px; background-color: #FAFAFA; border: 1px dashed #5A4373; border-radius: 16px;">
+        <strong style="color: #5A4373; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; display: block; margin-bottom: 12px;">Sua Nova Conta</strong>
+        <p style="margin: 0; font-size: 15px; color: #444;">Para acompanhar seu pedido, criamos uma conta automática para você:</p>
+        <div style="margin-top: 15px; font-size: 14px; color: #111;">
+          <strong>E-mail: ${to}</strong><br>
+          <strong>Senha: <span style="font-family: monospace; font-size: 16px;">${generatedPassword}</span></strong>
+        </div>
+        <p style="margin-top: 15px; margin-bottom: 0; font-size: 13px; color: #666;">Recomendamos alterar a senha no seu primeiro acesso.</p>
+      </div>`;
+    }
+
     const content = `
       Olá, ${name}.<br><br>
       Seu pedido foi registrado em nosso sistema e está aguardando a confirmação do pagamento.<br><br>
       <strong>Valor Total: ${formattedTotal}</strong>
       ${linkNotice}
+      ${passwordNotice}
     `;
     const text = `Pedido #${orderId.slice(0, 8)} recebido. Total: ${formattedTotal}.`;
     await this.send(

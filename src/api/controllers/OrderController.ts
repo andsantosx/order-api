@@ -96,6 +96,7 @@ export class OrderController {
       shippingAddress,
       acceptedTerms,
       idempotencyKey,
+      paymentMethod,
     } = req.body;
     const userId = req.user?.userId;
     const result = await this.orderService.create(
@@ -108,6 +109,7 @@ export class OrderController {
       shippingAddress,
       acceptedTerms,
       idempotencyKey,
+      paymentMethod,
     );
     res.status(HTTP_STATUS.CREATED).json(result);
   }
