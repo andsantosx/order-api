@@ -2,6 +2,7 @@ import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderDomainEvent } from '../../types/domain-enums';
 import { EmailService } from '../services/EmailService';
 import { OrderService } from '../services/OrderService';
+import { OrderStatus } from '../entities/Order';
 import winston from 'winston';
 import {
   OrderEventPayload,
@@ -89,17 +90,25 @@ export class EmailHandler {
     domainEvents.on(OrderDomainEvent.PAYMENT_APPROVED, async (data: OrderEventPayload) => {
       try {
         const order = await this.orderService.getOne(data.orderId, undefined, true);
+        const isRedundant = data.previousStatusId === OrderStatus.PAID;
 
-        // E-mail para o Cliente
-        await this.emailService.sendPaymentApproved(
-          order.user?.email || '',
-          order.user?.name || 'Cliente',
-          order.id,
-          data.notes,
-          order.items,
-        );
+        // E-mail para o Cliente (Evita duplicidade em caso de redundância do Gateway/Webhook)
+        if (!isRedundant) {
+          await this.emailService.sendPaymentApproved(
+            order.user?.email || '',
+            order.user?.name || 'Cliente',
+            order.id,
+            data.notes,
+            order.items,
+          );
+        } else {
+          winston.info(
+            `EmailHandler: Pulando e-mail do cliente para Pedido #${order.id} (Redundância detectada)`,
+          );
+        }
 
-        // Notificação Interna para Administração (Controle de Estoque/Logística)
+        // Notificação Interna para Administração (Garantia de Entrega)
+        // Sempre tentamos enviar a notificação interna como redundância caso tenha falhado antes
         await this.emailService.sendInternalOrderNotification(order);
       } catch (error: unknown) {
         winston.error(
