@@ -157,6 +157,7 @@ export class PaymentService {
       paymentId: result.id?.toString(),
       paymentMethod: result.payment_method_id,
       installments: result.installments || 1,
+      cardLastFour: result.card?.last_four_digits,
     };
 
     if (newStatus === OrderStatus.CANCELLED) {

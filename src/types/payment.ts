@@ -144,6 +144,8 @@ export interface PaymentRequestBody {
       zip_code: string;
       street_name: string;
       street_number: string;
+      city?: string;
+      state_name?: string;
     };
   };
   additional_info?: {
@@ -160,6 +162,8 @@ export interface PaymentRequestBody {
         zip_code: string;
         street_name: string;
         street_number: string;
+        city?: string;
+        state_name?: string;
       };
     };
   };
@@ -229,7 +233,14 @@ export interface MercadoPagoPaymentResponse {
       qr_code?: string;
       qr_code_base64?: string;
       ticket_url?: string;
+      external_resource_url?: string;
     };
   };
   date_of_expiration?: string;
+  card?: {
+    last_four_digits?: string;
+    first_six_digits?: string;
+    expiration_month?: number;
+    expiration_year?: number;
+  };
 }

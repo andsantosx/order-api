@@ -48,6 +48,8 @@ export class PaymentMapper {
               zip_code: payer.address.zipCode || shipping?.zipCode || '',
               street_name: payer.address.streetName || shipping?.street || '',
               street_number: payer.address.streetNumber || shipping?.number || 'SN',
+              city: payer.address.cityName || shipping?.city || '',
+              state_name: shipping?.state || '',
             }
           : undefined,
       },
@@ -69,6 +71,8 @@ export class PaymentMapper {
                 zip_code: payer.address.zipCode || shipping?.zipCode || '',
                 street_name: payer.address.streetName || shipping?.street || '',
                 street_number: payer.address.streetNumber || shipping?.number || 'SN',
+                city: payer.address.cityName || shipping?.city || '',
+                state_name: shipping?.state || '',
               }
             : undefined,
         },
