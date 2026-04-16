@@ -10,16 +10,26 @@ export class ProductController {
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort } =
+      const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort, sortBy } =
         req.query;
       const pageNum = page ? parseInt(page as string) : 1;
       const limitNum = limit ? parseInt(limit as string) : 20;
 
-      // Helper to ensure array
+      // Helper to ensure array and handle comma separated strings
       const toArray = (val: unknown): string[] | undefined => {
         if (!val) return undefined;
-        if (typeof val === 'string') return [val];
-        if (Array.isArray(val)) return val.filter((v): v is string => typeof v === 'string');
+        if (typeof val === 'string') {
+          return val.includes(',') ? val.split(',') : [val];
+        }
+        if (Array.isArray(val)) {
+          return val.reduce((acc: string[], curr) => {
+            if (typeof curr === 'string') {
+              if (curr.includes(',')) acc.push(...curr.split(','));
+              else acc.push(curr);
+            }
+            return acc;
+          }, []);
+        }
         return undefined;
       };
 
@@ -27,7 +37,7 @@ export class ProductController {
         categories: toArray(categories),
         brands: toArray(brands),
         sizes: toArray(sizes),
-        sortBy: sort as string,
+        sortBy: (sort || sortBy) as string,
         page: pageNum,
         limit: limitNum,
         search: search as string,

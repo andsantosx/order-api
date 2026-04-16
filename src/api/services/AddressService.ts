@@ -12,6 +12,8 @@ import { isValidZipCode } from '../../utils/validators';
  */
 export interface AddressData {
   street: string;
+  number: string;
+  reference?: string;
   city: string;
   state: string;
   zipCode: string;
@@ -111,6 +113,8 @@ export class AddressService {
     const address = this.addressRepository.create({
       user,
       street: sanitized.street,
+      number: sanitized.number,
+      reference: sanitized.reference,
       city: sanitized.city,
       state: sanitized.state,
       zipCode: sanitized.zipCode,

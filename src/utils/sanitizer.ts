@@ -112,12 +112,16 @@ export function sanitizeProductData(data: {
  */
 export function sanitizeAddressData(data: {
   street?: string;
+  number?: string;
+  reference?: string;
   city?: string;
   state?: string;
   zipCode?: string;
   country?: string;
 }): {
   street?: string;
+  number?: string;
+  reference?: string;
   city?: string;
   state?: string;
   zipCode?: string;
@@ -125,6 +129,8 @@ export function sanitizeAddressData(data: {
 } {
   const sanitized: {
     street?: string;
+    number?: string;
+    reference?: string;
     city?: string;
     state?: string;
     zipCode?: string;
@@ -136,6 +142,14 @@ export function sanitizeAddressData(data: {
       normalizeSpaces(stripHtml(data.street)),
       VALIDATION.MAX_STREET_LENGTH,
     );
+  }
+
+  if (data.number !== undefined) {
+    sanitized.number = truncate(normalizeSpaces(stripHtml(data.number)), 20);
+  }
+
+  if (data.reference !== undefined) {
+    sanitized.reference = truncate(normalizeSpaces(stripHtml(data.reference)), 255);
   }
 
   if (data.city !== undefined) {

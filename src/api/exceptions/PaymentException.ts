@@ -21,8 +21,8 @@ export class PaymentProcessingException extends PaymentException {
 }
 
 export class PaymentValidationException extends PaymentException {
-  constructor(message: string) {
-    super(message, HTTP_STATUS.BAD_REQUEST);
+  constructor(message: string, code?: string) {
+    super(message, HTTP_STATUS.BAD_REQUEST, code);
     this.name = 'PaymentValidationException';
   }
 }

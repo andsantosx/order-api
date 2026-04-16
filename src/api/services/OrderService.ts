@@ -16,7 +16,7 @@ import { sanitizeAddressData } from '../../utils/sanitizer';
 import { isValidZipCode } from '../../utils/validators';
 import { CPF } from '../domain/value-objects/CPF';
 import { ProductSize } from '../entities/ProductSize';
-import { ORDER, MONEY, SHIPPING, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { ORDER, MONEY, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderHistoryService } from './OrderHistoryService';
 import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
@@ -26,6 +26,8 @@ import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
  */
 interface ShippingAddressData {
   street: string;
+  number: string;
+  reference?: string;
   city: string;
   state: string;
   zipCode?: string;
@@ -403,8 +405,7 @@ export class OrderService {
       sizeNamesMap.set(item.size, size.name);
     }
 
-    const shippingCost =
-      subtotal >= SHIPPING.FREE_SHIPPING_THRESHOLD_CENTS ? 0 : SHIPPING.FIXED_SHIPPING_COST_CENTS;
+    const shippingCost = 0;
     const totalAmount = subtotal + shippingCost;
 
     if (totalAmount < MONEY.MIN_ORDER_VALUE_CENTS)
@@ -539,6 +540,8 @@ export class OrderService {
       const address = manager.create(ShippingAddress, {
         order: savedOrder,
         street: sanitized.street || shippingAddressData.street,
+        number: sanitized.number || shippingAddressData.number,
+        reference: sanitized.reference || shippingAddressData.reference,
         city: sanitized.city || shippingAddressData.city,
         state: sanitized.state || shippingAddressData.state,
         zipCode: sanitized.zipCode || shippingAddressData.zipCode,

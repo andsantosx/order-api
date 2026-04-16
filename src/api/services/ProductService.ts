@@ -161,8 +161,10 @@ export class ProductService {
     }
 
     if (search) {
-      // Case insensitive search
-      qb.andWhere('LOWER(product.name) LIKE :search', { search: `%${search.toLowerCase()}%` });
+      // Case insensitive search in both name and description
+      qb.andWhere('(LOWER(product.name) LIKE :search OR LOWER(product.description) LIKE :search)', {
+        search: `%${search.toLowerCase()}%`,
+      });
     }
 
     if (minPrice !== undefined) {

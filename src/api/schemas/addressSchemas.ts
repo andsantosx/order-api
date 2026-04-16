@@ -16,6 +16,15 @@ export const createAddressSchema = z.object({
         VALIDATION.MAX_STREET_LENGTH,
         `Rua deve ter no máximo ${VALIDATION.MAX_STREET_LENGTH} caracteres`,
       ),
+    number: z
+      .string()
+      .min(1, 'Número é obrigatório')
+      .regex(/^\d+$/, 'O número deve conter apenas dígitos')
+      .max(
+        VALIDATION.MAX_ADDRESS_NUMBER_LENGTH,
+        `Número deve ter no máximo ${VALIDATION.MAX_ADDRESS_NUMBER_LENGTH} caracteres`,
+      ),
+    reference: z.string().max(255, 'Ponto de referência muito longo').optional(),
     city: z
       .string()
       .min(

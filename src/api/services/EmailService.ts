@@ -15,6 +15,8 @@ interface IEmailItem {
 
 interface IEmailAddress {
   street: string;
+  number: string;
+  reference?: string;
   city: string;
   state: string;
   zipCode: string;
@@ -331,7 +333,7 @@ export class EmailService {
       order.shippingAddress && order.shippingAddress.length > 0 ? order.shippingAddress[0] : null;
 
     const addressStr = addr
-      ? `${addr.street}, ${addr.city} - ${addr.state}. CEP: ${addr.zipCode}`
+      ? `${addr.street}, ${addr.number}${addr.reference ? ` (${addr.reference})` : ''}, ${addr.city} - ${addr.state}. CEP: ${addr.zipCode}`
       : 'Não informado';
 
     const content = `
@@ -656,6 +658,51 @@ export class EmailService {
       `Código de Confirmação: ${code}`,
       this.getHtmlTemplate(title, content),
       text,
+    );
+  }
+
+  /**
+   * Envia notificação interna para a administração avisando sobre uma nova mensagem de contato.
+   * Destinatário: orderstoreco@gmail.com
+   */
+  async sendInternalContactNotification(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+  }): Promise<void> {
+    const title = `📩 <span style="color: #4A3B63;">NOVA MENSAGEM DE CONTATO</span>`;
+
+    const content = `
+      <strong>Você recebeu uma nova mensagem através do site!</strong><br><br>
+      <div style="background-color: #FAFAFA; padding: 25px; border-radius: 12px; border: 1px solid #EEEEEE;">
+        <strong style="color: #5A4373; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; display: block; margin-bottom: 12px;">Dados do Remetente</strong>
+        <p style="margin: 0 0 8px 0; font-size: 15px; color: #111;"><strong>Nome:</strong> ${data.name}</p>
+        <p style="margin: 0 0 8px 0; font-size: 15px; color: #111;"><strong>E-mail:</strong> ${data.email}</p>
+        <p style="margin: 0 0 16px 0; font-size: 15px; color: #111;"><strong>Telefone:</strong> ${data.phone || 'Não informado'}</p>
+        
+        <strong style="color: #5A4373; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; display: block; margin-bottom: 12px; border-top: 1px solid #EEEEEE; pt-16 mt-16">Conteúdo da Mensagem</strong>
+        <p style="margin: 0 0 8px 0; font-size: 15px; color: #111;"><strong>Assunto:</strong> ${data.subject}</p>
+        <div style="margin-top: 12px; padding: 15px; background-color: #FFFFFF; border: 1px solid #EEEEEE; border-radius: 8px; color: #444; font-size: 15px; line-height: 1.6;">
+          "${data.message}"
+        </div>
+      </div>
+    `;
+
+    const subject = `[CONTATO SITE] ${data.subject} - ${data.name}`;
+    await this.send(
+      'orderstoreco@gmail.com',
+      'Admin Order Store',
+      subject,
+      this.getHtmlTemplate(
+        title,
+        content,
+        'Ver no Painel Admin',
+        `${env.FRONTEND_URL}/admin/contacts`,
+        'Resposta imediata sugerida',
+      ),
+      `Nova mensagem de ${data.name}: ${data.subject}`,
     );
   }
 }

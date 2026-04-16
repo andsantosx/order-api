@@ -31,6 +31,12 @@ export class UserAddress {
   zipCode!: string;
 
   @Column()
+  number!: string;
+
+  @Column({ nullable: true })
+  reference?: string;
+
+  @Column()
   country!: string;
 
   @CreateDateColumn({ name: 'created_at' })

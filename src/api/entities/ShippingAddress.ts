@@ -22,6 +22,12 @@ export class ShippingAddress {
   @Column({ name: 'zip_code', length: 10 })
   zipCode!: string;
 
+  @Column({ length: 20 })
+  number!: string;
+
+  @Column({ length: 255, nullable: true })
+  reference?: string;
+
   @Column({ length: 60, default: 'Brasil' })
   country!: string;
 }

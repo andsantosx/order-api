@@ -14,6 +14,7 @@ import { PaymentMapper } from '../mappers/PaymentMapper';
 import {
   PaymentProcessingException,
   PaymentRejectedException,
+  PaymentValidationException,
 } from '../exceptions/PaymentException';
 import { AppDataSource } from '../../data-source';
 import { client } from '../../config/mercadopago';
@@ -387,6 +388,19 @@ export class PaymentService {
       throw new PaymentRejectedException(
         this.getFriendlyMessage(err.status_detail as MercadoPagoStatusDetail),
         err.status_detail,
+      );
+    }
+
+    // Capture specific API error messages like "remove_installment"
+    // and convert to 400 Validation Error instead of 500
+    const isInstallmentError = message.toLowerCase().includes('installment');
+
+    if (isInstallmentError || statusCode === 400) {
+      throw new PaymentValidationException(
+        isInstallmentError
+          ? 'O número de parcelas selecionado não é permitido para este cartão.'
+          : message,
+        isInstallmentError ? 'remove_installment' : undefined,
       );
     }
 

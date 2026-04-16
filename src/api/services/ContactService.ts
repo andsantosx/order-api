@@ -27,6 +27,14 @@ export class ContactService {
     });
 
     const saved = await this.contactRepository.save(contactMessage);
+
+    // Enviar notificação interna para a administração
+    try {
+      await this.emailService.sendInternalContactNotification(data);
+    } catch (error: unknown) {
+      console.error('Erro ao enviar e-mail de notificação de contato:', error);
+    }
+
     return this.getOne(saved.id);
   }
 
