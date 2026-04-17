@@ -15,8 +15,10 @@ export interface PayerData {
     zipCode?: string;
     streetName?: string;
     streetNumber?: string;
+    neighborhood?: string;
     cityName?: string;
     stateId?: string;
+    federalUnit?: string;
   };
   phone?: {
     areaCode?: string;
@@ -144,7 +146,9 @@ export interface PaymentRequestBody {
       zip_code: string;
       street_name: string;
       street_number: string;
+      neighborhood?: string;
       city?: string;
+      federal_unit?: string;
       state_name?: string;
     };
   };
@@ -162,7 +166,9 @@ export interface PaymentRequestBody {
         zip_code: string;
         street_name: string;
         street_number: string;
+        neighborhood?: string;
         city?: string;
+        federal_unit?: string;
         state_name?: string;
       };
     };

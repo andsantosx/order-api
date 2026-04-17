@@ -28,6 +28,9 @@ export class ShippingAddress {
   @Column({ length: 255, nullable: true })
   reference?: string;
 
+  @Column({ length: 100, nullable: true })
+  neighborhood?: string;
+
   @Column({ length: 60, default: 'Brasil' })
   country!: string;
 }

@@ -17,7 +17,6 @@ export class PaymentMapper {
     const amount = Number(order.totalAmount) / MONEY.CENTS_PER_REAL;
 
     // Mapeamento detalhado do Payer (Anti-fraude 100/100)
-    // Utilizamos os dados do usuário ou do endereço de entrega caso seja convidado
     const payerName = order.user?.name || order.guestEmail || 'Cliente Final';
     const payer = (data.payer || {
       email: order.user?.email || order.guestEmail || 'convidado@checkout.com',
@@ -43,15 +42,24 @@ export class PaymentMapper {
           type: payer.identification?.type || 'CPF',
           number: payer.identification?.number?.replace(/\D/g, '') || '',
         },
-        address: payer.address
-          ? {
-              zip_code: payer.address.zipCode || shipping?.zipCode || '',
-              street_name: payer.address.streetName || shipping?.street || '',
-              street_number: payer.address.streetNumber || shipping?.number || 'SN',
-              city: payer.address.cityName || shipping?.city || '',
-              state_name: shipping?.state || '',
-            }
-          : undefined,
+        address: {
+          zip_code:
+            payer.address?.zipCode?.replace(/\D/g, '') ||
+            shipping?.zipCode?.replace(/\D/g, '') ||
+            '',
+          street_name: payer.address?.streetName || shipping?.street || 'Rua não informada',
+          street_number: payer.address?.streetNumber || shipping?.number || 'SN',
+          neighborhood: payer.address?.neighborhood || shipping?.neighborhood || 'Centro',
+          city: payer.address?.cityName || shipping?.city || 'Cidade não informada',
+          federal_unit: (
+            payer.address?.federalUnit ||
+            payer.address?.stateId ||
+            shipping?.state ||
+            'SP'
+          )
+            .substring(0, 2)
+            .toUpperCase(),
+        },
       },
 
       additional_info: {
@@ -66,15 +74,14 @@ export class PaymentMapper {
                 number: payer.phone.number || '',
               }
             : undefined,
-          address: payer.address
-            ? {
-                zip_code: payer.address.zipCode || shipping?.zipCode || '',
-                street_name: payer.address.streetName || shipping?.street || '',
-                street_number: payer.address.streetNumber || shipping?.number || 'SN',
-                city: payer.address.cityName || shipping?.city || '',
-                state_name: shipping?.state || '',
-              }
-            : undefined,
+          address: {
+            zip_code:
+              payer.address?.zipCode?.replace(/\D/g, '') ||
+              shipping?.zipCode?.replace(/\D/g, '') ||
+              '',
+            street_name: payer.address?.streetName || shipping?.street || '',
+            street_number: payer.address?.streetNumber || shipping?.number || 'SN',
+          },
         },
       },
 
@@ -83,7 +90,10 @@ export class PaymentMapper {
         device_id: data.deviceId || data.formData?.device_id || '',
       },
 
-      installments: data.installments || 1,
+      installments:
+        data.paymentMethodId === 'pix' || data.paymentMethodId?.includes('ticket')
+          ? 1
+          : data.installments || 1,
       token: data.token || data.formData?.token,
       issuer_id: Number(data.issuerId || data.formData?.issuer_id) || undefined,
     };
@@ -109,21 +119,36 @@ export class PaymentMapper {
    * Normaliza a resposta para o frontend (CamelCase)
    */
   public static toFrontendResponse(result: MercadoPagoPaymentResponse) {
+    // Force conversion to a plain object because the SDK might return a class instance
+    // that doesn't serialize properly over the wire.
+    const rawData = JSON.parse(JSON.stringify(result));
+
+    // Robustly find point_of_interaction
+    const pi = rawData.point_of_interaction || rawData.pointOfInteraction || {};
+    const td_base = pi.transaction_data || pi.transactionData || {};
+    const details = rawData.transaction_details || rawData.transactionDetails || {};
+
+    // Universal mapping: merge specific transaction data with details and barcode
+    const td = {
+      ...details,
+      ...td_base,
+      barcode_content:
+        rawData.barcode?.content || details.barcode?.content || td_base.bar_code || td_base.barcode,
+    };
+
     return {
-      id: result.id,
-      status: result.status,
-      statusDetail: result.status_detail,
-      dateOfExpiration: result.date_of_expiration,
-      pointOfInteraction: result.point_of_interaction
-        ? {
-            transaction_data: result.point_of_interaction.transaction_data,
-          }
-        : undefined,
-      externalReference: result.external_reference,
-      transactionAmount: result.transaction_amount,
-      paymentMethodId: result.payment_method_id,
-      installments: result.installments,
-      raw: result,
+      id: rawData.id,
+      status: rawData.status,
+      statusDetail: rawData.status_detail || rawData.statusDetail,
+      dateOfExpiration: rawData.date_of_expiration || rawData.dateOfExpiration,
+      pointOfInteraction: {
+        transaction_data: td,
+      },
+      externalReference: rawData.external_reference || rawData.externalReference,
+      transactionAmount: rawData.transaction_amount || rawData.transactionAmount,
+      paymentMethodId: rawData.payment_method_id || rawData.paymentMethodId,
+      installments: rawData.installments,
+      raw: rawData,
     };
   }
 }

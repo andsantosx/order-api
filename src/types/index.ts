@@ -21,8 +21,17 @@ export interface JwtPayload {
  * Dados de endereço de entrega
  */
 export interface ShippingAddressData {
-  /** Rua e número */
+  /** Rua */
   street: string;
+
+  /** Número */
+  number: string;
+
+  /** Bairro */
+  neighborhood?: string;
+
+  /** Complemento/Referência */
+  reference?: string;
 
   /** Cidade */
   city: string;

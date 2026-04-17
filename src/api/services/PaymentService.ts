@@ -107,6 +107,12 @@ export class PaymentService {
       const mpBody = PaymentMapper.toMercadoPago(order, data);
       const idempotencyKey = `order_${order.id}_${Date.now()}`;
 
+      log.info('[PaymentService] Sending to Mercado Pago', {
+        orderId: order.id,
+        method: mpBody.payment_method_id,
+        payload: JSON.stringify(mpBody.payer, null, 2),
+      });
+
       const response = await paymentClient.create({
         body: mpBody,
         requestOptions: { idempotencyKey },
@@ -383,7 +389,17 @@ export class PaymentService {
     const statusCode = err.statusCode ?? err.status ?? 500;
     const message = err.message ?? 'Erro inesperado no checkout';
 
-    log.error('[PaymentService] Payment failure', { orderId, statusCode, message });
+    const details =
+      ((error as Record<string, unknown>).api_response as Record<string, unknown>)?.body ||
+      (error as Record<string, unknown>).cause ||
+      {};
+
+    log.error('[PaymentService] Payment failure', {
+      orderId,
+      statusCode,
+      message,
+      details: JSON.stringify(details, null, 2),
+    });
 
     if (err.status_detail) {
       throw new PaymentRejectedException(

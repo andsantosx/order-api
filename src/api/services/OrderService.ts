@@ -20,28 +20,7 @@ import { ORDER, MONEY, SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../const
 import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderHistoryService } from './OrderHistoryService';
 import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
-
-/**
- * Interface para dados de endereço de entrega
- */
-interface ShippingAddressData {
-  street: string;
-  number: string;
-  reference?: string;
-  city: string;
-  state: string;
-  zipCode?: string;
-  country: string;
-}
-
-/**
- * Interface para item do pedido (input)
- */
-interface OrderItemInput {
-  productId: string;
-  quantity: number;
-  size: string;
-}
+import { ShippingAddressData, OrderItemInput } from '../../types';
 
 /**
  * Interface para opções de atualização de status pelo admin
@@ -301,7 +280,12 @@ export class OrderService {
     );
     if (existingOrder) {
       log.info('Pedido duplicado detectado', { orderId: existingOrder.id });
-      return this.getOne(existingOrder.id);
+      // Atualizar método de pagamento se for diferente
+      if (paymentMethod && existingOrder.paymentMethod !== paymentMethod) {
+        await this.orderRepository.update(existingOrder.id, { paymentMethod });
+      }
+      const order = await this.getOne(existingOrder.id);
+      return { order, isNewUser: false };
     }
 
     const order = await this.createOrderTransaction(
@@ -390,9 +374,9 @@ export class OrderService {
         throw new AppError(`Produto ${item.productId} não encontrado`, HTTP_STATUS.NOT_FOUND);
 
       let size: Size | null = null;
-      const sizeId = parseInt(item.size, 10);
+      const sizeId = parseInt(item.size.toString(), 10);
       if (!isNaN(sizeId)) size = await this.sizeRepository.findOneBy({ id: sizeId });
-      if (!size) size = await this.sizeRepository.findOneBy({ name: item.size });
+      if (!size) size = await this.sizeRepository.findOneBy({ name: item.size.toString() });
       if (!size) throw new AppError(`Tamanho ${item.size} não encontrado`, HTTP_STATUS.NOT_FOUND);
 
       const productSize = await this.productSizeRepository.findOne({
@@ -402,7 +386,7 @@ export class OrderService {
 
       subtotal += product.priceCents * item.quantity;
       productsMap.set(item.productId, product);
-      sizeNamesMap.set(item.size, size.name);
+      sizeNamesMap.set(item.size.toString(), size.name);
     }
 
     const shippingCost = 0;
@@ -519,7 +503,7 @@ export class OrderService {
           quantity: item.quantity,
           unitPrice: product.priceCents,
           totalPrice: product.priceCents * item.quantity,
-          size: sizeNamesMap.get(item.size)!,
+          size: sizeNamesMap.get(item.size.toString())!,
         });
       });
 
@@ -545,6 +529,7 @@ export class OrderService {
         city: sanitized.city || shippingAddressData.city,
         state: sanitized.state || shippingAddressData.state,
         zipCode: sanitized.zipCode || shippingAddressData.zipCode,
+        neighborhood: sanitized.neighborhood || shippingAddressData.neighborhood,
         country: sanitized.country || shippingAddressData.country,
       });
       await manager.save(address);
