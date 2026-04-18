@@ -44,7 +44,7 @@ const MP_TO_ORDER_STATUS: Record<MercadoPagoPaymentStatus, OrderStatus> = {
   [MercadoPagoPaymentStatus.AUTHORIZED]: OrderStatus.PROCESSING,
   [MercadoPagoPaymentStatus.IN_PROCESS]: OrderStatus.PROCESSING,
   [MercadoPagoPaymentStatus.IN_MEDIATION]: OrderStatus.PROCESSING,
-  [MercadoPagoPaymentStatus.REJECTED]: OrderStatus.CANCELLED,
+  [MercadoPagoPaymentStatus.REJECTED]: OrderStatus.PENDING,
   [MercadoPagoPaymentStatus.CANCELLED]: OrderStatus.CANCELLED,
   [MercadoPagoPaymentStatus.REFUNDED]: OrderStatus.REFUNDED,
   [MercadoPagoPaymentStatus.CHARGED_BACK]: OrderStatus.REFUNDED,
@@ -105,12 +105,20 @@ export class PaymentService {
       const order = await this.orderService.getOne(orderId as string, undefined, true);
 
       const mpBody = PaymentMapper.toMercadoPago(order, data);
+
+      // Validação crítica para Boletos: CPF é obrigatório pela API do MP
+      if (mpBody.payment_method_id.includes('ticket') && !mpBody.payer?.identification?.number) {
+        throw new PaymentValidationException(
+          'O CPF é obrigatório para pagamentos via Boleto. Por favor, preencha seus dados corretamente.',
+        );
+      }
+
       const idempotencyKey = `order_${order.id}_${Date.now()}`;
 
       log.info('[PaymentService] Sending to Mercado Pago', {
         orderId: order.id,
         method: mpBody.payment_method_id,
-        payload: JSON.stringify(mpBody.payer, null, 2),
+        payload: JSON.stringify(mpBody, null, 2),
       });
 
       const response = await paymentClient.create({

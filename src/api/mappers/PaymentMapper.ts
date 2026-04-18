@@ -20,8 +20,8 @@ export class PaymentMapper {
     const payerName = order.user?.name || order.guestEmail || 'Cliente Final';
     const payer = (data.payer || {
       email: order.user?.email || order.guestEmail || 'convidado@checkout.com',
-      firstName: payerName.split(' ')[0],
-      lastName: payerName.split(' ').slice(1).join(' ') || 'Final',
+      firstName: (payerName.split(' ')[0] || 'Cliente').trim(),
+      lastName: (payerName.split(' ').slice(1).join(' ') || 'Final').trim(),
     }) as PayerData;
 
     const shipping = order.shippingAddress?.[0];
@@ -46,9 +46,9 @@ export class PaymentMapper {
           zip_code:
             payer.address?.zipCode?.replace(/\D/g, '') ||
             shipping?.zipCode?.replace(/\D/g, '') ||
-            '',
+            '00000000',
           street_name: payer.address?.streetName || shipping?.street || 'Rua não informada',
-          street_number: payer.address?.streetNumber || shipping?.number || 'SN',
+          street_number: (payer.address?.streetNumber || shipping?.number || '0').toString(),
           neighborhood: payer.address?.neighborhood || shipping?.neighborhood || 'Centro',
           city: payer.address?.cityName || shipping?.city || 'Cidade não informada',
           federal_unit: (
@@ -57,6 +57,7 @@ export class PaymentMapper {
             shipping?.state ||
             'SP'
           )
+            .toString()
             .substring(0, 2)
             .toUpperCase(),
         },
@@ -78,9 +79,9 @@ export class PaymentMapper {
             zip_code:
               payer.address?.zipCode?.replace(/\D/g, '') ||
               shipping?.zipCode?.replace(/\D/g, '') ||
-              '',
-            street_name: payer.address?.streetName || shipping?.street || '',
-            street_number: payer.address?.streetNumber || shipping?.number || 'SN',
+              '00000000',
+            street_name: payer.address?.streetName || shipping?.street || 'Rua não informada',
+            street_number: (payer.address?.streetNumber || shipping?.number || '0').toString(),
           },
         },
       },

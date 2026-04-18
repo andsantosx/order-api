@@ -47,7 +47,7 @@ export const ORDER_STATUS_EVENTS: Record<number, OrderDomainEvent> = {
  */
 export const VALID_TRANSITIONS: Record<number, number[]> = {
   [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.PAID, OrderStatus.CANCELLED],
-  [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
+  [OrderStatus.PROCESSING]: [OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.PENDING],
   [OrderStatus.PAID]: [
     OrderStatus.PAID,
     OrderStatus.AWAITING_SHIPMENT,

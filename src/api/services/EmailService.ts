@@ -430,11 +430,14 @@ export class EmailService {
       Você pode tentar realizar o pagamento novamente utilizando um novo método ou entrar em contato com seu banco.
     `;
     const text = `Pagamento recusado para o pedido #${orderId.slice(0, 8)}.`;
+    const subject = `Problema no Pagamento - #${orderId.slice(0, 8)}`;
+    const checkoutUrl = `${env.FRONTEND_URL}/checkout?orderId=${orderId}`;
+
     await this.send(
       to,
       name,
-      `Problema no Pagamento - #${orderId.slice(0, 8)}`,
-      this.getHtmlTemplate(title, content),
+      subject,
+      this.getHtmlTemplate(title, content, 'Tentar Novamente', checkoutUrl),
       text,
     );
   }
