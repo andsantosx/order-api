@@ -145,19 +145,12 @@ export class ProductService {
     }
 
     if (sizes && sizes.length > 0) {
-      qb.andWhere(
-        (qb) => {
-          const subQuery = qb
-            .subQuery()
-            .select('ps.productId')
-            .from(ProductSize, 'ps')
-            .leftJoin('ps.size', 's')
-            .where('s.name IN (:...sizes)')
-            .getQuery();
-          return 'product.id IN ' + subQuery;
-        },
-        { sizes },
-      );
+      // Use joins for reliable M-to-N filtering instead of raw subqueries
+      qb.innerJoin('product.sizes', 'ps_filter')
+        .innerJoin('ps_filter.size', 's_filter')
+        .andWhere('LOWER(s_filter.name) IN (:...sizes)', {
+          sizes: sizes.map((s) => s.toLowerCase()),
+        });
     }
 
     if (search) {
@@ -206,9 +199,8 @@ export class ProductService {
     const sizes = await this.sizeRepository
       .createQueryBuilder('size')
       .innerJoin('size.productSizes', 'ps')
-      .select(['size.id', 'size.name'])
-      .distinct(true)
-      .orderBy('size.id', 'ASC') // Maintain logical order if IDs are ordered
+      .select('DISTINCT size.name', 'name')
+      .orderBy('size.name', 'ASC')
       .getRawMany();
 
     // Get all unique brands that have products
@@ -223,7 +215,7 @@ export class ProductService {
     return {
       categories: categories.map((c) => ({ name: c.category_name, slug: c.category_slug })),
       brands: brands.map((b) => ({ name: b.brand_name, slug: b.brand_slug })),
-      sizes: sizes.map((s) => s.size_name),
+      sizes: sizes.map((s) => s.name),
     };
   }
 
