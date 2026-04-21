@@ -11,15 +11,16 @@ import { SECURITY, ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 import { CPF } from '../domain/value-objects/CPF';
 import { Password as PasswordVO } from '../domain/value-objects/Password';
 import { EmailService } from './EmailService';
+import { injectable, inject } from 'tsyringe';
 
 /**
  * Service responsável pela lógica de negócio relacionada a usuários
  * Gerencia autenticação, registro e perfil de usuários
  */
+@injectable()
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
   private emailVerificationRepository = AppDataSource.getRepository(EmailVerification);
-  private emailService = new EmailService();
 
   /**
    * Registra um novo usuário no sistema
@@ -397,4 +398,6 @@ export class UserService {
       acceptedTerms: user.acceptedTerms,
     };
   }
+
+  constructor(@inject(EmailService) private emailService: EmailService) {}
 }

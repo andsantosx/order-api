@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http';
 import { log } from '../../config/logger';
 import { OrderService } from './OrderService';
 import { ORDER_STATUS_DESCRIPTIONS } from '../../constants';
+import { container } from 'tsyringe';
 
 export interface CustomSocket extends Socket {
   userId?: string;
@@ -74,7 +75,7 @@ export class SocketService {
         if (!orderId) return;
 
         try {
-          const orderService = new OrderService();
+          const orderService = container.resolve(OrderService);
           // Busca o pedido sem restrição de userId aqui, pois o socket já entrou na sala se for dele
           // ou o frontend está validando a posse. O getOne lançará erro se não encontrar.
           const order = await orderService.getOne(orderId, undefined, true);

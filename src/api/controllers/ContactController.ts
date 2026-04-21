@@ -2,10 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { ContactService } from '../services/ContactService';
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class ContactController {
-  private contactService = new ContactService();
-
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const contactMessage = await this.contactService.create(req.body);
@@ -64,4 +64,6 @@ export class ContactController {
       next(error);
     }
   }
+
+  constructor(@inject(ContactService) private contactService: ContactService) {}
 }

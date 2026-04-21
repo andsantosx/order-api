@@ -3,6 +3,7 @@ import { ContactMessage, ContactMessageStatus } from '../entities/ContactMessage
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
 import { EmailService } from './EmailService';
+import { injectable, inject } from 'tsyringe';
 
 interface ContactMessageData {
   name: string;
@@ -12,9 +13,9 @@ interface ContactMessageData {
   message: string;
 }
 
+@injectable()
 export class ContactService {
   private contactRepository = AppDataSource.getRepository(ContactMessage);
-  private emailService = new EmailService();
 
   async create(data: ContactMessageData) {
     const contactMessage = this.contactRepository.create({
@@ -102,4 +103,6 @@ export class ContactService {
     const saved = await this.contactRepository.save(message);
     return this.getOne(saved.id);
   }
+
+  constructor(@inject(EmailService) private emailService: EmailService) {}
 }

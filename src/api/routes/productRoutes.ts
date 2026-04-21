@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { ProductController } from '../controllers/ProductController';
 import { authMiddleware } from '../middlewares/authMiddleware';
@@ -7,7 +8,7 @@ import { validate } from '../middlewares/validate';
 import { createProductSchema, updateProductSchema } from '../schemas/productSchemas';
 
 const router = Router();
-const productController = new ProductController();
+const productController = container.resolve(ProductController);
 
 // Public routes
 router.get('/', productController.getAll.bind(productController));

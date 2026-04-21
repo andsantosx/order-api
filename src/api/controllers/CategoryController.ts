@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { CategoryService } from '../services/CategoryService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class CategoryController {
-  private categoryService = new CategoryService();
-
   /**
    * Retorna todas as categorias cadastradas.
    */
@@ -80,4 +80,6 @@ export class CategoryController {
       next(error);
     }
   }
+
+  constructor(@inject(CategoryService) private categoryService: CategoryService) {}
 }

@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AdminService } from '../services/AdminService';
 import { AppError } from '../middlewares/errorHandler';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class AdminController {
-  private adminService = new AdminService();
-
   async getDashboardStats(req: Request, res: Response, _next: NextFunction) {
     // Enforce Admin Access
     if (!req.user || !req.user.isAdmin) {
@@ -19,4 +19,6 @@ export class AdminController {
     );
     res.json(stats);
   }
+
+  constructor(@inject(AdminService) private adminService: AdminService) {}
 }

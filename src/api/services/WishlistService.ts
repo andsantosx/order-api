@@ -5,6 +5,7 @@ import { User } from '../entities/User';
 import { AppError } from '../middlewares/errorHandler';
 import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { injectable } from 'tsyringe';
 
 /**
  * Service responsável pela gestão de listas de desejos
@@ -17,6 +18,7 @@ import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
  *
  * Cada usuário pode ter múltiplos produtos na wishlist
  */
+@injectable()
 export class WishlistService {
   private wishlistRepository = AppDataSource.getRepository(Wishlist);
   private productRepository = AppDataSource.getRepository(Product);

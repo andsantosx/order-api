@@ -1,6 +1,7 @@
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
 import { log } from '../../config/logger';
+import { injectable } from 'tsyringe';
 
 interface ViaCEPResponse {
   cep: string;
@@ -19,6 +20,7 @@ interface ViaCEPResponse {
 /**
  * Service para operações de logística e frete
  */
+@injectable()
 export class ShippingService {
   /**
    * Busca endereço por CEP utilizando a API oficial ViaCEP

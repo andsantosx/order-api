@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { CategoryController } from '../controllers/CategoryController';
 import { validate } from '../middlewares/validate';
@@ -7,7 +8,7 @@ import { adminMiddleware } from '../middlewares/adminMiddleware';
 import { auditMiddleware } from '../middlewares/auditMiddleware';
 
 const router = Router();
-const categoryController = new CategoryController();
+const categoryController = container.resolve(CategoryController);
 
 // Public routes
 router.get('/', categoryController.getAll.bind(categoryController));

@@ -21,6 +21,7 @@ import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderHistoryService } from './OrderHistoryService';
 import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
 import { ShippingAddressData, OrderItemInput } from '../../types';
+import { injectable } from 'tsyringe';
 
 /**
  * Interface para opções de atualização de status pelo admin
@@ -37,6 +38,7 @@ interface UpdateStatusOptions {
 /**
  * Service responsável pela lógica de negócio de pedidos
  */
+@injectable()
 export class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
   private productRepository = AppDataSource.getRepository(Product);

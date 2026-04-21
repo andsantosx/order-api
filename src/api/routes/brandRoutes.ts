@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { BrandController } from '../controllers/BrandController';
 import { validate } from '../middlewares/validate';
@@ -7,7 +8,7 @@ import { adminMiddleware } from '../middlewares/adminMiddleware';
 import { auditMiddleware } from '../middlewares/auditMiddleware';
 
 const router = Router();
-const brandController = new BrandController();
+const brandController = container.resolve(BrandController);
 
 // Public routes
 router.get('/', brandController.getAll.bind(brandController));

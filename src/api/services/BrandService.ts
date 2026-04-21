@@ -3,11 +3,13 @@ import { Brand } from '../entities/Brand';
 import { AppError } from '../middlewares/errorHandler';
 import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { injectable } from 'tsyringe';
 
 /**
  * Service responsável pela lógica de negócio relacionada a marcas
  * Gerencia criação, consulta, atualização e remoção de marcas de produtos
  */
+@injectable()
 export class BrandService {
   private brandRepository = AppDataSource.getRepository(Brand);
 

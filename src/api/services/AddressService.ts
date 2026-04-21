@@ -6,6 +6,7 @@ import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 import { sanitizeAddressData } from '../../utils/sanitizer';
 import { isValidZipCode } from '../../utils/validators';
+import { injectable } from 'tsyringe';
 
 /**
  * Interface para dados de endereço
@@ -34,6 +35,7 @@ export interface AddressData {
  * - Ownership verification (usuário só acessa seus próprios endereços)
  * - Sanitização contra XSS
  */
+@injectable()
 export class AddressService {
   private addressRepository = AppDataSource.getRepository(UserAddress);
   private userRepository = AppDataSource.getRepository(User);

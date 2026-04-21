@@ -1,5 +1,6 @@
 import { AppDataSource } from '../../data-source';
 import { log } from '../../config/logger';
+import { injectable } from 'tsyringe';
 
 export interface AuditLogData {
   adminId: string;
@@ -21,6 +22,7 @@ export interface AuditLogData {
  *
  * Segue os princípios de Clean Architecture ao isolar o mecanismo de log.
  */
+@injectable()
 export class AuditService {
   private static repository = AppDataSource.getRepository('admin_audit_logs');
 

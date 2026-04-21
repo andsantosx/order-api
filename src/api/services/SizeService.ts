@@ -1,7 +1,9 @@
 import { AppDataSource } from '../../data-source';
 import { Size } from '../entities/Size';
 import { AppError } from '../middlewares/errorHandler';
+import { injectable } from 'tsyringe';
 
+@injectable()
 export class SizeService {
   private sizeRepository = AppDataSource.getRepository(Size);
 

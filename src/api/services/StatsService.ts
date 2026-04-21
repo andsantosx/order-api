@@ -5,6 +5,7 @@ import { Product } from '../entities/Product';
 import { log } from '../../config/logger';
 import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
+import { injectable } from 'tsyringe';
 
 /**
  * Períodos válidos para estatísticas
@@ -22,6 +23,7 @@ export type StatsPeriod = '7d' | '30d' | '90d' | 'year' | 'all';
  *
  * Todos os valores monetários são retornados em **centavos** para consistência
  */
+@injectable()
 export class StatsService {
   private orderRepository = AppDataSource.getRepository(Order);
   private orderItemRepository = AppDataSource.getRepository(OrderItem);

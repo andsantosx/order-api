@@ -2,7 +2,9 @@ import { AppDataSource } from '../../data-source';
 import { Order, OrderStatus } from '../entities/Order';
 import { Product } from '../entities/Product';
 import { log } from '../../config/logger';
+import { injectable } from 'tsyringe';
 
+@injectable()
 export class AdminService {
   private orderRepository = AppDataSource.getRepository(Order);
   private productRepository = AppDataSource.getRepository(Product);

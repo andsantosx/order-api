@@ -1,9 +1,10 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { StatsController } from '../controllers/StatsController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
-const statsController = new StatsController();
+const statsController = container.resolve(StatsController);
 
 /**
  * Todas as rotas de estatísticas requerem autenticação

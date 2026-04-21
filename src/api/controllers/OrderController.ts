@@ -7,10 +7,10 @@ import { log } from '../../config/logger';
 import { HTTP_STATUS, ERROR_MESSAGES } from '../../constants';
 import { AppError } from '../middlewares/errorHandler';
 import { ChangedByRole } from '../../types/domain-enums';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class OrderController {
-  private orderService = new OrderService();
-
   /**
    * GET /orders
    * Retorna todos os pedidos com paginação e filtros.
@@ -244,7 +244,7 @@ export class OrderController {
     }
 
     try {
-      const paymentService = new PaymentService();
+      const paymentService = this.paymentService;
       const result = await paymentService.refundPayment(id);
       res.json(result);
     } catch (error) {
@@ -268,11 +268,16 @@ export class OrderController {
     }
 
     try {
-      const paymentService = new PaymentService();
+      const paymentService = this.paymentService;
       const result = await paymentService.cancelOrder(id, userId, isAdmin);
       res.json(result);
     } catch (error) {
       next(error);
     }
   }
+
+  constructor(
+    @inject(OrderService) private orderService: OrderService,
+    @inject(PaymentService) private paymentService: PaymentService,
+  ) {}
 }

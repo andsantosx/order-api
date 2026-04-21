@@ -1,6 +1,7 @@
 import Mailjet from 'node-mailjet';
 import { env } from '../../config/env';
 import winston from 'winston';
+import { injectable } from 'tsyringe';
 
 /**
  * Interfaces para tipos internos do EmailService
@@ -39,6 +40,7 @@ interface IEmailOrder {
  * Serviço responsável pelo envio de e-mails transacionais utilizando Mailjet.
  * Utiliza um design premium, minimalista e profissional.
  */
+@injectable()
 export class EmailService {
   private mailjet: Mailjet;
   constructor() {

@@ -9,6 +9,7 @@ import {
   PaymentRejectedEventPayload,
   OrderShippedEventPayload,
 } from '../../types/events';
+import { container } from 'tsyringe';
 
 /**
  * Subscriber responsável por escutar eventos de domínio e disparar e-mails.
@@ -19,8 +20,8 @@ export class EmailHandler {
   private static orderService: OrderService;
 
   static init() {
-    this.emailService = new EmailService();
-    this.orderService = new OrderService();
+    this.emailService = container.resolve(EmailService);
+    this.orderService = container.resolve(OrderService);
 
     // 1. Pedido Criado (Boas-vindas e Confirmação Inicial)
     domainEvents.on(

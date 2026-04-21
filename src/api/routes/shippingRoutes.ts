@@ -1,8 +1,9 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { ShippingController } from '../controllers/ShippingController';
 
 const router = Router();
-const shippingController = new ShippingController();
+const shippingController = container.resolve(ShippingController);
 
 /**
  * @swagger

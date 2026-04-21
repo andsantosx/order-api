@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { BrandService } from '../services/BrandService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class BrandController {
-  private brandService = new BrandService();
-
   /**
    * Retorna todas as marcas cadastradas.
    */
@@ -80,4 +80,6 @@ export class BrandController {
       next(error);
     }
   }
+
+  constructor(@inject(BrandService) private brandService: BrandService) {}
 }

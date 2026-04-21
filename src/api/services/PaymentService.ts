@@ -21,6 +21,7 @@ import { client } from '../../config/mercadopago';
 import { Payment, PaymentRefund } from 'mercadopago';
 import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderHistoryService } from './OrderHistoryService';
+import { injectable, container } from 'tsyringe';
 
 const paymentClient = new Payment(client);
 const refundClient = new PaymentRefund(client);
@@ -74,12 +75,13 @@ const STATUS_DETAIL_MESSAGES: Partial<Record<MercadoPagoStatusDetail, string>> =
   [MercadoPagoStatusDetail.CHARGED_BACK]: 'Pagamento contestado (chargeback).',
 };
 
+@injectable()
 export class PaymentService {
   private orderService: OrderService;
   private orderRepository = AppDataSource.getRepository(Order);
 
   constructor() {
-    this.orderService = new OrderService();
+    this.orderService = container.resolve(OrderService);
   }
 
   /**

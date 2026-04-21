@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { SizeService } from '../services/SizeService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class SizeController {
-  private sizeService = new SizeService();
-
   /**
    * Retorna tamanhos disponíveis.
    * Pode filtrar por tipo (ex: 'clothing', 'shoes') via query params.
@@ -22,4 +22,6 @@ export class SizeController {
     const size = await this.sizeService.getOne(parseInt(id as string));
     res.json(size);
   }
+
+  constructor(@inject(SizeService) private sizeService: SizeService) {}
 }

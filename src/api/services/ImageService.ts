@@ -2,7 +2,9 @@ import { AppDataSource } from '../../data-source';
 import { ProductImage } from '../entities/ProductImage';
 import { Product } from '../entities/Product';
 import { AppError } from '../middlewares/errorHandler';
+import { injectable } from 'tsyringe';
 
+@injectable()
 export class ImageService {
   private imageRepository = AppDataSource.getRepository(ProductImage);
   private productRepository = AppDataSource.getRepository(Product);

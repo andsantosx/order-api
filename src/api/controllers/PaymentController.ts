@@ -2,13 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/PaymentService';
 import { log } from '../../config/logger';
 import { HTTP_STATUS } from '../../constants';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class PaymentController {
-  private paymentService: PaymentService;
-
-  constructor() {
-    this.paymentService = new PaymentService();
-  }
+  constructor(@inject(PaymentService) private paymentService: PaymentService) {}
 
   /**
    * POST /api/payments/process

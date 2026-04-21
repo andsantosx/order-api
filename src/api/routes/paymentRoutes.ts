@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { PaymentController } from '../controllers/PaymentController';
 import { paymentLimiter, webhookLimiter } from '../../config/rateLimits';
@@ -9,7 +10,7 @@ import { adminMiddleware } from '../middlewares/adminMiddleware';
 import { auditMiddleware } from '../middlewares/auditMiddleware';
 
 const router = Router();
-const paymentController = new PaymentController();
+const paymentController = container.resolve(PaymentController);
 
 /**
  * POST /api/payments/process

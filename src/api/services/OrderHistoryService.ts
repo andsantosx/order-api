@@ -3,6 +3,7 @@ import { OrderStatusHistory } from '../entities/OrderStatusHistory';
 import { Order } from '../entities/Order';
 import { ChangedByRole } from '../../types/domain-enums';
 import { log } from '../../config/logger';
+import { injectable } from 'tsyringe';
 
 export interface RecordStatusChangeOptions {
   order: Order;
@@ -22,6 +23,7 @@ export interface RecordStatusChangeOptions {
  *
  * Padrão: fire-and-forget — erros no log não derrubam o fluxo principal.
  */
+@injectable()
 export class OrderHistoryService {
   private static repository = AppDataSource.getRepository(OrderStatusHistory);
 

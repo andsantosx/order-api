@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { OrderController } from '../controllers/OrderController';
 import { validate } from '../middlewares/validate';
@@ -15,7 +16,7 @@ import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 import { orderLimiter } from '../../config/rateLimits';
 
 const router = Router();
-const orderController = new OrderController();
+const orderController = container.resolve(OrderController);
 
 // ============================================================
 // Rotas do Usuário (autenticado)

@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { ShippingService } from '../services/ShippingService';
 import { HTTP_STATUS } from '../../constants';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class ShippingController {
-  private shippingService = new ShippingService();
-
   /**
    * Busca endereço por CEP
    */
@@ -21,4 +21,6 @@ export class ShippingController {
       next(error);
     }
   }
+
+  constructor(@inject(ShippingService) private shippingService: ShippingService) {}
 }

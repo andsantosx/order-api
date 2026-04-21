@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { ProductService } from '../services/ProductService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class ProductController {
-  private productService = new ProductService();
-
   /**
    * Retorna produtos com paginação e filtro de categoria.
    * Query Params: categories (string | string[]), sizes (string | string[]), page, limit, search, minPrice, maxPrice, sort.
@@ -156,4 +156,6 @@ export class ProductController {
       next(error);
     }
   }
+
+  constructor(@inject(ProductService) private productService: ProductService) {}
 }

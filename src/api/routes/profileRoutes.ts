@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { AddressController } from '../controllers/AddressController';
 import { WishlistController } from '../controllers/WishlistController';
@@ -6,8 +7,8 @@ import { validate } from '../middlewares/validate';
 import { createAddressSchema } from '../schemas/addressSchemas';
 
 const router = Router();
-const addressController = new AddressController();
-const wishlistController = new WishlistController();
+const addressController = container.resolve(AddressController);
+const wishlistController = container.resolve(WishlistController);
 
 router.use(authMiddleware);
 

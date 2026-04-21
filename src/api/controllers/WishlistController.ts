@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { WishlistService } from '../services/WishlistService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class WishlistController {
-  private wishlistService = new WishlistService();
-
   async list(req: Request, res: Response, _next: NextFunction) {
     const userId = req.user!.userId;
     const wishlist = await this.wishlistService.getWishlist(userId);
@@ -35,4 +35,6 @@ export class WishlistController {
     await this.wishlistService.removeFromWishlist(userId, id as string);
     res.status(204).send();
   }
+
+  constructor(@inject(WishlistService) private wishlistService: WishlistService) {}
 }

@@ -6,6 +6,7 @@ import { OrderService } from '../services/OrderService';
 import { env } from '../../config/env';
 import { log } from '../../config/logger';
 import { LessThan, In } from 'typeorm';
+import { container } from 'tsyringe';
 
 /**
  * OrderExpirationJob
@@ -18,7 +19,7 @@ import { LessThan, In } from 'typeorm';
  */
 export class OrderExpirationJob {
   private static isRunning = false;
-  private static orderService = new OrderService();
+  private static orderService = container.resolve(OrderService);
 
   /**
    * Executa a lógica de cancelamento de pedidos expirados.

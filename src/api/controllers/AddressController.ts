@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { AddressService } from '../services/AddressService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class AddressController {
-  private addressService = new AddressService();
-
   async list(req: Request, res: Response, _next: NextFunction) {
     const userId = req.user?.userId;
     if (!userId) return; // Middleware validation assumed
@@ -26,4 +26,6 @@ export class AddressController {
     await this.addressService.delete(userId, id as string);
     res.status(204).send();
   }
+
+  constructor(@inject(AddressService) private addressService: AddressService) {}
 }

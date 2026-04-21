@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { ImageService } from '../services/ImageService';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class ImageController {
-  private imageService = new ImageService();
-
   /**
    * Retorna todas as imagens de um produto específico.
    */
@@ -37,4 +37,6 @@ export class ImageController {
     const result = await this.imageService.delete(parseInt(id as string));
     res.json(result);
   }
+
+  constructor(@inject(ImageService) private imageService: ImageService) {}
 }

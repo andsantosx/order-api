@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { ImageController } from '../controllers/ImageController';
 import { validate } from '../middlewares/validate';
@@ -5,7 +6,7 @@ import { createImageSchema } from '../schemas/imageSchemas';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
-const imageController = new ImageController();
+const imageController = container.resolve(ImageController);
 
 // Public routes
 router.get('/product/:productId', imageController.getByProduct.bind(imageController));

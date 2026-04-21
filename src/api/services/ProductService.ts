@@ -10,6 +10,7 @@ import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
 import { sanitizeProductData } from '../../utils/sanitizer';
 import { executeInTransaction } from '../../utils/transaction';
+import { injectable } from 'tsyringe';
 
 /**
  * Interface para filtros de produtos
@@ -62,6 +63,7 @@ export interface ProductFilters {
  * - Preços: valores positivos
  * - Sanitização: HTML removido de nome e descrição
  */
+@injectable()
 export class ProductService {
   private productRepository = AppDataSource.getRepository(Product);
   private categoryRepository = AppDataSource.getRepository(Category);

@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { ContactController } from '../controllers/ContactController';
 import { validate } from '../middlewares/validate';
@@ -7,7 +8,7 @@ import { adminMiddleware } from '../middlewares/adminMiddleware';
 import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 
 const router = Router();
-const contactController = new ContactController();
+const contactController = container.resolve(ContactController);
 
 /**
  * Public route - anyone can send a contact message

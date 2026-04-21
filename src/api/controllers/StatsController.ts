@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { StatsService, StatsPeriod } from '../services/StatsService';
 import { log } from '../../config/logger';
+import { injectable, inject } from 'tsyringe';
 
 /**
  * Controller para endpoints de estatísticas e métricas
  * Usado pelo painel administrativo
  */
+@injectable()
 export class StatsController {
-  private statsService = new StatsService();
-
   /**
    * GET /api/admin/stats
    * Retorna estatísticas gerais do sistema
@@ -83,4 +83,6 @@ export class StatsController {
       throw error;
     }
   }
+
+  constructor(@inject(StatsService) private statsService: StatsService) {}
 }

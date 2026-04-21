@@ -3,11 +3,13 @@ import { Category } from '../entities/Category';
 import { AppError } from '../middlewares/errorHandler';
 import { log } from '../../config/logger';
 import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
+import { injectable } from 'tsyringe';
 
 /**
  * Service responsável pela lógica de negócio relacionada a categorias
  * Gerencia criação, consulta, atualização e remoção de categorias de produtos
  */
+@injectable()
 export class CategoryService {
   private categoryRepository = AppDataSource.getRepository(Category);
 

@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/UserService';
 import { Password as PasswordVO } from '../domain/value-objects/Password';
+import { injectable, inject } from 'tsyringe';
 
+@injectable()
 export class AuthController {
-  private userService = new UserService();
-
   /**
    * Registra um novo usuário.
    * Espera receber name, email e password no corpo da requisição.
@@ -105,4 +105,6 @@ export class AuthController {
     const result = await this.userService.verifyEmailCode(email, code);
     res.json(result);
   }
+
+  constructor(@inject(UserService) private userService: UserService) {}
 }

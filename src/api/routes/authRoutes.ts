@@ -1,3 +1,4 @@
+import { container } from 'tsyringe';
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middlewares/validate';
@@ -17,7 +18,7 @@ import { recaptchaMiddleware } from '../middlewares/recaptchaMiddleware';
 import { authLimiter } from '../../config/rateLimits';
 
 const router = Router();
-const authController = new AuthController();
+const authController = container.resolve(AuthController);
 
 // Apply rate limiting to prevent brute force attacks
 router.post(
