@@ -460,11 +460,16 @@ export class EmailService {
       <strong>Código de Rastreio:</strong> ${trackingCode}
     `;
     const text = `Pedido #${orderId.slice(0, 8)} enviado. Rastreio: ${trackingCode}.`;
+
+    // Se houver URL de rastreio, adicionamos como Botão (CTA)
+    const ctaText = trackingUrl ? 'Acompanhar Entrega' : undefined;
+    const ctaUrl = trackingUrl || undefined;
+
     await this.send(
       to,
       name,
       `Pedido em Trânsito #${orderId.slice(0, 8)}`,
-      this.getHtmlTemplate(title, content, undefined, undefined, notes, items),
+      this.getHtmlTemplate(title, content, ctaText, ctaUrl, notes, items),
       text,
     );
   }
