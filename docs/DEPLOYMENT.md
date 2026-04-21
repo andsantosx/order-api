@@ -1,92 +1,83 @@
-# Manual de Deploy e Infraestrutura
+# ☁️ Manual de Operações, Deploy e Infraestrutura
 
-Este documento detalha os procedimentos para deploy, configuração de ambiente e gestão de banco de dados.
+A Base desta Application Engine foi gerada inteiramente com foco na "Dockerização" e nuvem elástica, rodando `Node.js` através da velocidade assustadora das premissas de Server-Side. Segue a pauta de como orquestrar tanto a Máquina do Engenheiro Local quanto a Operação em Produção usando provedores como Railway, AWS, DigitalOcean e afins.
 
-## 1. Stack Tecnológico
+## 1. Tabela Matriz de Dependências Infracionais
 
-| Componente | Tecnologia | Versão Mínima |
+| Componente Crítico | Requisito de Versão | Notas (Ambiente) |
 |---|---|---|
-| **Runtime** | Node.js | 22.x (Alpine) |
-| **Banco de Dados** | PostgreSQL | 14.x |
-| **Container** | Docker | 20.10+ |
+| **Ambiente Nativo (Host)** | Node.js **22.x** | Alpine/LTS no Container |
+| **Tecnologia Relacional** | **PostgreSQL 14.x** + | Utilizado as `Migrations` Tipo "Data-Source Native" no TypeORM |
+| **Ecossistema Abstração Virtual** | Docker (20.x+) e Compose-Plugin | Para garantir ambientes perfeitamente espelhados de QA e PROD. |
 
-## 2. Variáveis de Ambiente
+> [!WARNING]
+> Tenha cuidado com inconsistências. Como este repositório processa cálculos de pagamentos exatos e conversão criptográfica via Zod, não o reduza a versões defasadas de Node (<20.x) ou motores antiquados.
 
-Configure as seguintes variáveis no arquivo `.env` ou no painel do provedor de nuvem (Railway/AWS):
+---
 
-### Críticas (Obrigatórias)
+## 2. Injetores do Cofre Ambiente (Variáveis)
 
-> [!CAUTION]
-> **SEGURANÇA**: Jamais armazene credenciais reais no código ou documentação. 
-> Utilize arquivos `.env` locais ou segredos no seu provedor de nuvem.
+Um projeto Premium não hard-coda chaves. Configurar um arquivo local `.env` — e nunca o rastrear (`git`) — é mandatório para sobrevivência em open-source/mercado real.
 
-- `DB_HOST`: Host (ex: `localhost` ou o nome do serviço no Docker Compose)
-- `DB_PORT`: Porta padrão do banco
-- `DB_NAME`: Nome da base de dados
-- `DB_USER`: Usuário com permissões adequadas
-- `DB_PASSWORD`: Senha forte
-- `JWT_SECRET`: Chave secreta para tokens (Mín 32-64 chars aleatórios)
-- `MERCADOPAGO_ACCESS_TOKEN`: Token de API securizado
-- `MERCADOPAGO_WEBHOOK_SECRET`: Secret de validação de webhook
-
-### Opcionais
-- `PORT`: Porta da aplicação
-- `NODE_ENV`: Ambiente (development/production)
-- `FRONTEND_URL`: Domínio autorizado para CORS
-
-## 3. Deploy na Railway
-
-O projeto possui configuração otimizada para Railway.
-
-1. Conecte o repositório GitHub à Railway.
-2. Adicione um serviço **PostgreSQL**.
-3. Adicione um serviço a partir do **Github Repositório**.
-4. Configure as variáveis de ambiente no serviço da API.
-5. O deploy detectará o `Dockerfile` e iniciará o build.
-
-### Build & Start Command
-O `package.json` define os scripts utilizados:
-
-- **Build**: `npm run build` (Compila TypeScript -> JavaScript em `./dist`)
-- **Start**: `npm start` (Executa migrations e inicia servidor)
-
-> **Nota**: O commando `start` executa automaticamente `npm run migration:run:prod` antes de subir o servidor. Isso garante que o banco de dados esteja sempre sincronizado com o código.
-
-## 4. Gestão de Banco de Dados (Migrations)
-
-Utilizamos **TypeORM Migrations** para versionamento de schema.
-
-### Em Desenvolvimento
-Criar uma nova migration após alterar entidades:
+**Obrigatórias no Host Cloud (Railway/AWS)**:
 ```bash
-npm run migration:generate --name=NomeDaMudanca
-```
-Isso cria um arquivo timestamped em `src/migrations/`.
+# PostgreSQL Host de Acesso
+DB_HOST=NomeDoSeuContainerOulinkDoHost
+DB_PORT=5432
+DB_NAME=MinhaBaseVirtual
+DB_USER=UsuarioSupremo
+DB_PASSWORD='!!Minha_Senha_Secreta_Nao_Leitura!!'
 
-### Em Produção
-As migrations são compiladas para `.js` e executadas automaticamente no boot da aplicação.
-Não é necessário rodar comandos manuais no servidor de produção.
+# Camadas De Autenticadores
+JWT_SECRET=UMACHAVEDEMINIMO64CARACTERESCRIPTOGRAFICAMENTEALOCADOS
 
-## 5. Docker Local
-
-Para desenvolvimento local com Docker, o **Docker Compose** é o método preferido, pois gerencia o banco de dados e a aplicação juntos:
-
-```bash
-# Iniciar ambiente completo
-docker compose up -d
-
-# Ver logs
-docker compose logs -f
+# Motores Financeiros de Gateway Oculto
+MERCADOPAGO_ACCESS_TOKEN=OndeATelaMagicaDeMPDisseSeuToken
+MERCADOPAGO_WEBHOOK_SECRET=KeyQueImpedeHackersDeForjarSuasEntradasDePix
 ```
 
-O arquivo `docker-compose.yml` está configurado para ler automaticamente as variáveis do seu arquivo `.env`.
+---
 
-### Rodando apenas o container da API (Imagem Fixa)
-Se precisar rodar apenas a imagem da API isoladamente:
+## 3. Gestão Completa (Deploy via GitHub -> Railway Ecosystem)
+
+Implementar essa infraestrutura no provedor em nuvem escalável "Railway" funciona excepcionalmente sem solavancos por causa do seu ambiente compilado pronto.
+
+1. Registre o repósitorio no Servidor Nuvem (`New Project -> Deploy from Github Repo`).
+2. Crie simultaneamente na nuvem do repositório um Plugin Base (*PostgreSQL Base*). Copie as variáveis dinâmicas (URL, Host, Senha).
+3. Insira as variáveis coletadas dentro das "Environment variables do Server Web".
+4. O servidor detectará a diretiva Build nativamente executando o `tsc --build` e rodando de imediato a aplicação pronta em `.dist/` na porta exigida.
+
+> [!TIP]
+> A Engine do App conta com rodapé inteligente de migrações nos Scripts do `package.json`. Ao mandar rodar e executar um boot de produção via script (`npm run start`), ela rodará também as diretivas pendentes de Migration (Garante banco populado perfeitamente) de forma paralela via CLI do TypeORM.
+
+---
+
+## 4. Workstations Isoladas (Ambiente Dev & Testes Livres Docker-Compose)
+
+Para emular Localmente esse mesmo arsenal: O **Docker Compose** injetará o banco e levantará uma rede limpa. Para começar, construa as chaves num terminal usando um prompt.
+
+1. **Primeiro Boot Mágico no Workspace:** Copie o template blindado e gere as credenciais da máquina.
 ```bash
-# Build da imagem
-docker build -t order-api .
-
-# Rodar container
-docker run --env-file .env -p 3000:3000 order-api
+cp .env.example .env
+npm install
 ```
+
+2. **Acionar o Motor de Bancos (`Up`) em background Daemon (`-d`):**
+```bash
+npm run docker:up
+```
+
+3. **Injetar O Sangue do App:** Subir a interface usando _Hot Recompilation (TypeScript Runner)_ que assiste nativamente seus arquivos para atualizar imediatamente:
+```bash
+npm run dev
+# Sua API estará ressoando na porta Localhost referida em poucos segundos (geralmente localhost:3000)
+```
+
+4. **Banco Prontos e Mapeados em Transações Formais**:
+Sincronizar a base crua recém forjada do Docker com todas as tabelas em segundos usando as migrations nativas escritas lá em `src/migrations/`:
+```bash
+npm run migration:run
+npm run seed  # (Opcional - Adiciona Dummy Data do Catálogo de Loja Perfeito)
+```
+
+**Concluído!** — Todas as ferramentas administrativas embutidas encontram-se limpas. Seu backend flui incrivelmente bem como desenhado nos melhores tutoriais de Cloud Natives das indústrias TIER 1.
