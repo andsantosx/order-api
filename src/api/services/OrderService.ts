@@ -368,7 +368,7 @@ export class OrderService {
   private async validateAndCalculateOrder(items: OrderItemInput[]) {
     const productsMap = new Map<string, Product>();
     const sizeNamesMap = new Map<string, string>();
-    let subtotal = 0;
+    const allItemPrices: number[] = [];
 
     for (const item of items) {
       const product = await this.productRepository.findOne({ where: { id: item.productId } });
@@ -386,9 +386,26 @@ export class OrderService {
       });
       if (!productSize) throw new AppError(`Tamanho indisponível`, HTTP_STATUS.BAD_REQUEST);
 
-      subtotal += product.priceCents * item.quantity;
+      // Coleta todos os preços considerando as quantidades de cada item
+      for (let i = 0; i < item.quantity; i++) {
+        allItemPrices.push(product.priceCents);
+      }
+
       productsMap.set(item.productId, product);
       sizeNamesMap.set(item.size.toString(), size.name);
+    }
+
+    // Lógica "Compre 2 Leve 3" (o produto de menor valor sai de graça a cada 3 selecionados)
+    // Ordenar os preços do maior para o menor
+    allItemPrices.sort((a, b) => b - a);
+
+    let subtotal = 0;
+    for (let i = 0; i < allItemPrices.length; i++) {
+      // Se não for o 3º item de cada grupo (ex: índices 2, 5, 8...), somar ao subtotal.
+      // Caso contrário, é grátis (desconto).
+      if ((i + 1) % 3 !== 0) {
+        subtotal += allItemPrices[i];
+      }
     }
 
     const shippingCost = 0;
