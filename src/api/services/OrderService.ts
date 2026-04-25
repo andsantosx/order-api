@@ -369,7 +369,7 @@ export class OrderService {
     const productsMap = new Map<string, Product>();
     const sizeNamesMap = new Map<string, string>();
     const allItemPrices: number[] = [];
-
+    let customizationTotal = 0;
     for (const item of items) {
       const product = await this.productRepository.findOne({ where: { id: item.productId } });
       if (!product)
@@ -386,41 +386,38 @@ export class OrderService {
       });
       if (!productSize) throw new AppError(`Tamanho indisponível`, HTTP_STATUS.BAD_REQUEST);
 
-      // Coleta todos os preços considerando as quantidades de cada item
+      // Coleta os preços BASE para a promoção
       for (let i = 0; i < item.quantity; i++) {
-        let price = product.priceCents;
-        // Adiciona custo de personalização se solicitado
+        allItemPrices.push(product.priceCents);
+
+        // Acumula o custo de personalização separadamente (sempre pago)
         if (item.customName || item.customNumber) {
           if (!product.isCustomizable) {
             throw new AppError(
-            `Produto ${product.name} não permite personalização`,
-            HTTP_STATUS.BAD_REQUEST,
-          );
+              `Produto ${product.name} não permite personalização`,
+              HTTP_STATUS.BAD_REQUEST,
+            );
           }
-          price += MONEY.CUSTOMIZATION_COST_CENTS;
+          customizationTotal += MONEY.CUSTOMIZATION_COST_CENTS;
         }
-        allItemPrices.push(price);
       }
 
       productsMap.set(item.productId, product);
       sizeNamesMap.set(item.size.toString(), size.name);
     }
 
-    // Lógica "Compre 2 Leve 3" (o produto de menor valor sai de graça a cada 3 selecionados)
-    // Ordenar os preços do maior para o menor
+    // Lógica "Compre 2 Leve 3" aplicada apenas sobre o valor BASE das camisetas
     allItemPrices.sort((a, b) => b - a);
 
     let subtotal = 0;
     for (let i = 0; i < allItemPrices.length; i++) {
-      // Se não for o 3º item de cada grupo (ex: índices 2, 5, 8...), somar ao subtotal.
-      // Caso contrário, é grátis (desconto).
       if ((i + 1) % 3 !== 0) {
         subtotal += allItemPrices[i];
       }
     }
 
     const shippingCost = 0;
-    const totalAmount = subtotal + shippingCost;
+    const totalAmount = subtotal + customizationTotal + shippingCost;
 
     if (totalAmount < MONEY.MIN_ORDER_VALUE_CENTS)
       throw new AppError(ERROR_MESSAGES.ORDER_TOO_SMALL, HTTP_STATUS.BAD_REQUEST);
@@ -532,9 +529,11 @@ export class OrderService {
           product,
           quantity: item.quantity,
           unitPrice:
-            product.priceCents + (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0),
+            product.priceCents +
+            (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0),
           totalPrice:
-            (product.priceCents + (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0)) *
+            (product.priceCents +
+              (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0)) *
             item.quantity,
           size: sizeNamesMap.get(item.size.toString())!,
           customName: item.customName,
