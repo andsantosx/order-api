@@ -8,12 +8,8 @@ export class AddCustomizationToProductsAndItems1777150710000 implements Migratio
     );
 
     // Add custom_name and custom_number to order_items
-    await queryRunner.query(
-      `ALTER TABLE "order_items" ADD "custom_name" character varying(50)`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "order_items" ADD "custom_number" character varying(10)`,
-    );
+    await queryRunner.query(`ALTER TABLE "order_items" ADD "custom_name" character varying(50)`);
+    await queryRunner.query(`ALTER TABLE "order_items" ADD "custom_number" character varying(10)`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
