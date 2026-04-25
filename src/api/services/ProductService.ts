@@ -46,6 +46,9 @@ export interface ProductFilters {
 
   /** Itens por página */
   limit: number;
+
+  /** Filtrar apenas produtos em destaque */
+  isFeatured?: boolean;
 }
 
 /**
@@ -111,6 +114,7 @@ export class ProductService {
       sortBy = 'createdAt',
       page = 1,
       limit = 20,
+      isFeatured,
     } = filters;
     const skip = (page - 1) * limit;
 
@@ -168,6 +172,10 @@ export class ProductService {
 
     if (maxPrice !== undefined) {
       qb.andWhere('product.priceCents <= :maxPrice', { maxPrice });
+    }
+
+    if (isFeatured !== undefined) {
+      qb.andWhere('product.isFeatured = :isFeatured', { isFeatured });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -287,6 +295,7 @@ export class ProductService {
     brandId: number | undefined,
     sizesData: { sizeId: number }[],
     images?: string[],
+    isFeatured?: boolean,
   ) {
     // Sanitização de dados
     const sanitized = sanitizeProductData({ name, description, images });
@@ -355,6 +364,7 @@ export class ProductService {
       brand: brand || undefined,
       sizes: productSizes,
       images: productImages,
+      isFeatured: isFeatured || false,
     });
 
     // Salva produto com cascade - salva imagens e tamanhos automaticamente
@@ -398,6 +408,7 @@ export class ProductService {
       brandId?: number | null;
       sizes?: { sizeId: number }[];
       images?: string[];
+      isFeatured?: boolean;
     },
   ) {
     // Sanitização de dados de entrada
@@ -431,6 +442,7 @@ export class ProductService {
       if (data.priceCents !== undefined) product.priceCents = data.priceCents;
       if (data.description !== undefined) product.description = sanitized.description;
       if (data.currency !== undefined) product.currency = data.currency;
+      if (data.isFeatured !== undefined) product.isFeatured = data.isFeatured;
 
       // Atualiza categoria se fornecida
       if (data.categoryId !== undefined) {

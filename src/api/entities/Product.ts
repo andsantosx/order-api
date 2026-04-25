@@ -43,6 +43,10 @@ export class Product {
   @Column({ length: 3 })
   currency!: string;
 
+  @Index()
+  @Column({ name: 'is_featured', type: 'boolean', default: false })
+  isFeatured!: boolean;
+
   @ManyToOne(() => Category, (category) => category.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'category_id' })
   category!: Category;

@@ -10,8 +10,19 @@ export class ProductController {
    */
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { categories, brands, sizes, page, limit, search, minPrice, maxPrice, sort, sortBy } =
-        req.query;
+      const {
+        categories,
+        brands,
+        sizes,
+        page,
+        limit,
+        search,
+        minPrice,
+        maxPrice,
+        sort,
+        sortBy,
+        isFeatured,
+      } = req.query;
       const pageNum = page ? parseInt(page as string) : 1;
       const limitNum = limit ? parseInt(limit as string) : 20;
 
@@ -43,6 +54,7 @@ export class ProductController {
         search: search as string,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        isFeatured: isFeatured === 'true',
       });
       res.json(products);
     } catch (error) {
@@ -93,6 +105,7 @@ export class ProductController {
         sizeIds,
         sizes,
         images,
+        isFeatured,
       } = req.body;
 
       const finalPrice = priceCents ?? price_cents;
@@ -111,6 +124,7 @@ export class ProductController {
         brandId,
         sizesData,
         images,
+        isFeatured,
       );
       res.status(201).json(product);
     } catch (error) {
@@ -124,7 +138,7 @@ export class ProductController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { sizeIds, sizes, images, priceCents, price_cents, ...rest } = req.body;
+      const { sizeIds, sizes, images, priceCents, price_cents, isFeatured, ...rest } = req.body;
       const finalPrice = priceCents ?? price_cents;
 
       let sizesData = sizes;
@@ -137,6 +151,7 @@ export class ProductController {
         priceCents: finalPrice,
         sizes: sizesData,
         images,
+        isFeatured,
       });
       res.json(product);
     } catch (error) {
