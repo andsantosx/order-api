@@ -44,6 +44,8 @@ export const createOrderSchema = z.object({
             z.string().min(1, 'Tamanho inválido'),
             z.number().int().positive('Tamanho inválido'),
           ]),
+          customName: z.string().max(50, 'Nome muito longo').optional(),
+          customNumber: z.string().max(10, 'Número muito longo').optional(),
         }),
       )
       .min(1, 'Pedido deve ter pelo menos um item'),

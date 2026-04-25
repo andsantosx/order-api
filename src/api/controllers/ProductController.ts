@@ -106,6 +106,7 @@ export class ProductController {
         sizes,
         images,
         isFeatured,
+        isCustomizable,
       } = req.body;
 
       const finalPrice = priceCents ?? price_cents;
@@ -125,6 +126,7 @@ export class ProductController {
         sizesData,
         images,
         isFeatured,
+        isCustomizable,
       );
       res.status(201).json(product);
     } catch (error) {
@@ -138,7 +140,16 @@ export class ProductController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { sizeIds, sizes, images, priceCents, price_cents, isFeatured, ...rest } = req.body;
+      const {
+        sizeIds,
+        sizes,
+        images,
+        priceCents,
+        price_cents,
+        isFeatured,
+        isCustomizable,
+        ...rest
+      } = req.body;
       const finalPrice = priceCents ?? price_cents;
 
       let sizesData = sizes;
@@ -152,6 +163,7 @@ export class ProductController {
         sizes: sizesData,
         images,
         isFeatured,
+        isCustomizable,
       });
       res.json(product);
     } catch (error) {

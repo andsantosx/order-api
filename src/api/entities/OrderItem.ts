@@ -21,6 +21,12 @@ export class OrderItem {
   @Column({ nullable: true })
   size?: string;
 
+  @Column({ name: 'custom_name', length: 50, nullable: true })
+  customName?: string;
+
+  @Column({ name: 'custom_number', length: 10, nullable: true })
+  customNumber?: string;
+
   @Column({
     name: 'unit_price',
     type: 'bigint',

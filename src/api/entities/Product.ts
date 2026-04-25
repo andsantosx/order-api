@@ -47,6 +47,9 @@ export class Product {
   @Column({ name: 'is_featured', type: 'boolean', default: false })
   isFeatured!: boolean;
 
+  @Column({ name: 'is_customizable', type: 'boolean', default: false })
+  isCustomizable!: boolean;
+
   @ManyToOne(() => Category, (category) => category.products, { nullable: true, eager: true })
   @JoinColumn({ name: 'category_id' })
   category!: Category;

@@ -58,6 +58,12 @@ export interface OrderItemInput {
 
   /** Tamanho selecionado */
   size: number | string;
+
+  /** Nome para personalização */
+  customName?: string;
+
+  /** Número para personalização */
+  customNumber?: string;
 }
 
 /**

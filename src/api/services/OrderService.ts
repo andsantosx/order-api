@@ -388,7 +388,18 @@ export class OrderService {
 
       // Coleta todos os preços considerando as quantidades de cada item
       for (let i = 0; i < item.quantity; i++) {
-        allItemPrices.push(product.priceCents);
+        let price = product.priceCents;
+        // Adiciona custo de personalização se solicitado
+        if (item.customName || item.customNumber) {
+          if (!product.isCustomizable) {
+            throw new AppError(
+            `Produto ${product.name} não permite personalização`,
+            HTTP_STATUS.BAD_REQUEST,
+          );
+          }
+          price += MONEY.CUSTOMIZATION_COST_CENTS;
+        }
+        allItemPrices.push(price);
       }
 
       productsMap.set(item.productId, product);
@@ -520,9 +531,14 @@ export class OrderService {
         return this.orderItemRepository.create({
           product,
           quantity: item.quantity,
-          unitPrice: product.priceCents,
-          totalPrice: product.priceCents * item.quantity,
+          unitPrice:
+            product.priceCents + (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0),
+          totalPrice:
+            (product.priceCents + (item.customName || item.customNumber ? MONEY.CUSTOMIZATION_COST_CENTS : 0)) *
+            item.quantity,
           size: sizeNamesMap.get(item.size.toString())!,
+          customName: item.customName,
+          customNumber: item.customNumber,
         });
       });
 

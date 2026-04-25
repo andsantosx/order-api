@@ -12,6 +12,8 @@ interface IEmailItem {
   };
   quantity: number;
   unitPrice: number;
+  customName?: string;
+  customNumber?: string;
 }
 
 interface IEmailAddress {
@@ -95,6 +97,11 @@ export class EmailService {
                 <td style="padding: 16px 0; border-bottom: 1px solid #F0F0F0;">
                   <span style="color: #111111; font-weight: 600;">${item.product?.name || 'Produto'}</span><br>
                   <span style="font-size: 13px; color: #666666;">Qtd: ${item.quantity}</span>
+                  ${
+                    item.customName || item.customNumber
+                      ? `<br><span style="font-size: 12px; color: #5A4373; font-weight: 600;">Personalização: ${[item.customName, item.customNumber].filter(Boolean).join(' - ')}</span>`
+                      : ''
+                  }
                 </td>
                 <td align="right" style="padding: 16px 0; border-bottom: 1px solid #F0F0F0; color: #111111; font-weight: 700;">
                   ${((item.unitPrice || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}

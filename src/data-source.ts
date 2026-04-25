@@ -27,8 +27,8 @@ export const AppDataSource = new DataSource({
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-  synchronize: false, // Desabilitado para usar migrations com segurança
-  migrationsRun: true, // Executa as migrations automaticamente ao subir o app
+  synchronize: true,
+  migrationsRun: false,
   logging: env.NODE_ENV === 'development',
   entities: [
     Product,

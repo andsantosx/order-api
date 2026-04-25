@@ -48,6 +48,7 @@ export const createProductSchema = z.object({
         .min(1, 'Produto deve ter pelo menos um tamanho'),
       images: z.array(imageUrlSchema).min(1, 'Pelo menos uma imagem é obrigatória').optional(),
       isFeatured: z.boolean().optional(),
+      isCustomizable: z.boolean().optional(),
     })
     .refine((data) => data.price_cents !== undefined || data.priceCents !== undefined, {
       message: 'Preço é obrigatório (price_cents ou priceCents)',
@@ -85,5 +86,6 @@ export const updateProductSchema = z.object({
     sizeIds: z.array(z.number().int().positive()).min(1).optional(),
     images: z.array(imageUrlSchema).min(1, 'Pelo menos uma imagem é obrigatória').optional(),
     isFeatured: z.boolean().optional(),
+    isCustomizable: z.boolean().optional(),
   }),
 });

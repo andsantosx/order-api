@@ -296,6 +296,7 @@ export class ProductService {
     sizesData: { sizeId: number }[],
     images?: string[],
     isFeatured?: boolean,
+    isCustomizable?: boolean,
   ) {
     // Sanitização de dados
     const sanitized = sanitizeProductData({ name, description, images });
@@ -365,6 +366,7 @@ export class ProductService {
       sizes: productSizes,
       images: productImages,
       isFeatured: isFeatured || false,
+      isCustomizable: isCustomizable || false,
     });
 
     // Salva produto com cascade - salva imagens e tamanhos automaticamente
@@ -409,6 +411,7 @@ export class ProductService {
       sizes?: { sizeId: number }[];
       images?: string[];
       isFeatured?: boolean;
+      isCustomizable?: boolean;
     },
   ) {
     // Sanitização de dados de entrada
@@ -443,6 +446,7 @@ export class ProductService {
       if (data.description !== undefined) product.description = sanitized.description;
       if (data.currency !== undefined) product.currency = data.currency;
       if (data.isFeatured !== undefined) product.isFeatured = data.isFeatured;
+      if (data.isCustomizable !== undefined) product.isCustomizable = data.isCustomizable;
 
       // Atualiza categoria se fornecida
       if (data.categoryId !== undefined) {
