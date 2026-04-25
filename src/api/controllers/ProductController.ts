@@ -54,7 +54,7 @@ export class ProductController {
         search: search as string,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
-        isFeatured: isFeatured === 'true',
+        isFeatured: isFeatured !== undefined ? isFeatured === 'true' : undefined,
       });
       res.json(products);
     } catch (error) {
