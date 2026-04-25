@@ -32,6 +32,7 @@ Este projeto não foi construído como um "side-project" comum. Ele orquestra os
    - Camadas de mitigação de abusos usando Rate-Limiting contextual (ex: maior restrição `/auth` menor no catálogo).
    - Sanitização agressiva contra SQL Injection e políticas restritas de CSP/CORS gerenciadas via Helmet e Zod.
 3. **Assinaturas Financeiras**: Tratamento automatizado de webhooks (IPN) integrados ao **Mercado Pago**, com atualização em tempo-real do status da compra.
+4. **Filtros de Alta Performance**: Implementação de indexação personalizada para produtos em destaque (`isFeatured`), garantindo filtragem ultra-rápida no banco de dados para vitrines principais.
 
 ---
 
