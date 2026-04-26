@@ -2,6 +2,7 @@ import Mailjet from 'node-mailjet';
 import { env } from '../../config/env';
 import winston from 'winston';
 import { injectable } from 'tsyringe';
+import { MONEY } from '../../constants';
 
 /**
  * Interfaces para tipos internos do EmailService
@@ -91,24 +92,44 @@ export class EmailService {
           <strong style="font-size: 11px; color: #999999; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 24px;">Resumo do Pedido</strong>
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 15px; color: #111111;">
             ${items
-              .map(
-                (item) => `
+              .map((item) => {
+                const isCustom = !!(item.customName || item.customNumber);
+                const basePrice = isCustom
+                  ? (item.unitPrice || 0) - MONEY.CUSTOMIZATION_COST_CENTS
+                  : item.unitPrice || 0;
+                const basePriceFormatted = (basePrice / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                });
+                const customPriceFormatted = (MONEY.CUSTOMIZATION_COST_CENTS / 100).toLocaleString(
+                  'pt-BR',
+                  {
+                    style: 'currency',
+                    currency: 'BRL',
+                  },
+                );
+                const totalItemPriceFormatted = ((item.unitPrice || 0) / 100).toLocaleString(
+                  'pt-BR',
+                  { style: 'currency', currency: 'BRL' },
+                );
+
+                return `
               <tr>
                 <td style="padding: 16px 0; border-bottom: 1px solid #F0F0F0;">
                   <span style="color: #111111; font-weight: 600;">${item.product?.name || 'Produto'}</span><br>
-                  <span style="font-size: 13px; color: #666666;">Qtd: ${item.quantity}</span>
+                  <span style="font-size: 13px; color: #666666;">Qtd: ${item.quantity} x ${basePriceFormatted}</span>
                   ${
-                    item.customName || item.customNumber
-                      ? `<br><span style="font-size: 12px; color: #5A4373; font-weight: 600;">Personalização: ${[item.customName, item.customNumber].filter(Boolean).join(' - ')}</span>`
+                    isCustom
+                      ? `<br><span style="font-size: 12px; color: #5A4373; font-weight: 600;">Personalização: ${[item.customName, item.customNumber].filter(Boolean).join(' - ')} (+ ${customPriceFormatted})</span>`
                       : ''
                   }
                 </td>
                 <td align="right" style="padding: 16px 0; border-bottom: 1px solid #F0F0F0; color: #111111; font-weight: 700;">
-                  ${((item.unitPrice || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  ${totalItemPriceFormatted}
                 </td>
               </tr>
-            `,
-              )
+            `;
+              })
               .join('')}
           </table>
         </div>
@@ -306,10 +327,43 @@ export class EmailService {
       </div>`;
     }
 
+    const sumItems =
+      items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
+    const discount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+
+    let priceDetailsHtml = `<strong>Valor Total: ${formattedTotal}</strong>`;
+
+    if (discount > 0) {
+      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      priceDetailsHtml = `
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
+          <tr>
+            <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
+            <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${formattedSum}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">Desconto Aplicado:</td>
+            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">- ${formattedDiscount}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
+            <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
+          </tr>
+        </table>
+      `;
+    }
+
     const content = `
       Olá, ${name}.<br><br>
       Seu pedido foi registrado em nosso sistema e está aguardando a confirmação do pagamento.<br><br>
-      <strong>Valor Total: ${formattedTotal}</strong>
+      ${priceDetailsHtml}
       ${linkNotice}
       ${passwordNotice}
     `;
@@ -318,7 +372,7 @@ export class EmailService {
       to,
       name,
       `Pedido Confirmado #${orderId.slice(0, 8)}`,
-      this.getHtmlTemplate(title, content),
+      this.getHtmlTemplate(title, content, undefined, undefined, notes, items),
       text,
     );
   }
@@ -345,11 +399,44 @@ export class EmailService {
       ? `${addr.street}, ${addr.number}${addr.reference ? ` (${addr.reference})` : ''}, ${addr.city} - ${addr.state}. CEP: ${addr.zipCode}`
       : 'Não informado';
 
+    const sumItems =
+      order.items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
+    const discount = sumItems > order.totalAmount ? sumItems - order.totalAmount : 0;
+
+    let priceDetailsHtml = `<strong>Valor Total:</strong> ${formattedTotal}<br><br>`;
+
+    if (discount > 0) {
+      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      priceDetailsHtml = `
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 15px;">
+          <tr>
+            <td style="font-size: 14px; color: #444; padding-bottom: 4px;"><strong>Subtotal dos itens:</strong></td>
+            <td align="right" style="font-size: 14px; color: #444; padding-bottom: 4px;">${formattedSum}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;"><strong>Desconto Aplicado:</strong></td>
+            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${formattedDiscount}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">Valor Final Recebido:</td>
+            <td align="right" style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">${formattedTotal}</td>
+          </tr>
+        </table>
+      `;
+    }
+
     const content = `
       <strong>Um novo pagamento foi confirmado!</strong><br><br>
       <div style="background-color: #FAFAFA; padding: 20px; border-radius: 4px; border: 1px solid #EEE;">
         <strong>ID do Pedido:</strong> #${order.id.slice(0, 8)}<br>
-        <strong>Valor Total:</strong> ${formattedTotal}<br><br>
+        ${priceDetailsHtml}
         <strong>CLIENTE:</strong><br>
         Nome: ${customerName}<br>
         E-mail: ${customerEmail}<br>
@@ -404,21 +491,62 @@ export class EmailService {
     to: string,
     name: string,
     orderId: string,
+    totalAmount: number,
     _notes?: string,
-    _items?: IEmailItem[],
+    items?: IEmailItem[],
   ): Promise<void> {
     const title = `Pagamento <span style="color: #4A3B63;">Confirmado</span>.`;
+
+    const formattedTotal = (totalAmount / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+
+    const sumItems =
+      items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
+    const discount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+
+    let priceDetailsHtml = `<strong>Valor Total: ${formattedTotal}</strong>`;
+
+    if (discount > 0) {
+      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+      priceDetailsHtml = `
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
+          <tr>
+            <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
+            <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${formattedSum}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">Desconto Aplicado:</td>
+            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">- ${formattedDiscount}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
+            <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
+          </tr>
+        </table>
+      `;
+    }
+
     const content = `
       Olá, ${name}.<br><br>
       Ótimas notícias. O pagamento do seu pedido <strong>#${orderId.slice(0, 8)}</strong> foi aprovado com sucesso.<br><br>
-      Nossa equipe já está providenciando a separação e o envio dos seus produtos.
+      Nossa equipe já está providenciando a separação e o envio dos seus produtos.<br><br>
+      ${priceDetailsHtml}
     `;
     const text = `Pagamento aprovado para o pedido #${orderId.slice(0, 8)}.`;
     await this.send(
       to,
       name,
       `Pagamento Aprovado - #${orderId.slice(0, 8)}`,
-      this.getHtmlTemplate(title, content),
+      this.getHtmlTemplate(title, content, undefined, undefined, _notes, items),
       text,
     );
   }

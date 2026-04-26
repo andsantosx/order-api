@@ -99,6 +99,7 @@ export class EmailHandler {
             order.user?.email || '',
             order.user?.name || 'Cliente',
             order.id,
+            order.totalAmount,
             data.notes,
             order.items,
           );
