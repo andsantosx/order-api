@@ -34,7 +34,9 @@ export class ContactService {
     try {
       await this.emailService.sendInternalContactNotification(data);
     } catch (error: unknown) {
-      log.error('Erro ao enviar e-mail de notificação de contato', error);
+      log.error('Erro ao enviar e-mail de notificação de contato', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return this.getOne(saved.id);
@@ -81,7 +83,9 @@ export class ContactService {
         saved.response || '',
       );
     } catch (error: unknown) {
-      log.error('Erro ao enviar e-mail de resposta de contato', error);
+      log.error('Erro ao enviar e-mail de resposta de contato', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return this.getOne(saved.id);
