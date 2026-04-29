@@ -1,5 +1,8 @@
 # Guia de Segurança - Order API
 
+> [!DANGER]
+> **REPOSITÓRIO PÚBLICO EM PRODUÇÃO**: Este repositório é público e contém código em produção. **NUNCA** commite dados sensíveis (senhas, tokens, chaves de API, credenciais de banco de dados, dados de usuários reais). Use sempre dados de exemplo/placeholder na documentação. Uma vez no histórico do Git, dados sensíveis devem ser considerados permanentemente expostos.
+
 ## Índice
 
 1. [Autenticação e Autorização](#autenticação-e-autorização)

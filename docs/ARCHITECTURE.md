@@ -783,9 +783,8 @@ A aplicação implementa os seguintes serviços de negócio:
 
 ### Obrigatórias
 
-> [!CAUTION]
-> **NUNCA** insira valores reais de produção em arquivos de documentação ou versão.
-> Use sempre o arquivo `.env` (que deve ser ignorado pelo Git).
+> [!DANGER]
+> **REPOSITÓRIO PÚBLICO EM PRODUÇÃO**: **NUNCA** insira valores reais de produção em arquivos de documentação ou versionados no Git. Use sempre o arquivo `.env` (que deve estar no `.gitignore`). Os exemplos abaixo são apenas para referência - configure valores reais apenas via variáveis de ambiente no servidor.
 
 ```bash
 DB_HOST=localhost      # Use 'db' para Docker

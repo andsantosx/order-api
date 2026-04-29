@@ -1,5 +1,8 @@
 # ☁️ Manual de Operações, Deploy e Infraestrutura
 
+> [!DANGER]
+> **REPOSITÓRIO PÚBLICO EM PRODUÇÃO**: Este repositório é público. **NUNCA** adicione valores reais de credenciais, tokens ou configurações de produção neste arquivo. Use sempre placeholders e exemplos. Configure valores reais apenas via variáveis de ambiente no servidor de produção.
+
 A Base desta Application Engine foi gerada inteiramente com foco na "Dockerização" e nuvem elástica, rodando `Node.js` através da velocidade assustadora das premissas de Server-Side. Segue a pauta de como orquestrar tanto a Máquina do Engenheiro Local quanto a Operação em Produção usando provedores como Railway, AWS, DigitalOcean e afins.
 
 ## 1. Tabela Matriz de Dependências Infracionais
