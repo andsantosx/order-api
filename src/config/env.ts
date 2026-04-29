@@ -73,6 +73,7 @@ const envSchema = z.object({
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
+  // eslint-disable-next-line no-console -- Console permitido: erro crítico antes da inicialização do logger
   console.error('❌ Variáveis de ambiente inválidas:', _env.error.format());
   throw new Error('Variáveis de ambiente inválidas');
 }

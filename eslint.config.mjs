@@ -19,7 +19,6 @@ export default [
     languageOptions: {
       globals: {
         process: "readonly",
-        console: "readonly",
         beforeAll: "readonly",
         afterAll: "readonly",
         beforeEach: "readonly",
@@ -69,6 +68,14 @@ export default [
           "caughtErrorsIgnorePattern": "^_"
         }
       ],
+      "no-console": "error", // Bloqueia todo console.log/warn/error (use logger)
+    },
+  },
+  // Permitir console.log em testes e seeds
+  {
+    files: ["**/*.test.ts", "**/tests/**/*.ts", "**/seed/**/*.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
 ];

@@ -4,6 +4,7 @@ import { AppError } from '../middlewares/errorHandler';
 import { HTTP_STATUS } from '../../constants';
 import { EmailService } from './EmailService';
 import { injectable, inject } from 'tsyringe';
+import { log } from '../../config/logger';
 
 interface ContactMessageData {
   name: string;
@@ -33,7 +34,7 @@ export class ContactService {
     try {
       await this.emailService.sendInternalContactNotification(data);
     } catch (error: unknown) {
-      console.error('Erro ao enviar e-mail de notificação de contato:', error);
+      log.error('Erro ao enviar e-mail de notificação de contato', error);
     }
 
     return this.getOne(saved.id);
@@ -80,7 +81,7 @@ export class ContactService {
         saved.response || '',
       );
     } catch (error: unknown) {
-      console.error('Erro ao enviar e-mail de resposta de contato:', error);
+      log.error('Erro ao enviar e-mail de resposta de contato', error);
     }
 
     return this.getOne(saved.id);
