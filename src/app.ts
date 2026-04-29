@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger';
 import { AppDataSource } from './data-source';
@@ -97,6 +98,7 @@ app.use('/api', generalLimiter);
 // 2. Middlewares Globais de JSON
 // ==========================================
 app.use(express.json({ limit: '10kb' })); // Limit JSON body size to 10kb to prevent DoS
+app.use(cookieParser()); // Parse cookies for httpOnly authentication
 
 // ==========================================
 // 3. Rotas de Monitoramento (Health Check)

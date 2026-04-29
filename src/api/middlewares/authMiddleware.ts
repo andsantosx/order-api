@@ -18,18 +18,23 @@ import { ERROR_MESSAGES, HTTP_STATUS } from '../../constants';
  * router.get('/profile', authMiddleware, profileController.getProfile);
  */
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // Obtém o header de autorização
-  const authHeader = req.headers.authorization;
+  // Tenta obter o token do cookie httpOnly (recomendado)
+  let token = req.cookies?.token;
 
-  if (!authHeader) {
-    throw new AppError(ERROR_MESSAGES.NO_TOKEN, HTTP_STATUS.UNAUTHORIZED);
+  // Se não tiver cookie, tenta obter do header Authorization (backward compatibility)
+  if (!token) {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader) {
+      // Formato esperado: "Bearer <token>"
+      const parts = authHeader.split(' ');
+      token = parts[1];
+    }
   }
 
-  // Formato esperado: "Bearer <token>"
-  const [, token] = authHeader.split(' ');
-
+  // Se não encontrou token em nenhum lugar
   if (!token) {
-    throw new AppError(ERROR_MESSAGES.MALFORMED_TOKEN, HTTP_STATUS.UNAUTHORIZED);
+    throw new AppError(ERROR_MESSAGES.NO_TOKEN, HTTP_STATUS.UNAUTHORIZED);
   }
 
   try {

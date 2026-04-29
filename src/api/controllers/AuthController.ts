@@ -6,12 +6,14 @@ import { injectable, inject } from 'tsyringe';
 @injectable()
 export class AuthController {
   /**
-   * Registra um novo usuário.
-   * Espera receber name, email e password no corpo da requisição.
+   * Registra um novo usuário e faz login automaticamente.
+   * Define httpOnly cookie com JWT token e retorna os dados do usuário.
    */
   async register(req: Request, res: Response, _next: NextFunction) {
     const { name, email, password, acceptedTerms, document, phone } = req.body;
-    const user = await this.userService.register(
+
+    // Registra o usuário
+    await this.userService.register(
       name || 'Cliente',
       email,
       password,
@@ -19,17 +21,55 @@ export class AuthController {
       document,
       phone,
     );
-    res.status(201).json(user);
+
+    // Faz login automaticamente para obter o token
+    const result = await this.userService.login(email, password);
+
+    // Define httpOnly cookie com o token
+    res.cookie('token', result.token, {
+      httpOnly: true,        // Não acessível via JavaScript (proteção XSS)
+      secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+      sameSite: 'strict',    // Proteção CSRF
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas (mesmo tempo do token JWT)
+    });
+
+    // Retorna apenas os dados do usuário (não o token)
+    res.status(201).json({ user: result.user });
   }
 
   /**
    * Realiza o login do usuário.
-   * Retorna o token JWT se as credenciais estiverem corretas.
+   * Define httpOnly cookie com JWT token e retorna os dados do usuário.
    */
   async login(req: Request, res: Response, _next: NextFunction) {
     const { email, password } = req.body;
     const result = await this.userService.login(email, password);
-    res.json(result);
+
+    // Define httpOnly cookie com o token
+    res.cookie('token', result.token, {
+      httpOnly: true,        // Não acessível via JavaScript (proteção XSS)
+      secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+      sameSite: 'strict',    // Proteção CSRF
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas (mesmo tempo do token JWT)
+    });
+
+    // Retorna apenas os dados do usuário (não o token)
+    res.json({ user: result.user });
+  }
+
+  /**
+   * Realiza o logout do usuário.
+   * Limpa o cookie httpOnly com o token.
+   */
+  async logout(req: Request, res: Response, _next: NextFunction) {
+    // Limpa o cookie
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    res.json({ message: 'Logout realizado com sucesso.' });
   }
 
   /**
