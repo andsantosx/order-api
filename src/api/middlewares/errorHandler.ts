@@ -7,6 +7,37 @@ import { isProduction } from '../../config/env';
 import { PaymentException } from '../exceptions/PaymentException';
 
 /**
+ * Sanitiza o body da requisição removendo campos sensíveis antes de logar
+ * CRÍTICO: Nunca logar senhas, tokens ou dados sensíveis
+ */
+function sanitizeBodyForLogging(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+
+  const sensitiveFields = [
+    'password',
+    'token',
+    'secret',
+    'apiKey',
+    'accessToken',
+    'refreshToken',
+    'cardNumber',
+    'cvv',
+    'securityCode',
+    'cardCvv',
+  ];
+
+  const sanitized = { ...body } as Record<string, unknown>;
+
+  for (const field of sensitiveFields) {
+    if (field in sanitized) {
+      sanitized[field] = '[REDACTED]';
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Classe customizada para erros da aplicação
  * Permite definir status code e mensagem de erro específicos
  */
@@ -134,7 +165,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, _next: Nex
     path: req.path,
     method: req.method,
     userId: req.user?.userId,
-    body: req.body,
+    body: sanitizeBodyForLogging(req.body), // NUNCA logar senhas/tokens
   });
 
   // Em produção, não expor detalhes do erro
