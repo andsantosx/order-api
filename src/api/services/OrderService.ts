@@ -339,7 +339,7 @@ export class OrderService {
     }
 
     const finalOrder = await this.getOne(order.id);
-    return { order: finalOrder, isNewUser };
+    return { order: finalOrder, isNewUser, user: isNewUser ? user : undefined };
   }
 
   private validateOrderInput(

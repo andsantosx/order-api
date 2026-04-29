@@ -4,10 +4,12 @@ import { OrderStatus } from '../entities/Order';
 import { PaymentService } from '../services/PaymentService';
 import { OrderHistoryService } from '../services/OrderHistoryService';
 import { log } from '../../config/logger';
-import { HTTP_STATUS, ERROR_MESSAGES } from '../../constants';
+import { HTTP_STATUS, ERROR_MESSAGES, SECURITY } from '../../constants';
 import { AppError } from '../middlewares/errorHandler';
 import { ChangedByRole } from '../../types/domain-enums';
 import { injectable, inject } from 'tsyringe';
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env';
 
 @injectable()
 export class OrderController {
@@ -111,6 +113,30 @@ export class OrderController {
       idempotencyKey,
       paymentMethod,
     );
+
+    // Se criou conta automaticamente (guest checkout), faz auto-login
+    if (result.isNewUser && result.user) {
+      const token = jwt.sign(
+        {
+          userId: result.user.id,
+          email: result.user.email,
+          isAdmin: result.user.isAdmin || false,
+        },
+        env.JWT_SECRET,
+        { expiresIn: SECURITY.JWT_EXPIRATION },
+      );
+
+      // Define httpOnly cookie para auto-login
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas
+      });
+
+      log.info('Auto-login após criação de conta guest', { userId: result.user.id });
+    }
+
     res.status(HTTP_STATUS.CREATED).json(result);
   }
 
