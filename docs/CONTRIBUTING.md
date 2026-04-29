@@ -1,7 +1,15 @@
 # Guia de Contribuição e Qualidade
 
-> [!WARNING]
-> **POLÍTICA DE SEGURANÇA**: É estritamente proibido o commit de arquivos `.env` ou qualquer forma de segredo (chaves de API, senhas, tokens) neste repositório.
+> [!DANGER]
+> **POLÍTICA DE SEGURANÇA CRÍTICA - REPOSITÓRIO PÚBLICO EM PRODUÇÃO**:
+> 
+> 1. **NUNCA** commitar arquivos `.env` ou qualquer segredo (chaves de API, senhas, tokens)
+> 2. **NUNCA** introduzir código com vulnerabilidades de segurança conhecidas
+> 3. **SEMPRE** seguir o checklist de segurança antes de commit (ver `docs/SECURITY.md`)
+> 4. **SEMPRE** validar e sanitizar TODO input de usuário
+> 5. **SEMPRE** verificar autenticação e autorização em endpoints protegidos
+>
+> **Código inseguro em repositório público = vulnerabilidade explorável por atacantes**
 
 ---
 
@@ -37,10 +45,44 @@ Uma tarefa só é considerada concluída quando:
 - Atualize `docs/TESTING.md` se houver novos cenários de teste ou estratégias.
 - Atualize `README.md` se houver mudanças em configuração ou setup.
 
-### Passo 4: Verificação de Qualidade
-- Linting: `npm run lint`
-- Formatting: `npm run format`
-- Build Check: `npm run build`
+### Passo 4: Verificação de Segurança e Qualidade
+
+**OBRIGATÓRIO - Checklist de Segurança**:
+```bash
+# 1. Auditoria de dependências
+npm audit
+
+# 2. Verificar vulnerabilidades críticas/altas
+npm audit --audit-level=high
+
+# 3. Linting
+npm run lint
+
+# 4. Formatting
+npm run format
+
+# 5. Type checking
+npm run build
+
+# 6. Testes
+npm test
+```
+
+**Code Review de Segurança - Verificar TODOS os itens**:
+- [ ] Todo input validado com Zod schemas
+- [ ] Todo texto sanitizado (stripHtml)
+- [ ] Endpoints protegidos com authMiddleware
+- [ ] Verificação de autorização (user.id === resource.userId)
+- [ ] Queries parametrizadas (TypeORM)
+- [ ] Rate limiting em endpoints sensíveis
+- [ ] Nenhum dado sensível em logs
+- [ ] Nenhum console.log em código de produção
+- [ ] Mensagens de erro genéricas (não revelam estrutura)
+- [ ] Valores monetários em centavos
+- [ ] Transações em operações críticas
+- [ ] Limites aplicados (max/min values)
+
+**Se qualquer item falhar, NÃO COMMITAR até corrigir.**
 
 ## 3. Componentes Críticos
 

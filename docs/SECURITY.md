@@ -3,16 +3,64 @@
 > [!DANGER]
 > **REPOSITÓRIO PÚBLICO EM PRODUÇÃO**: Este repositório é público e contém código em produção. **NUNCA** commite dados sensíveis (senhas, tokens, chaves de API, credenciais de banco de dados, dados de usuários reais). Use sempre dados de exemplo/placeholder na documentação. Uma vez no histórico do Git, dados sensíveis devem ser considerados permanentemente expostos.
 
+## ⚠️ IMPORTANTE: Código Público
+
+Como este repositório é **PÚBLICO**, atacantes têm acesso total ao código-fonte. Isso significa:
+
+- ✅ **Toda vulnerabilidade é visível** - Código inseguro pode ser explorado
+- ✅ **Zero tolerância a falhas** - Não podemos "consertar depois"
+- ✅ **Defesa em profundidade** - Múltiplas camadas de proteção
+- ✅ **Code review rigoroso** - Toda mudança deve passar por checklist de segurança
+
+**Vulnerabilidades conhecidas no código = convite para ataques**
+
+---
+
 ## Índice
 
-1. [Autenticação e Autorização](#autenticação-e-autorização)
-2. [Rate Limiting](#rate-limiting)
-3. [Validação e Sanitização](#validação-e-sanitização)
-4. [Proteção Contra Vulnerabilidades Comuns](#proteção-contra-vulnerabilidades-comuns)
-5. [Segurança de Dados](#segurança-de-dados)
-6. [Logging Seguro](#logging-seguro)
-7. [Configuração de Segurança](#configuração-de-segurança)
-8. [Checklist de Deploy](#checklist-de-deploy)
+1. [Princípios de Segurança](#princípios-de-segurança)
+2. [Autenticação e Autorização](#autenticação-e-autorização)
+3. [Rate Limiting](#rate-limiting)
+4. [Validação e Sanitização](#validação-e-sanitização)
+5. [Proteção Contra Vulnerabilidades Comuns](#proteção-contra-vulnerabilidades-comuns)
+6. [Segurança de Dados](#segurança-de-dados)
+7. [Logging Seguro](#logging-seguro)
+8. [Configuração de Segurança](#configuração-de-segurança)
+9. [Checklist de Deploy](#checklist-de-deploy)
+10. [Code Review de Segurança](#code-review-de-segurança)
+
+---
+
+## Princípios de Segurança
+
+### 1. Defense in Depth (Defesa em Profundidade)
+Múltiplas camadas de proteção - se uma falhar, outras ainda protegem:
+- Validação de input (Zod)
+- Sanitização (stripHtml)
+- Autenticação (JWT)
+- Autorização (verificação de propriedade)
+- Rate limiting
+- Logs e auditoria
+
+### 2. Least Privilege (Mínimo Privilégio)
+Usuários e código devem ter apenas as permissões necessárias:
+- Usuários comuns não podem acessar funções admin
+- Usuários só veem seus próprios dados
+- Endpoints requerem apenas permissões necessárias
+
+### 3. Fail Securely (Falhar com Segurança)
+Em caso de erro, o sistema deve:
+- Negar acesso por padrão
+- Não revelar informações sensíveis
+- Logar o incidente
+- Retornar mensagem genérica ao usuário
+
+### 4. Never Trust Input (Nunca Confie no Input)
+Todo input de usuário é malicioso até prova em contrário:
+- Validar TUDO (Zod schemas)
+- Sanitizar SEMPRE (stripHtml, validação de URL)
+- Parametrizar queries (TypeORM)
+- Limitar tamanhos e quantidades
 
 ---
 
@@ -861,3 +909,149 @@ Segurança é um **processo contínuo**, não um estado final. Esta aplicação 
 - Treinamento do time
 
 Para reportar vulnerabilidades, contate: **[definir contato]**
+
+---
+
+## Code Review de Segurança
+
+### Checklist Obrigatório para TODO Código Novo
+
+Antes de aprovar qualquer PR ou commit, verificar:
+
+#### ✅ Validação de Input
+- [ ] Todo input de usuário passa por Zod schema
+- [ ] Arrays têm limite de tamanho (.max())
+- [ ] Strings têm limite de comprimento (.max())
+- [ ] Números têm min/max apropriados
+- [ ] Emails são validados (.email())
+- [ ] UUIDs são validados (.uuid())
+
+#### ✅ Sanitização
+- [ ] Campos de texto são sanitizados com stripHtml()
+- [ ] URLs de imagem são validadas com isValidImageUrl()
+- [ ] CEPs são normalizados
+- [ ] CPFs são normalizados (apenas números)
+
+#### ✅ Autenticação e Autorização
+- [ ] Endpoints protegidos têm authMiddleware
+- [ ] Endpoints admin têm authMiddleware + isAdmin
+- [ ] Verificação de propriedade: `if (resource.userId !== req.user.id)`
+- [ ] Tokens têm expiração apropriada
+- [ ] Senhas usam bcrypt (NUNCA plain text)
+
+#### ✅ Queries de Banco de Dados
+- [ ] Usa TypeORM Repository ou Query Builder
+- [ ] NUNCA usa string interpolation em queries
+- [ ] Todos os parâmetros são passados via objeto
+- [ ] Queries complexas são revisadas para SQL injection
+
+#### ✅ Rate Limiting
+- [ ] Endpoints de autenticação têm rate limit rígido (5/15min)
+- [ ] Endpoints de criação de recursos têm rate limit
+- [ ] Endpoints públicos têm rate limit baseline (100/15min)
+- [ ] Webhooks têm rate limit
+
+#### ✅ Logging Seguro
+- [ ] Nenhum log contém senhas
+- [ ] Nenhum log contém tokens JWT completos
+- [ ] Nenhum log contém dados de cartão
+- [ ] Nenhum log contém CPF completo
+- [ ] Logs estruturados (não strings concatenadas)
+
+#### ✅ Tratamento de Erros
+- [ ] Try-catch em operações críticas
+- [ ] Erros não revelam stack trace em produção
+- [ ] Mensagens de erro são genéricas para o usuário
+- [ ] Erros detalhados vão apenas para logs
+- [ ] Status HTTP apropriados (401, 403, 404, etc)
+
+#### ✅ Lógica de Negócio
+- [ ] Valores monetários em centavos (inteiros)
+- [ ] Verificação de limites (max order value, max items)
+- [ ] Verificação de valores negativos onde não permitido
+- [ ] Idempotência em operações financeiras
+- [ ] Transações em operações multi-tabela
+
+#### ✅ Dependências
+- [ ] `npm audit` sem vulnerabilidades críticas ou altas
+- [ ] Dependências atualizadas regularmente
+- [ ] Nenhuma dependência desconhecida ou suspeita
+
+#### ✅ Informações Sensíveis
+- [ ] Nenhum dado sensível hardcoded
+- [ ] Nenhum comentário com informações confidenciais
+- [ ] Nenhum console.log em código de produção
+- [ ] Variáveis de ambiente para todas as configurações sensíveis
+
+### Exemplos de Vulnerabilidades a REJEITAR Imediatamente:
+
+```typescript
+// ❌ REJEITAR - SQL Injection
+await db.query(`SELECT * FROM users WHERE id = ${userId}`);
+
+// ❌ REJEITAR - Sem validação
+const order = await createOrder(req.body);
+
+// ❌ REJEITAR - Sem autorização
+app.get('/orders/:id', async (req, res) => {
+  const order = await getOrder(req.params.id);
+  res.json(order); // Qualquer um pode ver!
+});
+
+// ❌ REJEITAR - Senha sem hash
+user.password = req.body.password;
+await userRepo.save(user);
+
+// ❌ REJEITAR - Log com dados sensíveis
+log.info('Login attempt', { email, password });
+
+// ❌ REJEITAR - Erro expondo estrutura
+catch (error) {
+  res.status(500).json({ error: error.stack });
+}
+
+// ❌ REJEITAR - XSS
+user.name = req.body.name; // Sem sanitizar
+```
+
+### Ferramentas de Segurança
+
+**Usar regularmente:**
+
+```bash
+# Auditoria de dependências
+npm audit
+npm audit --audit-level=high
+
+# Análise estática
+npm run lint
+
+# Verificar tipos
+npm run build
+
+# Testes
+npm test
+```
+
+### Quando Reportar Issue de Segurança
+
+Criar issue de segurança IMEDIATAMENTE se encontrar:
+
+1. **Vulnerabilidade Crítica**
+   - SQL Injection
+   - XSS (Cross-Site Scripting)
+   - Autenticação quebrada
+   - Dados sensíveis expostos
+
+2. **Vulnerabilidade Alta**
+   - Falta de rate limiting em endpoint crítico
+   - Autorização inadequada
+   - Logs com dados sensíveis
+   - Dependência com CVE crítico
+
+3. **Vulnerabilidade Média**
+   - Validação inadequada
+   - Mensagens de erro muito detalhadas
+   - Rate limits muito permissivos
+
+**NUNCA** criar issue pública com detalhes de vulnerabilidade ativa. Contatar maintainers diretamente.
