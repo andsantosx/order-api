@@ -138,3 +138,6 @@ vite.config.ts.timestamp-*
 .env
 .env.*
 !.env.example
+
+# Claude Code instructions (local only)
+CLAUDE.md
