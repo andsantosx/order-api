@@ -77,12 +77,45 @@ Para rodar uma suíte específica (ex: cenários de pagamento):
 docker exec -e DB_HOST=db order-api-app-1 npx jest src/tests/integration/payment_scenarios.test.ts --verbose
 ```
 
-## 5. Considerações Futuras (A Implementar)
+## 5. Áreas de Teste Recentemente Implementadas
+
+### A. Customização de Produtos
+- **Cálculo de Custo**: Verificar se o custo adicional de R$ 20,00 é aplicado corretamente
+- **Persistência**: Garantir que a customização é salva no OrderItem
+- **Email**: Validar que a customização aparece nos emails transacionais
+
+### B. Sistema de Auditoria
+- **Log de Ações**: Verificar se todas as ações admin são registradas
+- **Rastreabilidade**: Garantir que as informações do audit log estão completas
+- **Segurança**: Validar que apenas admins podem acessar logs
+
+### C. Histórico de Status
+- **Registro de Mudanças**: Cada mudança de status deve criar uma entrada
+- **Informações Completas**: Validar campos (from_status, to_status, changed_by, notes)
+- **Timeline**: Garantir ordenação cronológica correta
+
+### D. Socket.io (Tempo Real)
+- **Conexão**: Validar autenticação via JWT no handshake
+- **Emissão de Eventos**: Verificar que eventos são emitidos corretamente
+- **Rooms**: Garantir isolamento entre usuários e pedidos
+
+### E. Wishlist
+- **CRUD**: Adicionar, listar e remover produtos
+- **Validações**: Produto deve existir, usuário autenticado
+- **Duplicatas**: Não permitir produto duplicado na mesma wishlist
+
+### F. Emails Transacionais
+- **Templates**: Validar formatação e conteúdo
+- **Envio**: Garantir que emails são enviados nos eventos corretos
+- **Fallback**: Testar comportamento quando Mailjet está indisponível
+
+## 6. Considerações Futuras (A Implementar)
 Para atingir uma cobertura verdadeiramente abrangente, as seguintes áreas devem ser monitoradas e testadas conforme novas funcionalidades forem adicionadas:
 
-- **Gestão de Estoque**: Atualmente, o sistema **não** rastreia níveis de estoque por tamanho/variante. Implementar uma entidade `Variant` ou checagem de estoque antes da criação do pedido é um próximo passo crítico.
-- **Concorrência**: Garantir prevenção de pagamento duplo (idempotência é atualmente mockada/verificada).
-- **Limites do Usuário**: Máximo de pedidos abertos, valor máximo por pedido.
+- **Gestão de Estoque**: Atualmente há controle básico por ProductSize. Implementar checagem de estoque antes da criação do pedido.
+- **Concorrência**: Garantir prevenção de condições de corrida em operações críticas.
+- **Performance**: Testes de carga para endpoints críticos (criação de pedidos, processamento de pagamentos).
+- **Webhooks**: Simular cenários de retry e validação de assinatura do Mercado Pago.
 
 ## 6. Troubleshooting
 

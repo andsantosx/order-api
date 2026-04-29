@@ -136,6 +136,8 @@ const isValid = await bcrypt.compare(plainPassword, user.password_hash);
 | **General (Todos)**       | `RATE_LIMIT_GENERAL_MAX` <br> `RATE_LIMIT_GENERAL_WINDOW` | 100 req/15min | Abuso geral da API               |
 | **Webhooks**              | `MERCADOPAGO_WEBHOOK_SECRET`                              | 100 req/1min  | Spam em callbacks                |
 | **Product Search**        | (hardcoded)                                               | 30 req/1min   | Scraping de catálogo             |
+| **Contact Form**          | (hardcoded)                                               | 5 req/15min   | Spam de mensagens de contato     |
+| **Wishlist**              | (hardcoded)                                               | 30 req/15min  | Abuso de wishlist                |
 
 ### Implementação
 
@@ -648,6 +650,127 @@ npm audit --audit-level=critical
 - [ ] Testes de integração passando
 - [ ] Load testing realizado
 - [ ] Webhook testing (simulado do Mercado Pago)
+
+---
+
+## Sistema de Auditoria e Rastreabilidade
+
+### Audit Log de Ações Administrativas
+
+Todas as ações administrativas críticas são registradas na tabela `AdminAuditLog`:
+
+```typescript
+{
+  "id": "uuid",
+  "admin_id": "admin-uuid",
+  "action": "UPDATE_ORDER_STATUS",
+  "entity_type": "Order",
+  "entity_id": "order-uuid",
+  "ip_address": "192.168.1.1",
+  "user_agent": "Mozilla/5.0...",
+  "details": {
+    "from_status": "PAID",
+    "to_status": "SHIPPED",
+    "tracking_code": "RA123456789BR"
+  },
+  "created_at": "2024-04-29T10:00:00Z"
+}
+```
+
+**Ações Auditadas**:
+- Criação/Edição/Exclusão de produtos
+- Mudanças de status de pedidos
+- Processamento de reembolsos
+- Alterações em dados de usuários
+- Concessão de privilégios administrativos
+- Alterações em configurações do sistema
+
+**Informações Capturadas**:
+- ✅ Quem fez a ação (admin_id)
+- ✅ O que foi feito (action)
+- ✅ Qual entidade foi afetada (entity_type, entity_id)
+- ✅ Detalhes da mudança (details JSON)
+- ✅ IP de origem
+- ✅ User-Agent
+- ✅ Timestamp preciso
+
+### Histórico de Mudanças de Status
+
+Cada mudança de status de pedido é rastreada em `OrderStatusHistory`:
+
+```typescript
+{
+  "id": "uuid",
+  "order_id": "order-uuid",
+  "from_status": "PAID",
+  "to_status": "SHIPPED",
+  "changed_by": "admin-uuid",
+  "notes": "Pedido enviado via Correios",
+  "tracking_code": "RA123456789BR",
+  "created_at": "2024-04-29T10:00:00Z"
+}
+```
+
+**Benefícios de Segurança**:
+- Rastreabilidade completa de mudanças
+- Identificação de ações suspeitas
+- Evidência para disputas
+- Compliance com regulações
+
+### Verificação de Email
+
+Sistema de confirmação de email para prevenir uso de emails falsos:
+
+```typescript
+{
+  "user_id": "uuid",
+  "token": "crypto-random-token",
+  "expires_at": "2024-04-30T10:00:00Z",
+  "verified_at": null
+}
+```
+
+**Características de Segurança**:
+- Tokens criptograficamente seguros
+- Expiração automática (24 horas)
+- Verificação obrigatória para certos recursos
+- Prevenção de spam e contas falsas
+
+### Logs Estruturados de Segurança
+
+**Eventos Logados para Análise de Segurança**:
+
+```typescript
+// Tentativas de Login Falhadas
+log.warn('Tentativa de login falhada', {
+  email: 'user@example.com',
+  ip: req.ip,
+  userAgent: req.headers['user-agent'],
+  reason: 'Senha incorreta'
+});
+
+// Acesso Negado
+log.warn('Acesso negado a recurso protegido', {
+  userId: req.user?.id,
+  endpoint: req.path,
+  method: req.method,
+  ip: req.ip
+});
+
+// Ações Administrativas
+log.info('Ação administrativa executada', {
+  adminId: admin.id,
+  action: 'DELETE_PRODUCT',
+  targetId: productId,
+  ip: req.ip
+});
+```
+
+**Análise de Logs**:
+- Detecção de padrões de ataque
+- Identificação de IPs suspeitos
+- Monitoramento de tentativas de brute force
+- Alertas automáticos para atividades anormais
 
 ---
 

@@ -34,6 +34,15 @@ JWT_SECRET=UMACHAVEDEMINIMO64CARACTERESCRIPTOGRAFICAMENTEALOCADOS
 # Motores Financeiros de Gateway Oculto
 MERCADOPAGO_ACCESS_TOKEN=OndeATelaMagicaDeMPDisseSeuToken
 MERCADOPAGO_WEBHOOK_SECRET=KeyQueImpedeHackersDeForjarSuasEntradasDePix
+
+# Serviço de Email (Mailjet)
+MAILJET_API_KEY=SuaChaveAPIDoMailjet
+MAILJET_API_SECRET=SeuSecretDoMailjet
+MAILJET_SENDER_EMAIL=noreply@seudominio.com
+MAILJET_SENDER_NAME=SuaLoja
+
+# Frontend URL (para CORS e links em emails)
+FRONTEND_URL=https://seusite.com
 ```
 
 ---
@@ -81,3 +90,72 @@ npm run seed  # (Opcional - Adiciona Dummy Data do Catálogo de Loja Perfeito)
 ```
 
 **Concluído!** — Todas as ferramentas administrativas embutidas encontram-se limpas. Seu backend flui incrivelmente bem como desenhado nos melhores tutoriais de Cloud Natives das indústrias TIER 1.
+
+---
+
+## 5. Configurações Adicionais para Produção
+
+### Mailjet (Email Transacional)
+
+O sistema envia emails automaticamente para:
+- **Confirmação de Pedido**: Detalhes completos do pedido com breakdown de preços
+- **Credenciais de Auto-signup**: Email e senha para usuários guest
+- **Pedido Enviado**: Código de rastreio e estimativa de entrega
+- **Verificação de Email**: Token de confirmação
+
+Configure as seguintes variáveis:
+```bash
+MAILJET_API_KEY=sua-api-key
+MAILJET_API_SECRET=seu-api-secret
+MAILJET_SENDER_EMAIL=noreply@seudominio.com
+MAILJET_SENDER_NAME=Nome da Sua Loja
+```
+
+### Socket.io (Comunicação em Tempo Real)
+
+Para notificações instantâneas no frontend:
+- Conecte-se em `wss://sua-api.com` (WebSocket)
+- Inclua token JWT no header `Authorization` durante o handshake
+- Eventos disponíveis: `orderStatusUpdate`, `paymentApproved`, etc.
+
+### CORS e Segurança
+
+Em produção, configure:
+```bash
+FRONTEND_URL=https://seusite.com  # URL exata do frontend
+NODE_ENV=production
+```
+
+Isso garante:
+- CORS restrito ao domínio exato do frontend
+- Logs em formato JSON para agregadores
+- Validações mais rigorosas
+- Rate limits mais restritivos
+
+### Migrations em Produção
+
+As migrations são executadas automaticamente no comando `npm run start`:
+```bash
+"start": "npm run migration:run:prod && node dist/server.js"
+```
+
+Para executar manualmente:
+```bash
+npm run migration:run:prod
+```
+
+### Monitoramento de Saúde
+
+Endpoint de health check disponível em `/api/health`:
+```json
+{
+  "status": "healthy",
+  "services": {
+    "database": "healthy",
+    "mercadopago": "healthy",
+    "mailjet": "healthy"
+  }
+}
+```
+
+Configure monitoramento (ex: UptimeRobot, Pingdom) para alertar se o serviço ficar offline.

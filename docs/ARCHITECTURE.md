@@ -25,12 +25,23 @@ src/
 │   ├── middlewares/      # Middlewares Express (auth, validation, error handling)
 │   ├── routes/           # Definições de rotas
 │   ├── schemas/          # Schemas Zod para validação de input
-│   └── services/         # Lógica de negócio
+│   ├── services/         # Lógica de negócio
+│   ├── domain/           # Camada de domínio (DDD)
+│   │   ├── events/       # Eventos de domínio
+│   │   └── value-objects/# Objetos de valor
+│   ├── mappers/          # Conversores entre camadas (DTO ↔ Entity)
+│   ├── jobs/             # Jobs assíncronos e agendados
+│   ├── exceptions/       # Exceções customizadas
+│   ├── subscribers/      # Subscribers do TypeORM
+│   └── validations/      # Validações de regras de negócio
 ├── config/               # Configurações (env, logger, mercadopago, rate limits)
 ├── constants/            # Constantes da aplicação
+├── migrations/           # Migrations do banco de dados
 ├── types/                # Tipos TypeScript customizados
-├── utils/                # Utilitários (sanitizer, transactions)
+├── utils/                # Utilitários (sanitizer, transactions, validators)
+├── tests/                # Testes (integration, unit, seed)
 ├── data-source.ts        # Configuração TypeORM
+├── app.ts                # Configuração do Express
 └── server.ts             # Entry point da aplicação
 ```
 
@@ -173,6 +184,28 @@ export class Order {
 - Valores monetários sempre em **centavos** (bigint)
 - Relações bem definidas com cascade onde apropriado
 
+**Entidades do Sistema**:
+
+| Entidade | Responsabilidade |
+|---|---|
+| `User` | Usuários do sistema (clientes e admins) |
+| `Product` | Produtos do catálogo (com suporte a customização) |
+| `Order` | Pedidos realizados |
+| `OrderItem` | Itens de cada pedido (com customização opcional) |
+| `Category` | Categorias de produtos |
+| `Brand` | Marcas de produtos |
+| `Size` | Tamanhos disponíveis |
+| `ProductSize` | Relação produto-tamanho com estoque |
+| `ProductImage` | Imagens dos produtos |
+| `ShippingAddress` | Endereço de entrega do pedido |
+| `UserAddress` | Endereços salvos do usuário |
+| `Wishlist` | Lista de desejos do usuário |
+| `ContactMessage` | Mensagens de contato enviadas |
+| `Status` | Status centralizados do sistema |
+| `OrderStatusHistory` | Histórico de mudanças de status do pedido |
+| `AdminAuditLog` | Log de auditoria de ações administrativas |
+| `EmailVerification` | Tokens de verificação de email |
+
 ---
 
 ### 5. Middlewares
@@ -302,6 +335,152 @@ graph TD
 
 ---
 
+### Recursos Avançados Implementados
+
+#### 1. Customização de Produtos
+
+O sistema permite customização de produtos com custo adicional:
+
+```typescript
+// Produto com customização
+{
+  "productId": "uuid",
+  "size": "M",
+  "quantity": 2,
+  "customization": "Nome na camisa: João Silva"
+}
+
+// Custo adicional aplicado: R$ 20,00 por item
+```
+
+**Características**:
+- Custo fixo de R$ 20,00 por item customizado
+- Customização é opcional
+- Texto livre para personalização
+- Custo calculado e separado no total do pedido
+
+#### 2. Sistema de Auditoria
+
+Todas as ações administrativas são registradas:
+
+```typescript
+// AdminAuditLog
+{
+  "admin_id": "uuid",
+  "action": "UPDATE_ORDER_STATUS",
+  "entity_type": "Order",
+  "entity_id": "order-uuid",
+  "details": { "from": "PAID", "to": "SHIPPED" },
+  "timestamp": "2024-04-29T10:00:00Z"
+}
+```
+
+**Ações Auditadas**:
+- Criação/Edição/Exclusão de produtos
+- Mudanças de status de pedidos
+- Reembolsos processados
+- Alterações em usuários
+- Configurações do sistema
+
+#### 3. Histórico de Status de Pedidos
+
+Cada mudança de status é rastreada:
+
+```typescript
+// OrderStatusHistory
+{
+  "order_id": "uuid",
+  "from_status": "PAID",
+  "to_status": "SHIPPED",
+  "changed_by": "admin-uuid",
+  "notes": "Pedido enviado via Correios - código RA123456789BR",
+  "timestamp": "2024-04-29T10:00:00Z"
+}
+```
+
+**Benefícios**:
+- Rastreabilidade completa
+- Identificação de quem fez a mudança
+- Notas adicionais para contexto
+- Timeline visual para o cliente
+
+#### 4. Comunicação em Tempo Real (Socket.io)
+
+WebSocket para notificações instantâneas:
+
+```typescript
+// Eventos emitidos
+io.to(`user:${userId}`).emit('orderStatusUpdate', {
+  orderId,
+  newStatus: 'SHIPPED',
+  trackingCode: 'RA123456789BR'
+});
+```
+
+**Casos de Uso**:
+- Atualização de status de pedido
+- Confirmação de pagamento
+- Notificações de promoções
+- Alertas administrativos
+
+#### 5. Sistema de Wishlist
+
+Usuários podem salvar produtos favoritos:
+
+```typescript
+// Adicionar à wishlist
+POST /api/wishlist
+{
+  "productId": "uuid",
+  "size": "M"
+}
+```
+
+**Funcionalidades**:
+- Adicionar/Remover produtos
+- Visualizar lista completa
+- Notificações de promoções em produtos da wishlist
+
+#### 6. Emails Transacionais
+
+Sistema automatizado de emails via Mailjet:
+
+**Emails Enviados**:
+- **Confirmação de Pedido**: Detalhes do pedido, itens, total
+- **Credenciais de Auto-signup**: Email e senha para guests
+- **Pedido Enviado**: Código de rastreio e prazo de entrega
+- **Status Atualizado**: Notificações de mudanças importantes
+- **Verificação de Email**: Token de confirmação
+
+**Template Dinâmico**:
+- Logo e branding
+- Detalhamento de itens com imagens
+- Breakdown de preços (subtotal, customização, frete)
+- Links para rastreamento
+- Informações de contato
+
+#### 7. Verificação de Email
+
+Sistema de confirmação de email:
+
+```typescript
+// EmailVerification
+{
+  "user_id": "uuid",
+  "token": "random-secure-token",
+  "expires_at": "2024-04-30T10:00:00Z",
+  "verified_at": null
+}
+```
+
+**Fluxo**:
+1. Token gerado no registro
+2. Email enviado com link de confirmação
+3. Usuário clica no link
+4. Email verificado e marcado como confirmado
+
+---
+
 ## Segurança
 
 ### 1. Autenticação e Autorização
@@ -319,14 +498,16 @@ graph TD
 
 ### 2. Rate Limiting
 
-| Endpoint               | Limite    | Proteção Contra     |
-| ---------------------- | --------- | ------------------- |
-| `/auth/login`          | 5/15min   | Brute force         |
-| `/auth/register`       | 5/15min   | Spam de contas      |
-| `/orders` (POST)       | 10/1h     | Spam de pedidos     |
-| `/payments/:id` (POST) | 5/15min   | Abuso de pagamentos |
-| `/products` (GET)      | 30/1min   | Scraping            |
-| Geral                  | 100/15min | Abuso geral         |
+| Endpoint               | Limite    | Proteção Contra              |
+| ---------------------- | --------- | ---------------------------- |
+| `/auth/login`          | 5/15min   | Brute force                  |
+| `/auth/register`       | 5/15min   | Spam de contas               |
+| `/orders` (POST)       | 10/1h     | Spam de pedidos              |
+| `/payments/:id` (POST) | 5/15min   | Abuso de pagamentos          |
+| `/products` (GET)      | 30/1min   | Scraping                     |
+| `/contact` (POST)      | 5/15min   | Spam de mensagens            |
+| `/wishlist` (POST)     | 30/15min  | Abuso de wishlist            |
+| Geral                  | 100/15min | Abuso geral                  |
 
 **Configuração**: Variáveis de ambiente (`.env`)
 
@@ -435,6 +616,68 @@ const order = await executeInTransaction(async (manager) => {
 
 ---
 
+## Camada de Domínio (DDD)
+
+### Domain Events (`src/api/domain/events`)
+
+Eventos de domínio representam fatos que aconteceram no sistema:
+
+```typescript
+// Exemplo de evento
+OrderPaidEvent {
+  orderId: string;
+  userId: string;
+  totalAmount: number;
+  occurredAt: Date;
+}
+```
+
+**Uso**:
+- Desacoplamento entre módulos
+- Histórico de eventos (Event Sourcing parcial)
+- Triggers para ações assíncronas (emails, notificações)
+
+### Value Objects (`src/api/domain/value-objects`)
+
+Objetos de valor imutáveis que representam conceitos do domínio:
+
+```typescript
+// Exemplo
+Money {
+  amount: number; // Em centavos
+  currency: string; // 'BRL'
+  
+  add(other: Money): Money
+  subtract(other: Money): Money
+  toReais(): number
+}
+```
+
+**Características**:
+- Imutáveis
+- Sem identidade própria
+- Validação interna
+- Comportamento rico
+
+### Mappers (`src/api/mappers`)
+
+Conversão entre diferentes representações:
+
+```typescript
+// DTO → Entity
+OrderMapper.toEntity(orderDTO): Order
+
+// Entity → Response DTO
+OrderMapper.toResponse(order): OrderResponseDTO
+```
+
+**Benefícios**:
+- Separação clara de camadas
+- Evita vazamento de detalhes de implementação
+- Facilita mudanças de estrutura
+
+---
+
 ## Regras de Negócio Centralizadas
 
 ### Constantes (`src/constants/index.ts`)
@@ -442,13 +685,14 @@ const order = await executeInTransaction(async (manager) => {
 ```typescript
 export const MONEY = {
   CENTS_PER_REAL: 100,
-  MIN_ORDER_VALUE_CENTS: 1000, // R$ 10,00
+  MIN_ORDER_VALUE_CENTS: 0, // R$ 0,00
   MAX_ORDER_VALUE_CENTS: 5000000, // R$ 50.000,00
+  CUSTOMIZATION_COST_CENTS: 2000, // R$ 20,00
 };
 
 export const SHIPPING = {
-  FIXED_SHIPPING_COST_CENTS: 1500, // R$ 15,00
-  FREE_SHIPPING_THRESHOLD_CENTS: 20000, // R$ 200,00
+  FIXED_SHIPPING_COST_CENTS: 0, // FRETE GRÁTIS
+  FREE_SHIPPING_THRESHOLD_CENTS: 0, // R$ 0,00
   ESTIMATED_DELIVERY_DAYS: 7,
 };
 
@@ -466,6 +710,40 @@ export const ORDER = {
 - Regras fáceis de ajustar
 - Documentação implícita via nomes descritivos
 - Type-safe com `as const`
+
+---
+
+## Serviços do Sistema
+
+A aplicação implementa os seguintes serviços de negócio:
+
+| Service | Responsabilidade |
+|---|---|
+| `OrderService` | Criação e gerenciamento de pedidos, cálculo de valores, idempotência |
+| `PaymentService` | Integração com Mercado Pago, processamento de pagamentos e webhooks |
+| `ProductService` | CRUD de produtos, filtragem, destaque, customização |
+| `UserService` | Autenticação, registro, auto-signup de guests |
+| `EmailService` | Envio de emails transacionais (Mailjet), confirmações, credenciais |
+| `SocketService` | Comunicação em tempo real com Socket.io, notificações |
+| `WishlistService` | Gerenciamento de lista de desejos |
+| `AddressService` | Gerenciamento de endereços de usuário |
+| `CategoryService` | CRUD de categorias |
+| `BrandService` | CRUD de marcas |
+| `SizeService` | Gerenciamento de tamanhos |
+| `ShippingService` | Cálculo de frete e prazos de entrega |
+| `ContactService` | Processamento de mensagens de contato |
+| `StatsService` | Estatísticas e dashboards administrativos |
+| `AuditService` | Log de auditoria de ações administrativas |
+| `OrderHistoryService` | Histórico de mudanças de status de pedidos |
+| `ImageService` | Validação e gerenciamento de imagens de produtos |
+| `AdminService` | Operações administrativas diversas |
+
+**Padrões dos Services**:
+- Métodos públicos representam casos de uso
+- Métodos privados encapsulam lógica interna
+- Uso de transações para operações críticas
+- Validações de negócio centralizadas
+- Logging estruturado em todas as operações importantes
 
 ---
 
@@ -539,25 +817,39 @@ RATE_LIMIT_PAYMENT_MAX=5
 
 ---
 
+## Recursos Implementados ✅
+
+1. ✅ **Testes Automatizados**: Suíte completa de testes de integração
+2. ✅ **Audit Log**: Sistema completo de auditoria de ações administrativas
+3. ✅ **Email Transacional**: Integração com Mailjet para emails automatizados
+4. ✅ **Socket.io**: Comunicação em tempo real
+5. ✅ **Histórico de Status**: Rastreamento completo de mudanças de pedido
+6. ✅ **Wishlist**: Sistema de lista de desejos
+7. ✅ **Customização de Produtos**: Personalização com custo adicional
+8. ✅ **Verificação de Email**: Sistema de confirmação de email
+9. ✅ **Sistema de Contato**: Formulário de contato com persistência
+
 ## Próximas Melhorias Recomendadas
 
 ### Alta Prioridade
 
-1. **Testes Automatizados**: Unit + Integration tests (15 testes passando no PostgreSQL via Docker)
-2. **Refresh Tokens**: Melhorar experiência de autenticação
+1. **Refresh Tokens**: Melhorar experiência de autenticação de longa duração
+2. **Webhook Signatures**: Validar origem dos webhooks do Mercado Pago
+3. **Controle de Estoque**: Sistema de gestão de estoque por variante/tamanho
 
 ### Média Prioridade
 
-1. **Audit Log**: Rastreabilidade de ações admin
-2. **Webhook Signatures**: Validar origem dos webhooks MP
-3. **Cache Layer**: Redis para queries frequentes
-4. **API Documentation**: Swagger/OpenAPI
+1. **Cache Layer**: Redis para queries frequentes (produtos, categorias)
+2. **API Documentation**: Swagger/OpenAPI para documentação interativa
+3. **Search Engine**: ElasticSearch ou Algolia para busca avançada de produtos
+4. **Notificações Push**: Push notifications mobile/web
 
 ### Baixa Prioridade
 
-1. **Metrics**: Prometheus/Grafana
-2. **Background Jobs**: Bull/BullMQ para emails
+1. **Metrics**: Prometheus/Grafana para monitoramento
+2. **Background Jobs**: Bull/BullMQ para processamento assíncrono
 3. **Feature Flags**: LaunchDarkly ou similar
+4. **CDN**: CloudFlare ou similar para assets estáticos
 
 ---
 

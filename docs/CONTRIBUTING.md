@@ -31,9 +31,11 @@ Uma tarefa só é considerada concluída quando:
   ```
 
 ### Passo 3: Documentação
-- Atualize `docs/API.md` se houver mudanças em endpoints.
-- Atualize `docs/ARCHITECTURE.md` se houver mudanças estruturais.
-- Atualize `README.md` se houver mudanças em configuração.
+- Atualize `docs/API.md` se houver mudanças em endpoints ou novos recursos.
+- Atualize `docs/ARCHITECTURE.md` se houver mudanças estruturais ou novos serviços.
+- Atualize `docs/SECURITY.md` se houver mudanças em segurança, autenticação ou rate limits.
+- Atualize `docs/TESTING.md` se houver novos cenários de teste ou estratégias.
+- Atualize `README.md` se houver mudanças em configuração ou setup.
 
 ### Passo 4: Verificação de Qualidade
 - Linting: `npm run lint`
@@ -45,11 +47,28 @@ Uma tarefa só é considerada concluída quando:
 ### Pagamentos
 - Todo status deve ser tratado (Approved, Pending, Rejected, Refunded).
 - O sistema deve ser resiliente a falhas de webhook (idempotência).
+- Webhooks devem retornar 200 OK rapidamente (< 1.5s).
 
 ### Segurança da Informação
-- **PII (Dados Pessoais)**: Nunca logar dados sensíveis.
-- **Validação**: Todo input deve passar por schemas Zod.
+- **PII (Dados Pessoais)**: Nunca logar dados sensíveis (senhas, tokens, CPF completo).
+- **Validação**: Todo input deve passar por schemas Zod antes de processar.
 - **Autenticação**: Rotas protegidas devem validar JWT explicitamente.
+- **Auditoria**: Ações administrativas críticas devem ser registradas em AdminAuditLog.
+
+### Emails Transacionais
+- Sempre usar templates validados e testados.
+- Incluir informações completas (breakdown de preços, customizações).
+- Implementar fallback em caso de falha do serviço de email.
+
+### Customização de Produtos
+- Custo de customização (R$ 20,00) é fixo e definido em `constants/index.ts`.
+- Customização deve ser salva no OrderItem, não no Order.
+- Breakdown de preços deve separar subtotal, customização e frete.
+
+### Comunicação em Tempo Real
+- Socket.io requer autenticação JWT no handshake.
+- Eventos devem ser emitidos para rooms específicas (user, order, admins).
+- Nunca expor informações sensíveis em eventos socket.
 
 ## 4. Troubleshooting no Docker
 
