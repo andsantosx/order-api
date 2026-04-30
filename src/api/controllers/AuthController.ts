@@ -27,10 +27,10 @@ export class AuthController {
 
     // Define httpOnly cookie com o token
     res.cookie('token', result.token, {
-      httpOnly: true,        // Não acessível via JavaScript (proteção XSS)
+      httpOnly: true, // Não acessível via JavaScript (proteção XSS)
       secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
-      sameSite: 'strict',    // Proteção CSRF
-      maxAge: 24 * 60 * 60 * 1000 // 24 horas (mesmo tempo do token JWT)
+      sameSite: 'strict', // Proteção CSRF
+      maxAge: 24 * 60 * 60 * 1000, // 24 horas (mesmo tempo do token JWT)
     });
 
     // Retorna apenas os dados do usuário (não o token)
@@ -47,10 +47,10 @@ export class AuthController {
 
     // Define httpOnly cookie com o token
     res.cookie('token', result.token, {
-      httpOnly: true,        // Não acessível via JavaScript (proteção XSS)
+      httpOnly: true, // Não acessível via JavaScript (proteção XSS)
       secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
-      sameSite: 'strict',    // Proteção CSRF
-      maxAge: 24 * 60 * 60 * 1000 // 24 horas (mesmo tempo do token JWT)
+      sameSite: 'strict', // Proteção CSRF
+      maxAge: 24 * 60 * 60 * 1000, // 24 horas (mesmo tempo do token JWT)
     });
 
     // Retorna apenas os dados do usuário (não o token)
@@ -66,7 +66,7 @@ export class AuthController {
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: 'strict',
     });
 
     res.json({ message: 'Logout realizado com sucesso.' });
