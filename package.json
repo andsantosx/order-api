@@ -22,7 +22,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose up -d --build",
-    "seed": "ts-node-dev --transpile-only src/tests/seed/seed-test.ts"
+    "seed": "ts-node-dev --transpile-only src/tests/seed/seed-test.ts",
+    "clean": "rm -rf logs/*.log coverage/ dist/ && echo '✅ Projeto limpo! (logs, coverage e dist removidos)'"
   },
   "keywords": [
     "express",
