@@ -67,14 +67,18 @@ const envSchema = z.object({
   MAILJET_API_SECRET: z.string().min(1, 'Mailjet API Secret é obrigatória'),
   MAILJET_SENDER_EMAIL: z.string().email('Email do remetente Mailjet inválido'),
   MAILJET_SENDER_NAME: z.string().default('Equipe Order API'),
+
+  // ImgBB - Hospedagem de imagens de produtos
+  IMGBB_API_KEY: z.string().min(1, 'ImgBB API Key é obrigatória'),
+
+  // Remove.bg - Remoção de fundo de imagens de produtos
+  REMOVEBG_API_KEY: z.string().min(1, 'Remove.bg API Key é obrigatória'),
 });
 
 // Valida as variáveis de ambiente (Eritamente o que está no process.env)
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
-  // eslint-disable-next-line no-console -- Console permitido: erro crítico antes da inicialização do logger
-  console.error('❌ Variáveis de ambiente inválidas:', _env.error.format());
   throw new Error('Variáveis de ambiente inválidas');
 }
 

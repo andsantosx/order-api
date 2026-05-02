@@ -23,6 +23,8 @@ export const validateImageUrl = (url: string): boolean => {
       'postimg.cc',
       'i.postimg.cc',
       'camisadetime.eu',
+      'i.ibb.co',
+      'ibb.co',
       // Add your trusted domains here
     ];
 

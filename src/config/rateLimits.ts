@@ -137,3 +137,23 @@ export const productSearchLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate Limiter para Upload de Imagens
+ *
+ * Protege a cota do ImgBB (1000/mês na conta gratuita)
+ * Limite padrão: 20 uploads por hora por IP (admin only)
+ *
+ * Aplicar em:
+ * - POST /api/images/upload
+ */
+export const imageUploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 20,
+  message: {
+    status: 'error',
+    message: 'Limite de uploads de imagem atingido. Tente novamente em 1 hora.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
