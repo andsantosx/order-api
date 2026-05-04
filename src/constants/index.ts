@@ -216,6 +216,7 @@ export const HTTP_STATUS = {
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
+  PAYMENT_REQUIRED: 402,
 } as const;
 
 /**

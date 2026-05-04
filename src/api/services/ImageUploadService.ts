@@ -8,7 +8,7 @@ const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 const REMOVE_BG_URL = 'https://api.remove.bg/v1.0/removebg';
 
 // Tipos de arquivo permitidos (MIME types)
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
 // Limite de tamanho original: 12MB (limite do remove.bg)
 const MAX_SIZE_BYTES = 12 * 1024 * 1024;
@@ -26,7 +26,9 @@ export interface ImgBBUploadResult {
  * Remove o fundo da imagem usando a API do remove.bg.
  */
 async function removeBackground(buffer: Buffer): Promise<Buffer> {
-  log.info('Iniciando remoção de fundo com remove.bg');
+  log.info('Iniciando remoção de fundo com remove.bg', {
+    size: `${(buffer.length / 1024 / 1024).toFixed(2)}MB`,
+  });
 
   const response = await fetch(REMOVE_BG_URL, {
     method: 'POST',
@@ -38,16 +40,27 @@ async function removeBackground(buffer: Buffer): Promise<Buffer> {
       image_file_b64: buffer.toString('base64'),
       size: 'auto',
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(45_000), // Aumentado para 45s para imagens pesadas
   });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => 'Erro desconhecido');
-    log.error('remove.bg retornou erro HTTP', { status: response.status, body: errorText });
-    throw new AppError(
-      'Falha ao remover o fundo da imagem. Tente novamente.',
-      HTTP_STATUS.BAD_GATEWAY,
-    );
+    const errorData = (await response.json().catch(() => ({}))) as any;
+    const apiError = errorData.errors?.[0]?.title || 'Erro desconhecido na API';
+
+    log.error('remove.bg retornou erro HTTP', {
+      status: response.status,
+      apiError,
+      errorData,
+    });
+
+    if (response.status === 402) {
+      throw new AppError(
+        'Seus créditos no remove.bg acabaram. Verifique sua conta.',
+        HTTP_STATUS.PAYMENT_REQUIRED,
+      );
+    }
+
+    throw new AppError(`Falha ao remover o fundo: ${apiError}.`, HTTP_STATUS.BAD_GATEWAY);
   }
 
   const arrayBuffer = await response.arrayBuffer();
