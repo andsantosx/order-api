@@ -23,8 +23,8 @@ export class ProductController {
         sortBy,
         isFeatured,
       } = req.query;
-      const pageNum = page ? parseInt(page as string) : 1;
-      const limitNum = limit ? parseInt(limit as string) : 20;
+      const pageNum = Math.max(1, page ? parseInt(page as string) : 1);
+      const limitNum = Math.max(1, limit ? parseInt(limit as string) : 20);
 
       // Helper to ensure array and handle comma separated strings
       const toArray = (val: unknown): string[] | undefined => {
