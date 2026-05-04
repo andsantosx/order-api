@@ -63,21 +63,21 @@ async function processImageWithWhiteBackground(inputBuffer: Buffer): Promise<Buf
   // Isso garante que a quantidade de fundo branco seja MILIMETRICAMENTE igual ao resto da loja
   const targetSize = Math.round(canvasSize * 0.71);
 
-  const img = sharp(inputBuffer);
-  const metadata = await img.metadata();
+  // 1. Remove as bordas transparentes extras que o remove.bg costuma deixar
+  // Isso garante que o cálculo de escala seja baseado APENAS na peça de roupa,
+  // resolvendo o problema de peças que pareciam menores que as outras.
+  const { data: trimmedBuffer, info: trimmedInfo } = await sharp(inputBuffer)
+    .trim()
+    .toBuffer({ resolveWithObject: true });
 
-  if (!metadata.width || !metadata.height) {
-    throw new AppError('Não foi possível ler as dimensões da imagem', HTTP_STATUS.BAD_REQUEST);
-  }
+  // Calcula a escala para a peça ocupar o targetSize (852px) em sua maior dimensão
+  const scale = Math.min(targetSize / trimmedInfo.width, targetSize / trimmedInfo.height);
 
-  // Calcula a escala para caber em 1140px
-  const scale = Math.min(targetSize / metadata.width, targetSize / metadata.height);
+  const newWidth = Math.round(trimmedInfo.width * scale);
+  const newHeight = Math.round(trimmedInfo.height * scale);
 
-  const newWidth = Math.round(metadata.width * scale);
-  const newHeight = Math.round(metadata.height * scale);
-
-  // Redimensiona usando o algoritmo de altíssima qualidade (mesmo para imagens pequenas)
-  const resized = await img
+  // Redimensiona usando o algoritmo de altíssima qualidade
+  const resized = await sharp(trimmedBuffer)
     .resize(newWidth, newHeight, {
       kernel: sharp.kernel.lanczos3,
     })
@@ -98,10 +98,10 @@ async function processImageWithWhiteBackground(inputBuffer: Buffer): Promise<Buf
         left: Math.round((canvasSize - newWidth) / 2),
       },
     ])
-    .jpeg({ quality: 100 }) // Mantém a qualidade máxima absoluta (JPEG sem compressão)
+    .jpeg({ quality: 100 }) // Mantém a qualidade máxima absoluta
     .toBuffer();
 
-  log.info('Processamento da imagem concluído');
+  log.info('Processamento da imagem concluído com normalização de bordas');
   return finalImage;
 }
 
