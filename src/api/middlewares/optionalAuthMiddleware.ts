@@ -17,16 +17,19 @@ interface JwtPayload {
  * Se o token for inválido/expirado, retorna 401.
  */
 export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return next(); // Guest — sem auth é válido para este endpoint
-  }
-
-  const [, token] = authHeader.split(' ');
+  let token = req.cookies?.token;
 
   if (!token) {
-    throw new AppError('Token mal formatado', 401);
+    const authHeader = req.headers.authorization;
+
+    if (authHeader) {
+      const parts = authHeader.split(' ');
+      token = parts[1];
+    }
+  }
+
+  if (!token) {
+    return next(); // Guest — sem auth é válido para este endpoint
   }
 
   try {
