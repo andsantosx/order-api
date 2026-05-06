@@ -291,7 +291,7 @@ graph TD
 1. **Idempotência**: Previne pedidos duplicados (30s window)
 2. **Auto-signup**: Cria conta automaticamente para guests
 3. **Transação Atômica**: Order + Items + Address salvos juntos
-4. **Cálculo de Frete**: Grátis acima de R$ 200
+4. **Cálculo de Custo**: Verificar se o custo adicional de R$ 25,00 é aplicado corretamente
 5. **Validações**: CEP, limites de valor, quantidade de items
 6. **Flexibilidade de Tamanho**: Suporte a IDs numéricos (traduzidos dinamicamente para nomes no DB)
 
@@ -350,11 +350,11 @@ O sistema permite customização de produtos com custo adicional:
   "customization": "Nome na camisa: João Silva"
 }
 
-// Custo adicional aplicado: R$ 20,00 por item
+// Custo adicional aplicado: R$ 25,00 por item
 ```
 
 **Características**:
-- Custo fixo de R$ 20,00 por item customizado
+- Custo de customização (R$ 25,00) é fixo e definido em `constants/index.ts`.
 - Customização é opcional
 - Texto livre para personalização
 - Custo calculado e separado no total do pedido
@@ -687,7 +687,7 @@ export const MONEY = {
   CENTS_PER_REAL: 100,
   MIN_ORDER_VALUE_CENTS: 0, // R$ 0,00
   MAX_ORDER_VALUE_CENTS: 5000000, // R$ 50.000,00
-  CUSTOMIZATION_COST_CENTS: 2000, // R$ 20,00
+  CUSTOMIZATION_COST_CENTS: 2500, // R$ 25,00
 };
 
 export const SHIPPING = {
@@ -824,7 +824,7 @@ RATE_LIMIT_PAYMENT_MAX=5
 4. ✅ **Socket.io**: Comunicação em tempo real
 5. ✅ **Histórico de Status**: Rastreamento completo de mudanças de pedido
 6. ✅ **Wishlist**: Sistema de lista de desejos
-7. ✅ **Customização de Produtos**: Personalização com custo adicional
+7. ✅ **Customização de Produtos**: Produtos podem ser customizados com custo adicional de **R$ 25,00** por item
 8. ✅ **Verificação de Email**: Sistema de confirmação de email
 9. ✅ **Sistema de Contato**: Formulário de contato com persistência
 

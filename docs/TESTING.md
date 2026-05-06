@@ -80,7 +80,7 @@ docker exec -e DB_HOST=db order-api-app-1 npx jest src/tests/integration/payment
 ## 5. Áreas de Teste Recentemente Implementadas
 
 ### A. Customização de Produtos
-- **Cálculo de Custo**: Verificar se o custo adicional de R$ 20,00 é aplicado corretamente
+- **Cálculo de Custo**: Verificar se o custo adicional de R$ 25,00 é aplicado corretamente
 - **Persistência**: Garantir que a customização é salva no OrderItem
 - **Email**: Validar que a customização aparece nos emails transacionais
 

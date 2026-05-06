@@ -167,7 +167,7 @@ Lista produtos com filtros e paginação.
       "description": "Camiseta 100% algodão",
       "price_cents": 4990,
       "has_customization": true,
-      "customization_cost_cents": 2000,
+      "customization_cost_cents": 2500,
       "isFeatured": true,
       "category": { "id": "uuid", "name": "Camisetas" },
       "brand": { "id": "uuid", "name": "Marca X" },
@@ -232,9 +232,9 @@ Cria novo pedido (permite guest checkout).
   "user": { "id": "uuid", "email": "guest@example.com" },
   "items": [...],
   "subtotal_cents": 9980,
-  "customization_cost_cents": 4000,
+  "customization_cost_cents": 5000,
   "shipping_cost_cents": 0,
-  "total_amount": 13980,
+  "total_amount": 14980,
   "status": "PENDING",
   "created_at": "2024-04-29T10:00:00Z"
 }
@@ -414,7 +414,7 @@ Verifica status de todos os serviços.
 
 ### Customização de Produtos
 
-Produtos podem ser customizados com custo adicional de **R$ 20,00** por item:
+Produtos podem ser customizados com custo adicional de **R$ 25,00** por item:
 
 ```json
 {

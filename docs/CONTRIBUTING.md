@@ -103,7 +103,7 @@ npm test
 - Implementar fallback em caso de falha do serviço de email.
 
 ### Customização de Produtos
-- Custo de customização (R$ 20,00) é fixo e definido em `constants/index.ts`.
+- Custo de customização (R$ 25,00) é fixo e definido em `constants/index.ts`.
 - Customização deve ser salva no OrderItem, não no Order.
 - Breakdown de preços deve separar subtotal, customização e frete.
 

@@ -36,8 +36,8 @@ export const MONEY = {
   /** Valor máximo de pedido em centavos (R$ 50.000,00) */
   MAX_ORDER_VALUE_CENTS: 5000000,
 
-  /** Custo de personalização em centavos (R$ 20,00) */
-  CUSTOMIZATION_COST_CENTS: 2000,
+  /** Custo de personalização em centavos (R$ 25,00) */
+  CUSTOMIZATION_COST_CENTS: 2500,
 } as const;
 
 /**
