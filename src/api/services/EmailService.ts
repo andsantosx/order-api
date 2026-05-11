@@ -217,7 +217,7 @@ export class EmailService {
 
                       <div style="margin-top: 15px;">
                         <div style="margin-bottom: 25px;">
-                          <a href="https://www.instagram.com/orderco.sc" target="_blank" style="text-decoration: none; margin-right: 15px;">
+                          <a href="https://www.instagram.com/ordersc.co" target="_blank" style="text-decoration: none; margin-right: 15px;">
                             <img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="IG" width="20" style="filter: grayscale(100%); opacity: 0.3;">
                           </a>
                           <a href="${env.FRONTEND_URL}" target="_blank" style="text-decoration: none;">
