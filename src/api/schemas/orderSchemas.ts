@@ -94,6 +94,7 @@ export const createOrderSchema = z.object({
         .default('Brasil'),
     }),
     idempotencyKey: z.string().uuid().optional(),
+    gaClientId: z.string().optional(),
   }),
 });
 

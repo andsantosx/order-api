@@ -138,6 +138,9 @@ export class Order {
   @Column({ name: 'accepted_terms', default: false })
   acceptedTerms!: boolean;
 
+  @Column({ name: 'ga_client_id', nullable: true })
+  gaClientId?: string;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 

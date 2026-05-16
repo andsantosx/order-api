@@ -112,6 +112,7 @@ export class OrderController {
       acceptedTerms,
       idempotencyKey,
       paymentMethod,
+      req.body.gaClientId,
     );
 
     // Se criou conta automaticamente (guest checkout), faz auto-login

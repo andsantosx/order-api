@@ -252,6 +252,7 @@ export class OrderService {
     acceptedTerms: boolean,
     idempotencyKey?: string,
     paymentMethod?: string,
+    gaClientId?: string,
   ) {
     this.validateOrderInput(
       userId,
@@ -301,6 +302,7 @@ export class OrderService {
       shippingAddressData,
       idempotencyKey,
       phone,
+      gaClientId,
     );
 
     const isNewUser = !!tempPassword;
@@ -521,6 +523,7 @@ export class OrderService {
     shippingAddressData: ShippingAddressData,
     idempotencyKey?: string,
     phone?: string,
+    gaClientId?: string,
   ): Promise<Order> {
     return await executeInTransaction(async (manager) => {
       const orderItems = items.map((item) => {
@@ -551,6 +554,7 @@ export class OrderService {
         statusId: OrderStatus.PENDING,
         acceptedTerms: true,
         phone,
+        gaClientId,
       });
 
       const savedOrder = await manager.save(newOrder);

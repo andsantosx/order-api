@@ -73,6 +73,10 @@ const envSchema = z.object({
 
   // Remove.bg - Remoção de fundo de imagens de produtos
   REMOVEBG_API_KEY: z.string().min(1, 'Remove.bg API Key é obrigatória'),
+
+  // Google Analytics 4 (Measurement Protocol)
+  GA_MEASUREMENT_ID: z.string().default('G-6BMSZ1L8M3'),
+  GA_API_SECRET: z.string().optional(),
 });
 
 // Valida as variáveis de ambiente (Eritamente o que está no process.env)
