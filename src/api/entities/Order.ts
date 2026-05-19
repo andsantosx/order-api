@@ -141,6 +141,18 @@ export class Order {
   @Column({ name: 'ga_client_id', nullable: true })
   gaClientId?: string;
 
+  @Column({ name: 'fbp', nullable: true })
+  fbp?: string;
+
+  @Column({ name: 'fbc', nullable: true })
+  fbc?: string;
+
+  @Column({ name: 'ip_address', nullable: true })
+  ipAddress?: string;
+
+  @Column({ name: 'user_agent', nullable: true })
+  userAgent?: string;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
 

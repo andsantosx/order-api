@@ -99,8 +99,16 @@ export class OrderController {
       acceptedTerms,
       idempotencyKey,
       paymentMethod,
+      gaClientId,
+      fbp,
+      fbc,
     } = req.body;
     const userId = req.user?.userId;
+
+    // Capture IP Address & User Agent directly from request
+    const ipAddress = req.body.ipAddress || req.ip || req.socket.remoteAddress || undefined;
+    const userAgent = req.body.userAgent || req.headers['user-agent'] || undefined;
+
     const result = await this.orderService.create(
       userId,
       guestName,
@@ -112,7 +120,11 @@ export class OrderController {
       acceptedTerms,
       idempotencyKey,
       paymentMethod,
-      req.body.gaClientId,
+      gaClientId,
+      fbp,
+      fbc,
+      ipAddress,
+      userAgent,
     );
 
     // Se criou conta automaticamente (guest checkout), faz auto-login

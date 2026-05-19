@@ -95,6 +95,10 @@ export const createOrderSchema = z.object({
     }),
     idempotencyKey: z.string().uuid().optional(),
     gaClientId: z.string().optional(),
+    fbp: z.string().optional(),
+    fbc: z.string().optional(),
+    ipAddress: z.string().optional(),
+    userAgent: z.string().optional(),
   }),
 });
 
