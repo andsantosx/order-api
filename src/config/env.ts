@@ -79,7 +79,7 @@ const envSchema = z.object({
   GA_API_SECRET: z.string().optional(),
 
   // Meta Pixel & Conversions API
-  META_PIXEL_ID: z.string().default('1921689951941339'),
+  META_PIXEL_ID: z.string().default('1635706724380117'),
   META_ACCESS_TOKEN: z.string().optional(),
   META_TEST_EVENT_CODE: z.string().optional(),
 });
