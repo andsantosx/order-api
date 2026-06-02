@@ -304,7 +304,8 @@ export async function seedDatabase(dataSource: DataSource) {
         await shippingAddressRepo.save(
           shippingAddressRepo.create({
             order: savedOrder,
-            street: 'Rua das Flores, 123',
+            street: 'Rua das Flores',
+            number: '123',
             city: 'São Paulo',
             state: 'SP',
             zipCode: '01234-567',
