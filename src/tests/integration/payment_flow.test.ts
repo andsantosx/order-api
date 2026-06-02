@@ -94,7 +94,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
       .send({
         items: [
           {
-            productId: (await TestDataSource.getRepository('Product').findOneBy({}))?.id,
+            productId: (await TestDataSource.getRepository('Product').findOneBy({ name: 'Camiseta Basic Cotton' }))?.id,
             quantity: 1,
             size: 'M',
           },
