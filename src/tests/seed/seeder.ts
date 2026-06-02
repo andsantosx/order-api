@@ -81,6 +81,8 @@ export async function seedDatabase(dataSource: DataSource) {
       { name: 'M', type: 'clothing' },
       { name: 'G', type: 'clothing' },
       { name: 'GG', type: 'clothing' },
+      { name: 'XG', type: 'clothing' },
+      { name: '2XG', type: 'clothing' },
       { name: '38', type: 'shoes' },
       { name: '39', type: 'shoes' },
       { name: '40', type: 'shoes' },

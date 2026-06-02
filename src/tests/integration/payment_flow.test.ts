@@ -65,7 +65,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
       const sizeRepo = TestDataSource.getRepository('Size');
       let sizeM = await sizeRepo.findOneBy({ name: 'M' });
       if (!sizeM) {
-        sizeM = await sizeRepo.save(sizeRepo.create({ name: 'M' }));
+        sizeM = await sizeRepo.save(sizeRepo.create({ name: 'M', type: 'clothing' }));
       }
 
       const productSizeRepo = TestDataSource.getRepository(ProductSize);
