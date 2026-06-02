@@ -15,6 +15,7 @@ import { Status } from '../api/entities/Status';
 import { Brand } from '../api/entities/Brand';
 import { AdminAuditLog } from '../api/entities/AdminAuditLog';
 import { OrderStatusHistory } from '../api/entities/OrderStatusHistory';
+import { EmailVerification } from '../api/entities/EmailVerification';
 
 export const TestDataSource = new DataSource({
   type: 'postgres',
@@ -41,6 +42,7 @@ export const TestDataSource = new DataSource({
     Brand,
     AdminAuditLog,
     OrderStatusHistory,
+    EmailVerification,
   ],
   synchronize: true,
   dropSchema: true,

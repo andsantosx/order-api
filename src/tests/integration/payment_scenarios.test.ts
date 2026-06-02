@@ -110,6 +110,7 @@ describe('Payment Scenarios Integration', () => {
           state: 'SP',
           country: 'BR',
         },
+        phone: '11999991111',
         acceptedTerms: true,
       });
 
@@ -152,6 +153,7 @@ describe('Payment Scenarios Integration', () => {
           state: 'SP',
           country: 'BR',
         },
+        phone: '11999991111',
         acceptedTerms: true,
       });
 
