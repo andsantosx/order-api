@@ -296,6 +296,7 @@ export async function seedDatabase(dataSource: DataSource) {
             product: nikeAirForce,
             quantity: 1,
             unitPrice: nikeAirForce.priceCents,
+            totalPrice: nikeAirForce.priceCents,
           }),
         );
 

@@ -73,6 +73,7 @@ export class StatsService {
       const pendingOrders = countsMap[OrderStatus.PENDING] || 0;
       const completedOrders =
         (countsMap[OrderStatus.PAID] || 0) +
+        (countsMap[OrderStatus.AWAITING_SHIPMENT] || 0) +
         (countsMap[OrderStatus.SHIPPED] || 0) +
         (countsMap[OrderStatus.DELIVERED] || 0);
 
@@ -87,7 +88,12 @@ export class StatsService {
           .select('SUM(order.totalAmount)', 'total')
           .where('order.createdAt >= :date', { date: thirtyDaysAgo })
           .andWhere('order.statusId IN (:...statuses)', {
-            statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+            statuses: [
+              OrderStatus.PAID,
+              OrderStatus.AWAITING_SHIPMENT,
+              OrderStatus.SHIPPED,
+              OrderStatus.DELIVERED,
+            ],
           })
           .getRawOne(),
       ]);
@@ -117,7 +123,12 @@ export class StatsService {
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'total')
       .where('order.statusId IN (:...statuses)', {
-        statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+        statuses: [
+          OrderStatus.PAID,
+          OrderStatus.AWAITING_SHIPMENT,
+          OrderStatus.SHIPPED,
+          OrderStatus.DELIVERED,
+        ],
       })
       .getRawOne();
 
@@ -191,7 +202,12 @@ export class StatsService {
         .leftJoin('orderItem.product', 'product')
         .leftJoin('orderItem.order', 'order')
         .where('order.statusId IN (:...statuses)', {
-          statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+          statuses: [
+            OrderStatus.PAID,
+            OrderStatus.AWAITING_SHIPMENT,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED,
+          ],
         })
         .groupBy('orderItem.product_id')
         .addGroupBy('product.name')
@@ -240,7 +256,12 @@ export class StatsService {
         .select('SUM(order.totalAmount)', 'revenue')
         .addSelect('COUNT(order.id)', 'orderCount')
         .where('order.statusId IN (:...statuses)', {
-          statuses: [OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED],
+          statuses: [
+            OrderStatus.PAID,
+            OrderStatus.AWAITING_SHIPMENT,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED,
+          ],
         });
 
       if (startDate) {
