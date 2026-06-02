@@ -102,6 +102,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
         shippingAddress: {
           zipCode: '01001-000',
           street: 'Rua de Teste Longa',
+          number: '123',
           city: 'São Paulo',
           state: 'SP',
           country: 'BR',

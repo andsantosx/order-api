@@ -56,6 +56,7 @@ describe('Order Integration', () => {
       ],
       shippingAddress: {
         street: 'Test St',
+        number: '123',
         city: 'City',
         state: 'ST',
         zipCode: '12345-678',
@@ -96,6 +97,7 @@ describe('Order Integration', () => {
       ],
       shippingAddress: {
         street: 'Test St',
+        number: '123',
         city: 'City',
         state: 'ST',
         zipCode: '12345-678',
@@ -130,6 +132,7 @@ describe('Order Integration', () => {
       items: [{ productId: productId, quantity: 1, size: sizeId }],
       shippingAddress: {
         street: 'Jane St',
+        number: '123',
         city: 'City',
         state: 'ST',
         zipCode: '12345-678',

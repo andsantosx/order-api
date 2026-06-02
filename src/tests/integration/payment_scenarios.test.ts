@@ -105,6 +105,7 @@ describe('Payment Scenarios Integration', () => {
         shippingAddress: {
           zipCode: '01001-000',
           street: 'Test St',
+          number: '123',
           city: 'Test City',
           state: 'SP',
           country: 'BR',
@@ -146,7 +147,8 @@ describe('Payment Scenarios Integration', () => {
         shippingAddress: {
           zipCode: '04571-010',
           street: 'Guest St',
-          city: 'SP',
+          number: '123',
+          city: 'São Paulo',
           state: 'SP',
           country: 'BR',
         },

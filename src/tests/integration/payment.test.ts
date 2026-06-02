@@ -64,8 +64,9 @@ describe('Payment Integration', () => {
       .send({
         items: [{ productId: product.id, quantity: 1, size: size.id }],
         shippingAddress: {
-          street: 'S',
-          city: 'C',
+          street: 'Street Test',
+          number: '123',
+          city: 'City',
           state: 'ST',
           zipCode: '12345-000',
           country: 'BR',
