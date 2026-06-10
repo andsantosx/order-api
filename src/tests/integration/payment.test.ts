@@ -10,6 +10,7 @@ import { Product } from '../../api/entities/Product';
 import { Size } from '../../api/entities/Size';
 import { Category } from '../../api/entities/Category';
 import { Brand } from '../../api/entities/Brand';
+import { ProductSize } from '../../api/entities/ProductSize';
 
 import { DataSource } from 'typeorm';
 
@@ -21,20 +22,33 @@ describe('Payment Integration', () => {
   beforeAll(async () => {
     connection = TestDataSource;
 
+    // Seed email verification first to allow register endpoint to pass
+    await connection.getRepository('EmailVerification').save({
+      email: 'pay@example.com',
+      code: '123456',
+      expiresAt: new Date(Date.now() + 3600000),
+      isVerified: true,
+    });
+
     // Auth
     await request(app).post('/api/auth/register').send({
       name: 'Pay User',
       email: 'pay@example.com',
-      password: 'password123',
-      confirmPassword: 'password123',
-      document: '12345678901',
+      password: 'Password123!',
+      confirmPassword: 'Password123!',
+      document: '12345678909',
+      phone: '11999999999',
       acceptedTerms: true,
     });
     const loginRes = await request(app).post('/api/auth/login').send({
       email: 'pay@example.com',
-      password: 'password123',
+      password: 'Password123!',
     });
-    token = (loginRes.body as { token: string }).token;
+    const loginCookie = loginRes.headers['set-cookie'];
+    if (Array.isArray(loginCookie)) {
+      const tokenCookie = loginCookie.find((c: string) => c.startsWith('token='));
+      if (tokenCookie) token = tokenCookie.split(';')[0].split('=')[1];
+    }
 
     // Setup Data
     const brand = await connection
@@ -57,6 +71,11 @@ describe('Payment Integration', () => {
       currency: 'BRL',
     });
 
+    await connection.getRepository(ProductSize).save({
+      product,
+      size,
+    });
+
     // Create Order
     const orderRes = await request(app)
       .post('/api/orders')
@@ -71,9 +90,10 @@ describe('Payment Integration', () => {
           zipCode: '12345-000',
           country: 'BR',
         },
+        phone: '11999999999',
         acceptedTerms: true,
       });
-    orderId = (orderRes.body as { id: string }).id;
+    orderId = (orderRes.body as { order: { id: string } }).order.id;
   });
 
   // Note: Actual payment processing involves external API (Mercado Pago).

@@ -11,8 +11,22 @@ export const validate =
         params: req.params,
       }) as { body?: unknown; query?: unknown; params?: unknown };
       if (parsed.body !== undefined) req.body = parsed.body;
-      if (parsed.query !== undefined) Object.assign(req, { query: parsed.query });
-      if (parsed.params !== undefined) Object.assign(req, { params: parsed.params });
+      if (parsed.query !== undefined) {
+        Object.defineProperty(req, 'query', {
+          value: parsed.query,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      }
+      if (parsed.params !== undefined) {
+        Object.defineProperty(req, 'params', {
+          value: parsed.params,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

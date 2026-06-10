@@ -9,7 +9,13 @@ import app from '../../app';
 
 describe('Auth Integration', () => {
   beforeAll(async () => {
-    // Connection is already established in setup.ts
+    // Seed email verification first to allow register endpoint to pass
+    await TestDataSource.getRepository('EmailVerification').save({
+      email: 'test@example.com',
+      code: '123456',
+      expiresAt: new Date(Date.now() + 3600000),
+      isVerified: true,
+    });
   });
 
   const testUser = {
@@ -27,9 +33,9 @@ describe('Auth Integration', () => {
 
     if (response.status !== 201) console.error('Register Error:', response.body);
     expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.email).toBe(testUser.email);
-    expect(response.body).not.toHaveProperty('password');
+    expect(response.body.user).toHaveProperty('id');
+    expect(response.body.user.email).toBe(testUser.email);
+    expect(response.body.user).not.toHaveProperty('password');
   });
 
   it('should login with valid credentials', async () => {
@@ -40,7 +46,13 @@ describe('Auth Integration', () => {
 
     if (response.status !== 200) console.error('Login Error:', response.body);
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('token');
+    
+    const cookies = response.headers['set-cookie'];
+    expect(cookies).toBeDefined();
+    expect(Array.isArray(cookies)).toBe(true);
+    const tokenCookie = (cookies as any).find((c: string) => c.startsWith('token='));
+    expect(tokenCookie).toBeDefined();
+
     expect(response.body).toHaveProperty('user');
   });
 

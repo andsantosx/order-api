@@ -99,6 +99,7 @@ export const createOrderSchema = z.object({
     fbc: z.string().optional(),
     ipAddress: z.string().optional(),
     userAgent: z.string().optional(),
+    couponCode: z.string().optional(),
   }),
 });
 

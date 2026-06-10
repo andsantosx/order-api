@@ -19,7 +19,11 @@ describe('Contact Integration', () => {
       email: 'admin@admin.com',
       password: 'admin123',
     });
-    adminToken = loginRes.body.token;
+    const loginCookie = loginRes.headers['set-cookie'];
+    if (Array.isArray(loginCookie)) {
+      const tokenCookie = loginCookie.find((c: string) => c.startsWith('token='));
+      if (tokenCookie) adminToken = tokenCookie.split(';')[0].split('=')[1];
+    }
   });
 
   it('should create a new contact message publicly', async () => {

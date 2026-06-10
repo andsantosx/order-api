@@ -26,7 +26,11 @@ describe('Order Integration', () => {
       email: 'john@example.com',
       password: 'password123',
     });
-    token = loginRes.body.token;
+    const loginCookie = loginRes.headers['set-cookie'];
+    if (Array.isArray(loginCookie)) {
+      const tokenCookie = loginCookie.find((c: string) => c.startsWith('token='));
+      if (tokenCookie) token = tokenCookie.split(';')[0].split('=')[1];
+    }
 
     // Fetch seeded data
     // Find by name since slug is not a column in Product entity
@@ -76,14 +80,14 @@ describe('Order Integration', () => {
     }
 
     expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.totalAmount).toBeDefined();
-    expect(response.body.statusId).toBe(1); // OrderStatus.PENDING
-    expect(response.body.status).toBeDefined();
-    expect(response.body.status.name).toBe('PENDING');
-    expect(response.body.status.label).toBe('Pendente');
+    expect(response.body.order).toHaveProperty('id');
+    expect(response.body.order.totalAmount).toBeDefined();
+    expect(response.body.order.statusId).toBe(1); // OrderStatus.PENDING
+    expect(response.body.order.status).toBeDefined();
+    expect(response.body.order.status.name).toBe('PENDING');
+    expect(response.body.order.status.label).toBe('Pendente');
     // Verify that the size NAME is stored, not the ID
-    expect(response.body.items[0].size).toBe('38');
+    expect(response.body.order.items[0].size).toBe('38');
   });
 
   it('should fail to create order with invalid product', async () => {
@@ -126,7 +130,12 @@ describe('Order Integration', () => {
       email: 'jane@example.com',
       password: 'password123',
     });
-    const janeToken = loginRes.body.token;
+    let janeToken = '';
+    const loginCookie = loginRes.headers['set-cookie'];
+    if (Array.isArray(loginCookie)) {
+      const tokenCookie = loginCookie.find((c: string) => c.startsWith('token='));
+      if (tokenCookie) janeToken = tokenCookie.split(';')[0].split('=')[1];
+    }
 
     const orderData = {
       items: [{ productId: productId, quantity: 1, size: sizeId }],

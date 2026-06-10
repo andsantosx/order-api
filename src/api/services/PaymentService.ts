@@ -12,6 +12,7 @@ import { OrderService } from './OrderService';
 import { Order, OrderStatus, ORDER_STATUS_EVENTS } from '../entities/Order';
 import { PaymentMapper } from '../mappers/PaymentMapper';
 import {
+  PaymentException,
   PaymentProcessingException,
   PaymentRejectedException,
   PaymentValidationException,
@@ -140,6 +141,9 @@ export class PaymentService {
 
       return PaymentMapper.toFrontendResponse(result);
     } catch (error: unknown) {
+      if (error instanceof AppError || error instanceof PaymentException) {
+        throw error;
+      }
       this.handlePaymentError(error, orderId as string);
     }
   }

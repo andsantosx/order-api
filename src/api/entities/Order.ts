@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from './User';
+import { Coupon } from './Coupon';
 import { OrderItem } from './OrderItem';
 import { ShippingAddress } from './ShippingAddress';
 import { Money } from '../domain/value-objects/Money';
@@ -75,6 +76,27 @@ export class Order {
 
   @Column({ nullable: true })
   phone?: string;
+
+  @Column({ name: 'coupon_id', nullable: true })
+  couponId?: string;
+
+  @ManyToOne(() => Coupon)
+  @JoinColumn({ name: 'coupon_id' })
+  coupon?: Coupon;
+
+  @Column({ name: 'coupon_code', nullable: true })
+  couponCode?: string;
+
+  @Column({
+    name: 'discount_amount',
+    type: 'bigint',
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseInt(value, 10),
+    },
+  })
+  discountAmount!: number;
 
   @Index()
   @Column({

@@ -37,6 +37,9 @@ interface IEmailOrder {
   guestEmail?: string;
   shippingAddress?: IEmailAddress[];
   items?: IEmailItem[];
+  couponCode?: string;
+  discountAmount?: number;
+  couponPercentage?: number;
 }
 
 /**
@@ -299,6 +302,9 @@ export class EmailService {
     items?: IEmailItem[],
     isAccountLinked: boolean = false,
     generatedPassword?: string,
+    couponCode?: string,
+    discountAmount?: number,
+    couponPercentage?: number,
   ): Promise<void> {
     const formattedTotal = (totalAmount / 100).toLocaleString('pt-BR', {
       style: 'currency',
@@ -329,36 +335,47 @@ export class EmailService {
 
     const sumItems =
       items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
-    const discount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+    const totalDiscount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+    const actualCouponDiscount = discountAmount && discountAmount > 0 ? Math.min(discountAmount, totalDiscount) : 0;
+    const promoDiscount = totalDiscount > actualCouponDiscount ? totalDiscount - actualCouponDiscount : 0;
 
-    let priceDetailsHtml = `<strong>Valor Total: ${formattedTotal}</strong>`;
+    let priceDetailsHtml = `
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
+        <tr>
+          <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
+          <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${(sumItems / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
 
-    if (discount > 0) {
-      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      priceDetailsHtml = `
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
-          <tr>
-            <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
-            <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${formattedSum}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">Desconto Aplicado:</td>
-            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">- ${formattedDiscount}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
-            <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
-          </tr>
-        </table>
-      `;
+    if (promoDiscount > 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Promoção Compre 2 Leve 3:</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(promoDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
     }
+
+    if (couponCode && actualCouponDiscount > 0) {
+      const pctStr = couponPercentage ? ` - ${couponPercentage}%` : '';
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Cupom aplicado (<strong>${couponCode}${pctStr}</strong>):</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(actualCouponDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    } else if (totalDiscount > 0 && promoDiscount === 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Desconto Aplicado:</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(totalDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    }
+
+    priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
+          <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
+        </tr>
+      </table>
+    `;
 
     const content = `
       Olá, ${name}.<br><br>
@@ -401,36 +418,47 @@ export class EmailService {
 
     const sumItems =
       order.items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
-    const discount = sumItems > order.totalAmount ? sumItems - order.totalAmount : 0;
+    const totalDiscount = sumItems > order.totalAmount ? sumItems - order.totalAmount : 0;
+    const actualCouponDiscount = order.discountAmount && order.discountAmount > 0 ? Math.min(order.discountAmount, totalDiscount) : 0;
+    const promoDiscount = totalDiscount > actualCouponDiscount ? totalDiscount - actualCouponDiscount : 0;
 
-    let priceDetailsHtml = `<strong>Valor Total:</strong> ${formattedTotal}<br><br>`;
+    let priceDetailsHtml = `
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 15px;">
+        <tr>
+          <td style="font-size: 14px; color: #444; padding-bottom: 4px;"><strong>Subtotal dos itens:</strong></td>
+          <td align="right" style="font-size: 14px; color: #444; padding-bottom: 4px;">${(sumItems / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
 
-    if (discount > 0) {
-      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      priceDetailsHtml = `
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 15px;">
-          <tr>
-            <td style="font-size: 14px; color: #444; padding-bottom: 4px;"><strong>Subtotal dos itens:</strong></td>
-            <td align="right" style="font-size: 14px; color: #444; padding-bottom: 4px;">${formattedSum}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;"><strong>Desconto Aplicado:</strong></td>
-            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${formattedDiscount}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">Valor Final Recebido:</td>
-            <td align="right" style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">${formattedTotal}</td>
-          </tr>
-        </table>
-      `;
+    if (promoDiscount > 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;"><strong>Desconto Promoção Leve 3:</strong></td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;">- ${(promoDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
     }
+
+    if (order.couponCode && actualCouponDiscount > 0) {
+      const pctStr = order.couponPercentage ? ` - ${order.couponPercentage}%` : '';
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;"><strong>Cupom utilizado (${order.couponCode}${pctStr}):</strong></td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;">- ${(actualCouponDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    } else if (totalDiscount > 0 && promoDiscount === 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;"><strong>Desconto Aplicado:</strong></td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 4px;">- ${(totalDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    }
+
+    priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">Valor Final Recebido:</td>
+          <td align="right" style="font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 8px;">${formattedTotal}</td>
+        </tr>
+      </table>
+    `;
 
     const content = `
       <strong>Um novo pagamento foi confirmado!</strong><br><br>
@@ -494,6 +522,9 @@ export class EmailService {
     totalAmount: number,
     _notes?: string,
     items?: IEmailItem[],
+    couponCode?: string,
+    discountAmount?: number,
+    couponPercentage?: number,
   ): Promise<void> {
     const title = `Pagamento <span style="color: #4A3B63;">Confirmado</span>.`;
 
@@ -504,36 +535,47 @@ export class EmailService {
 
     const sumItems =
       items?.reduce((acc, item) => acc + (item.unitPrice || 0) * item.quantity, 0) || 0;
-    const discount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+    const totalDiscount = sumItems > totalAmount ? sumItems - totalAmount : 0;
+    const actualCouponDiscount = discountAmount && discountAmount > 0 ? Math.min(discountAmount, totalDiscount) : 0;
+    const promoDiscount = totalDiscount > actualCouponDiscount ? totalDiscount - actualCouponDiscount : 0;
 
-    let priceDetailsHtml = `<strong>Valor Total: ${formattedTotal}</strong>`;
+    let priceDetailsHtml = `
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
+        <tr>
+          <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
+          <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${(sumItems / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
 
-    if (discount > 0) {
-      const formattedSum = (sumItems / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      const formattedDiscount = (discount / 100).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      });
-      priceDetailsHtml = `
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 15px; padding: 15px; background-color: #FAFAFA; border: 1px solid #EEE; border-radius: 8px;">
-          <tr>
-            <td style="font-size: 14px; color: #666; padding-bottom: 8px;">Subtotal dos itens:</td>
-            <td align="right" style="font-size: 14px; color: #666; padding-bottom: 8px;">${formattedSum}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">Desconto Aplicado:</td>
-            <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 12px;">- ${formattedDiscount}</td>
-          </tr>
-          <tr>
-            <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
-            <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
-          </tr>
-        </table>
-      `;
+    if (promoDiscount > 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Promoção Compre 2 Leve 3:</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(promoDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
     }
+
+    if (couponCode && actualCouponDiscount > 0) {
+      const pctStr = couponPercentage ? ` - ${couponPercentage}%` : '';
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Cupom aplicado (<strong>${couponCode}${pctStr}</strong>):</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(actualCouponDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    } else if (totalDiscount > 0 && promoDiscount === 0) {
+      priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">Desconto Aplicado:</td>
+          <td align="right" style="font-size: 14px; color: #E74C3C; padding-bottom: 8px;">- ${(totalDiscount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    }
+
+    priceDetailsHtml += `
+        <tr>
+          <td style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">Valor Total Pago:</td>
+          <td align="right" style="font-size: 16px; font-weight: 700; color: #111; border-top: 1px solid #EEE; padding-top: 12px;">${formattedTotal}</td>
+        </tr>
+      </table>
+    `;
 
     const content = `
       Olá, ${name}.<br><br>

@@ -89,6 +89,14 @@ describe('Payment Scenarios Integration', () => {
         size,
       });
 
+      // Seed a verified email verification record for the guest test
+      await connection.getRepository('EmailVerification').save({
+        email: 'guest_it_final@example.com',
+        code: '123456',
+        expiresAt: new Date(Date.now() + 3600000),
+        isVerified: true,
+      });
+
       log.info('✅ Integration test environment manually initialized');
     } catch (error) {
       console.error('❌ beforeAll error:', error);
@@ -115,7 +123,7 @@ describe('Payment Scenarios Integration', () => {
       });
 
     expect(orderRes.status).toBe(201);
-    const orderId = orderRes.body.id;
+    const orderId = orderRes.body.order.id;
 
     const paymentRes = await request(app)
       .post('/api/payments/process')
@@ -158,7 +166,7 @@ describe('Payment Scenarios Integration', () => {
       });
 
     expect(orderRes.status).toBe(201);
-    const orderId = orderRes.body.id;
+    const orderId = orderRes.body.order.id;
 
     const paymentRes = await request(app)
       .post('/api/payments/process')

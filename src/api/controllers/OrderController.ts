@@ -102,6 +102,7 @@ export class OrderController {
       gaClientId,
       fbp,
       fbc,
+      couponCode,
     } = req.body;
     const userId = req.user?.userId;
 
@@ -125,6 +126,7 @@ export class OrderController {
       fbc,
       ipAddress,
       userAgent,
+      couponCode,
     );
 
     // Se criou conta automaticamente (guest checkout), faz auto-login

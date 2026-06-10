@@ -1,4 +1,4 @@
-import { Brackets } from 'typeorm';
+import { Brackets, Not } from 'typeorm';
 import { Order, OrderStatus, ORDER_STATUS_EVENTS } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
@@ -21,6 +21,8 @@ import { domainEvents } from '../domain/events/DomainEvents';
 import { OrderHistoryService } from './OrderHistoryService';
 import { OrderDomainEvent, ChangedByRole } from '../../types/domain-enums';
 import { ShippingAddressData, OrderItemInput } from '../../types';
+import { Coupon } from '../entities/Coupon';
+import { CouponUserUsage } from '../entities/CouponUserUsage';
 import { injectable } from 'tsyringe';
 
 /**
@@ -71,6 +73,7 @@ export class OrderService {
       .leftJoinAndSelect('o.shippingAddress', 'shippingAddress')
       .leftJoinAndSelect('o.status', 'status')
       .leftJoinAndSelect('o.statusHistory', 'statusHistory')
+      .leftJoinAndSelect('o.coupon', 'coupon')
       .orderBy('o.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -127,6 +130,7 @@ export class OrderService {
         'shippingAddress',
         'status',
         'statusHistory',
+        'coupon',
       ],
     });
 
@@ -257,6 +261,7 @@ export class OrderService {
     fbc?: string,
     ipAddress?: string,
     userAgent?: string,
+    couponCode?: string,
   ) {
     this.validateOrderInput(
       userId,
@@ -276,7 +281,7 @@ export class OrderService {
     );
     const finalEmail = guestEmail || user.email;
 
-    const { productsMap, sizeNamesMap, totalAmount, shippingCost } =
+    const { productsMap, sizeNamesMap, subtotal, totalAmount, shippingCost } =
       await this.validateAndCalculateOrder(items);
 
     const existingOrder = await this.checkIdempotency(
@@ -304,6 +309,8 @@ export class OrderService {
       totalAmount,
       shippingCost,
       shippingAddressData,
+      subtotal,
+      couponCode,
       idempotencyKey,
       phone,
       gaClientId,
@@ -431,7 +438,7 @@ export class OrderService {
 
     if (totalAmount < MONEY.MIN_ORDER_VALUE_CENTS)
       throw new AppError(ERROR_MESSAGES.ORDER_TOO_SMALL, HTTP_STATUS.BAD_REQUEST);
-    return { productsMap, sizeNamesMap, totalAmount, shippingCost };
+    return { productsMap, sizeNamesMap, subtotal, totalAmount, shippingCost };
   }
 
   private async resolveUser(
@@ -529,6 +536,8 @@ export class OrderService {
     totalAmount: number,
     shippingCost: number,
     shippingAddressData: ShippingAddressData,
+    subtotal: number,
+    couponCode?: string,
     idempotencyKey?: string,
     phone?: string,
     gaClientId?: string,
@@ -538,6 +547,121 @@ export class OrderService {
     userAgent?: string,
   ): Promise<Order> {
     return await executeInTransaction(async (manager) => {
+      let finalTotalAmount = totalAmount;
+      let appliedCoupon: Coupon | undefined;
+      let discountAmount = 0;
+
+      if (couponCode) {
+        const uppercaseCode = couponCode.toUpperCase().trim();
+
+        // Lock pessimista no cupom para evitar race conditions globais
+        const coupon = await manager.findOne(Coupon, {
+          where: { code: uppercaseCode },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!coupon) {
+          throw new AppError('Cupom inválido ou não encontrado', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Regra de negócios: cupom deve estar ativo
+        if (coupon.isActive === false) {
+          throw new AppError('Este cupom está temporariamente inativo', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Regra de negócios: cupom não deve estar expirado
+        if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+          throw new AppError('Este cupom já expirou e não é mais válido', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Regra de negócios: limite global de usos
+        if (coupon.maxUsesGlobal !== null && coupon.maxUsesGlobal !== undefined && coupon.usedCount >= coupon.maxUsesGlobal) {
+          throw new AppError('Este cupom atingiu o limite máximo de usos permitido', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Regra de negócios: mínimo de itens
+        const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+        if (totalItemsCount < coupon.minItems) {
+          throw new AppError(
+            `Este cupom só é válido para compras com ${coupon.minItems} ou mais itens`,
+            HTTP_STATUS.BAD_REQUEST,
+          );
+        }
+
+        // Regra de negócios: subtotal mínimo do pedido
+        if (coupon.minOrderValueCents !== null && coupon.minOrderValueCents !== undefined && subtotal < coupon.minOrderValueCents) {
+          const minValFormatted = (coupon.minOrderValueCents / 100).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          });
+          throw new AppError(
+            `Este cupom só é válido para compras acima de ${minValFormatted}`,
+            HTTP_STATUS.BAD_REQUEST,
+          );
+        }
+
+        // Regra de negócios: exclusivo para primeira compra
+        if (coupon.firstOrderOnly) {
+          const existingOrder = await manager.findOne(Order, {
+            where: {
+              user: { id: user.id },
+              statusId: Not(OrderStatus.CANCELLED),
+            },
+          });
+          if (existingOrder) {
+            throw new AppError('Este cupom é exclusivo para a primeira compra', HTTP_STATUS.BAD_REQUEST);
+          }
+        }
+
+        // Verificação e controle de uso POR USUÁRIO com lock pessimista
+        // Garante que dois pedidos simultâneos do mesmo usuário não ultrapassem o limite
+        const existingUsage = await manager
+          .createQueryBuilder(CouponUserUsage, 'usage')
+          .setLock('pessimistic_write')
+          .where('usage.coupon_id = :couponId', { couponId: coupon.id })
+          .andWhere('usage.user_id = :userId', { userId: user.id })
+          .getOne();
+
+        const currentUseCount = existingUsage?.useCount ?? 0;
+
+        if (currentUseCount >= coupon.maxUsesPerUser) {
+          throw new AppError(
+            `Você já utilizou este cupom o número máximo de vezes permitido (${coupon.maxUsesPerUser}x)`,
+            HTTP_STATUS.BAD_REQUEST,
+          );
+        }
+
+        // Calcular desconto sobre o subtotal (após promoções, sem personalização)
+        discountAmount = Math.round(subtotal * (coupon.discountPercentage / 100));
+
+        // Regra de negócios: teto máximo de desconto
+        if (coupon.maxDiscountCents !== null && coupon.maxDiscountCents !== undefined) {
+          discountAmount = Math.min(discountAmount, coupon.maxDiscountCents);
+        }
+
+        // Atualizar uso por usuário (upsert seguro dentro da transação)
+        if (existingUsage) {
+          existingUsage.useCount += 1;
+          await manager.save(existingUsage);
+        } else {
+          const newUsage = manager.create(CouponUserUsage, {
+            coupon,
+            couponId: coupon.id,
+            user,
+            userId: user.id,
+            useCount: 1,
+          });
+          await manager.save(newUsage);
+        }
+
+        // Incrementar contador global de auditoria
+        coupon.usedCount += 1;
+        await manager.save(coupon);
+
+        appliedCoupon = coupon;
+        finalTotalAmount = Math.max(0, totalAmount - discountAmount);
+      }
+
       const orderItems = items.map((item) => {
         const product = productsMap.get(item.productId)!;
         return this.orderItemRepository.create({
@@ -560,7 +684,7 @@ export class OrderService {
         user,
         guestEmail: finalEmail,
         items: orderItems,
-        totalAmount,
+        totalAmount: finalTotalAmount,
         currency: MONEY.DEFAULT_CURRENCY,
         idempotencyKey: idempotencyKey || uuidv4(),
         statusId: OrderStatus.PENDING,
@@ -571,6 +695,9 @@ export class OrderService {
         fbc,
         ipAddress,
         userAgent,
+        coupon: appliedCoupon,
+        couponCode: appliedCoupon?.code,
+        discountAmount,
       });
 
       const savedOrder = await manager.save(newOrder);

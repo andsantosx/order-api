@@ -94,7 +94,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
       .send({
         items: [
           {
-            productId: (await TestDataSource.getRepository('Product').findOneBy({ name: 'Camiseta Basic Cotton' }))?.id,
+            productId: (await TestDataSource.getRepository('Product').findOneBy({ name: 'Test Product' }))?.id,
             quantity: 1,
             size: 'M',
           },
@@ -112,7 +112,7 @@ describe('Payment Flow Integration (Mercado Pago)', () => {
       });
 
     expect(res.status).toBe(201);
-    orderId = res.body.id;
+    orderId = res.body.order.id;
   });
 
   it('💳 should process a payment successfully', async () => {

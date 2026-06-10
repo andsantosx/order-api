@@ -42,6 +42,9 @@ export class EmailHandler {
               order.items,
               data.isAccountLinked,
               data.generatedPassword, // Senha unificada aqui
+              order.couponCode,
+              order.discountAmount,
+              order.coupon?.discountPercentage,
             );
           } else if (data.generatedPassword) {
             // Se for Cartão/Pix mas for um NOVO GUEST, enviamos o e-mail de boas-vindas separado?
@@ -57,6 +60,9 @@ export class EmailHandler {
               order.items,
               data.isAccountLinked,
               data.generatedPassword,
+              order.couponCode,
+              order.discountAmount,
+              order.coupon?.discountPercentage,
             );
           }
         } catch (error: unknown) {
@@ -102,6 +108,9 @@ export class EmailHandler {
             order.totalAmount,
             data.notes,
             order.items,
+            order.couponCode,
+            order.discountAmount,
+            order.coupon?.discountPercentage,
           );
         } else {
           winston.info(
@@ -111,7 +120,10 @@ export class EmailHandler {
 
         // Notificação Interna para Administração (Garantia de Entrega)
         // Sempre tentamos enviar a notificação interna como redundância caso tenha falhado antes
-        await this.emailService.sendInternalOrderNotification(order);
+        await this.emailService.sendInternalOrderNotification({
+          ...order,
+          couponPercentage: order.coupon?.discountPercentage,
+        });
       } catch (error: unknown) {
         winston.error(
           `EmailHandler Error (PAYMENT_APPROVED): ${error instanceof Error ? error.message : 'Unknown error'}`,

@@ -111,6 +111,13 @@ export async function seedDatabase(dataSource: DataSource) {
         phone: '11999997777',
       },
       {
+        name: 'Anderson Santos',
+        email: 'andersonsantos.yz@gmail.com',
+        password: 'password123',
+        isAdmin: true,
+        phone: '11999998882',
+      },
+      {
         name: 'John Doe',
         email: 'john@example.com',
         password: 'password123',
