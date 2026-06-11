@@ -6,6 +6,7 @@ import { ShippingAddress } from '../entities/ShippingAddress';
 import { EmailVerification } from '../entities/EmailVerification';
 import { User } from '../entities/User';
 import { Size } from '../entities/Size';
+import { CartItem } from '../entities/CartItem';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../middlewares/errorHandler';
 import { AppDataSource } from '../../data-source';
@@ -701,6 +702,10 @@ export class OrderService {
       });
 
       const savedOrder = await manager.save(newOrder);
+
+      // Limpa os itens do carrinho do usuário no banco após finalizar o pedido com sucesso
+      await manager.getRepository(CartItem).delete({ userId: user.id });
+
       const sanitized = sanitizeAddressData(shippingAddressData);
       const address = manager.create(ShippingAddress, {
         order: savedOrder,
