@@ -26,6 +26,9 @@ import { generalLimiter } from './config/rateLimits';
 import { env } from './config/env';
 import shippingRoutes from './api/routes/shippingRoutes';
 import couponRoutes from './api/routes/couponRoutes';
+import cartRoutes from './api/routes/cartRoutes';
+import notificationRoutes from './api/routes/notificationRoutes';
+
 
 // Carrega variáveis de ambiente
 dotenv.config();
@@ -175,6 +178,9 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 // ==========================================
 // 5. Tratamento de Erros e 404

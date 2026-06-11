@@ -9,6 +9,8 @@ import { SocketHandler } from './api/subscribers/SocketHandler';
 import { EmailHandler } from './api/subscribers/EmailHandler';
 import { AnalyticsHandler } from './api/subscribers/AnalyticsHandler';
 import { OrderExpirationJob } from './api/jobs/OrderExpirationJob';
+import { CartAbandonmentJob } from './api/jobs/CartAbandonmentJob';
+import { CheckoutAbandonmentJob } from './api/jobs/CheckoutAbandonmentJob';
 
 const PORT = env.PORT || 3000;
 
@@ -33,6 +35,8 @@ AppDataSource.initialize()
     EmailHandler.init();
     AnalyticsHandler.init();
     OrderExpirationJob.init();
+    CartAbandonmentJob.init();
+    CheckoutAbandonmentJob.init();
 
     // Aplica o middleware de autenticação no socket
     socketService.getIO().use(socketAuthMiddleware);

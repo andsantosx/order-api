@@ -57,6 +57,19 @@ export class EmailService {
   }
 
   /**
+   * Converte uma URL relativa em URL absoluta usando o FRONTEND_URL.
+   */
+  private formatAbsoluteUrl(url?: string): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const baseUrl = env.FRONTEND_URL.endsWith('/') ? env.FRONTEND_URL.slice(0, -1) : env.FRONTEND_URL;
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${path}`;
+  }
+
+  /**
    * Layout Premium Base
    */
   private getHtmlTemplate(
@@ -892,4 +905,117 @@ export class EmailService {
       `Nova mensagem de ${data.name}: ${data.subject}`,
     );
   }
+
+  /**
+   * Envia e-mail de abandono de carrinho para o usuário.
+   */
+  async sendAbandonedCartEmail(to: string, name: string, checkoutUrl: string): Promise<void> {
+    const title = `Esqueceu algo no seu <span style="color: #4A3B63;">Carrinho</span>?`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Notamos que você adicionou itens incríveis ao seu carrinho, mas não concluiu a compra.<br><br>
+      Queremos te lembrar que o estoque de nossos produtos é limitado e muito procurado. Garanta suas peças exclusivas agora mesmo!<br><br>
+      Utilize o link abaixo para retornar direto para o seu carrinho e finalizar sua compra.
+    `;
+    const text = `Olá ${name}, você esqueceu itens no seu carrinho da Order. Finalize agora: ${checkoutUrl}`;
+    await this.send(
+      to,
+      name,
+      'Você deixou itens em seu carrinho!',
+      this.getHtmlTemplate(title, content, 'Finalizar Compra', checkoutUrl || `${env.FRONTEND_URL}/checkout`),
+      text,
+    );
+  }
+
+  /**
+   * Envia e-mail de abandono de checkout para o usuário.
+   */
+  async sendAbandonedCheckoutEmail(to: string, name: string, checkoutUrl: string): Promise<void> {
+    const title = `Seu Pedido está <span style="color: #4A3B63;">Aguardando Pagamento</span>.`;
+    const content = `
+      Olá, ${name}.<br><br>
+      Seu checkout foi iniciado, mas ainda não identificamos o pagamento do seu pedido.<br><br>
+      Para que possamos separar e enviar os seus produtos o mais rápido possível, conclua o pagamento da sua compra.<br><br>
+      Utilize o link abaixo para acessar sua fatura ou gerar novamente os dados de pagamento.
+    `;
+    const text = `Olá ${name}, seu pedido na Order está aguardando pagamento. Conclua aqui: ${checkoutUrl}`;
+    await this.send(
+      to,
+      name,
+      'Conclua o pagamento do seu pedido!',
+      this.getHtmlTemplate(title, content, 'Pagar Pedido', checkoutUrl || `${env.FRONTEND_URL}/checkout`),
+      text,
+    );
+  }
+
+  /**
+   * Envia e-mail notificando sobre um novo produto na loja.
+   */
+  async sendNewProductEmail(to: string, name: string, productName: string, productUrl: string, customContent?: string): Promise<void> {
+    const title = `Novidade na Loja: <span style="color: #4A3B63;">${productName}</span>`;
+    const formattedUrl = this.formatAbsoluteUrl(productUrl) || `${env.FRONTEND_URL}/shop`;
+    const content = `
+      Olá, ${name}.<br><br>
+      ${customContent || `Acabamos de adicionar um novo produto exclusivo ao nosso catálogo! <strong>${productName}</strong> já está disponível em nosso site com estoque limitado.`}<br><br>
+      Seja um dos primeiros a garantir essa novidade clicando no botão abaixo.
+    `;
+    const text = customContent ? customContent.replace(/<[^>]*>/g, '') : `Olá ${name}, novidade na Order! Conheça o novo produto ${productName}: ${formattedUrl}`;
+    await this.send(
+      to,
+      name,
+      `Novidade: ${productName} chegou na loja!`,
+      this.getHtmlTemplate(title, content, 'Ver Produto', formattedUrl),
+      text,
+    );
+  }
+
+  /**
+   * Envia e-mail notificando sobre uma nova categoria.
+   */
+  async sendNewCategoryEmail(to: string, name: string, categoryName: string, categoryUrl: string, customContent?: string): Promise<void> {
+    const title = `Nova Categoria: <span style="color: #4A3B63;">${categoryName}</span>`;
+    const formattedUrl = this.formatAbsoluteUrl(categoryUrl) || `${env.FRONTEND_URL}/shop`;
+    const content = `
+      Olá, ${name}.<br><br>
+      ${customContent || `Acabamos de lançar a categoria <strong>${categoryName}</strong> em nossa loja, repleta de opções incríveis selecionadas especialmente para você.`}<br><br>
+      Explore a nova coleção agora mesmo no link abaixo.
+    `;
+    const text = customContent ? customContent.replace(/<[^>]*>/g, '') : `Olá ${name}, nova categoria lançada na Order: ${categoryName}. Explore: ${formattedUrl}`;
+    await this.send(
+      to,
+      name,
+      `Nova Categoria: ${categoryName} disponível!`,
+      this.getHtmlTemplate(title, content, 'Explorar Categoria', formattedUrl),
+      text,
+    );
+  }
+
+  /**
+   * Envia e-mail para campanhas customizadas enviadas pelos administradores.
+   */
+  async sendCustomCampaignEmail(
+    to: string,
+    name: string,
+    subject: string,
+    emailTitle: string,
+    emailContent: string,
+    ctaText?: string,
+    ctaUrl?: string,
+  ): Promise<void> {
+    const title = emailTitle;
+    const content = `
+      Olá, ${name}.<br><br>
+      ${emailContent}
+    `;
+    const formattedUrl = this.formatAbsoluteUrl(ctaUrl);
+    const text = emailContent.replace(/<[^>]*>/g, '');
+    await this.send(
+      to,
+      name,
+      subject,
+      this.getHtmlTemplate(title, content, ctaText, formattedUrl),
+      text,
+    );
+  }
 }
+

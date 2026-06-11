@@ -21,6 +21,8 @@ import { OrderStatusHistory } from './api/entities/OrderStatusHistory';
 import { EmailVerification } from './api/entities/EmailVerification';
 import { Coupon } from './api/entities/Coupon';
 import { CouponUserUsage } from './api/entities/CouponUserUsage';
+import { Notification } from './api/entities/Notification';
+import { CartItem } from './api/entities/CartItem';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -29,7 +31,7 @@ export const AppDataSource = new DataSource({
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-  synchronize: false,
+  synchronize: true,
   migrationsRun: env.NODE_ENV === 'production',
   logging: env.NODE_ENV === 'development',
   entities: [
@@ -52,6 +54,8 @@ export const AppDataSource = new DataSource({
     EmailVerification,
     Coupon,
     CouponUserUsage,
+    Notification,
+    CartItem,
   ],
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   subscribers: [],
