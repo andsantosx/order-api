@@ -917,12 +917,13 @@ export class EmailService {
       Queremos te lembrar que o estoque de nossos produtos é limitado e muito procurado. Garanta suas peças exclusivas agora mesmo!<br><br>
       Utilize o link abaixo para retornar direto para o seu carrinho e finalizar sua compra.
     `;
-    const text = `Olá ${name}, você esqueceu itens no seu carrinho da Order. Finalize agora: ${checkoutUrl}`;
+    const formattedUrl = this.formatAbsoluteUrl(checkoutUrl) || `${env.FRONTEND_URL}/checkout`;
+    const text = `Olá ${name}, você esqueceu itens no seu carrinho da Order. Finalize agora: ${formattedUrl}`;
     await this.send(
       to,
       name,
       'Você deixou itens em seu carrinho!',
-      this.getHtmlTemplate(title, content, 'Finalizar Compra', checkoutUrl || `${env.FRONTEND_URL}/checkout`),
+      this.getHtmlTemplate(title, content, 'Finalizar Compra', formattedUrl),
       text,
     );
   }
@@ -938,12 +939,13 @@ export class EmailService {
       Para que possamos separar e enviar os seus produtos o mais rápido possível, conclua o pagamento da sua compra.<br><br>
       Utilize o link abaixo para acessar sua fatura ou gerar novamente os dados de pagamento.
     `;
-    const text = `Olá ${name}, seu pedido na Order está aguardando pagamento. Conclua aqui: ${checkoutUrl}`;
+    const formattedUrl = this.formatAbsoluteUrl(checkoutUrl) || `${env.FRONTEND_URL}/checkout`;
+    const text = `Olá ${name}, seu pedido na Order está aguardando pagamento. Conclua aqui: ${formattedUrl}`;
     await this.send(
       to,
       name,
       'Conclua o pagamento do seu pedido!',
-      this.getHtmlTemplate(title, content, 'Pagar Pedido', checkoutUrl || `${env.FRONTEND_URL}/checkout`),
+      this.getHtmlTemplate(title, content, 'Pagar Pedido', formattedUrl),
       text,
     );
   }
