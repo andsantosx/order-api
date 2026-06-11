@@ -18,6 +18,8 @@ import { OrderStatusHistory } from '../api/entities/OrderStatusHistory';
 import { EmailVerification } from '../api/entities/EmailVerification';
 import { Coupon } from '../api/entities/Coupon';
 import { CouponUserUsage } from '../api/entities/CouponUserUsage';
+import { Notification } from '../api/entities/Notification';
+import { CartItem } from '../api/entities/CartItem';
 
 export const TestDataSource = new DataSource({
   type: 'postgres',
@@ -47,6 +49,8 @@ export const TestDataSource = new DataSource({
     EmailVerification,
     Coupon,
     CouponUserUsage,
+    Notification,
+    CartItem,
   ],
   synchronize: true,
   dropSchema: true,

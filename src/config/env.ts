@@ -90,6 +90,7 @@ const envSchema = z.object({
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
+  console.error('❌ Erro na validação do arquivo .env:', JSON.stringify(_env.error.format(), null, 2));
   throw new Error('Variáveis de ambiente inválidas');
 }
 
